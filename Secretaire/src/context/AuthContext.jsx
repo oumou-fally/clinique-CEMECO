@@ -14,11 +14,11 @@ export function AuthProvider({ children }) {
       setIsAuthenticated(true)
       setUser({
         id: Math.floor(Math.random() * 10000),
-        name: 'Marie Dupont',
+        name: 'Baldé Aissatou',
         email: email,
         phone: '06 12 34 56 78',
         department: 'Secrétariat Médical',
-        permissions: ['manage_appointments', 'manage_doctors', 'manage_billing']
+        permissions: ['manage_appointments', 'manage_doctors', 'manage_nouvelle_facture']
       })
       setLoading(false)
     }, 500)

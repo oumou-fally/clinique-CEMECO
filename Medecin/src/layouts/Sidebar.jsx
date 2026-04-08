@@ -9,7 +9,9 @@ import {
   X,
   Home,
   Users,
-  Bell
+  Bell,
+  Pill,
+  MessageSquare
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
@@ -19,12 +21,14 @@ export default function Sidebar() {
   const { logout, user } = useAuth()
 
   const menuItems = [
-    { icon: Home, label: 'Accueil', path: '/dashboard' },
+    { icon: Home, label: 'Tableau de Bord', path: '/dashboard' },
     { icon: Users, label: 'Mes Patients', path: '/dashboard/patients' },
     { icon: Calendar, label: 'Mes Consultations', path: '/dashboard/consultations' },
     { icon: FileText, label: 'Rapports Médicaux', path: '/dashboard/medical-reports' },
+    { icon: Pill, label: 'Ordonnances', path: '/dashboard/prescriptions' },
+    { icon: MessageSquare, label: 'Conseils Médicaux', path: '/dashboard/advice' },
     { icon: Bell, label: 'Notifications', path: '/dashboard/notifications' },
-    { icon: Settings, label: 'Paramètres', path: '/dashboard/settings' }
+    { icon: Settings, label: 'Configuration', path: '/dashboard/settings' }
   ]
 
   const isActive = (path) => location.pathname === path
@@ -44,7 +48,7 @@ export default function Sidebar() {
 
       {/* Sidebar */}
       <div
-        className={`fixed left-0 top-0 h-screen bg-gradient-to-b ${bgGradient} text-white transition-all duration-300 z-40 ${
+        className={`fixed left-0 top-0 h-screen bg-linear-to-b ${bgGradient} text-white transition-all duration-300 z-40 ${
           isOpen ? 'w-64' : 'w-0 lg:w-20'
         } overflow-hidden`}
       >
@@ -86,7 +90,7 @@ export default function Sidebar() {
                   : `${hoverBg} text-white text-opacity-80`
               } ${!isOpen && 'justify-center'}`}
             >
-              <item.icon className="w-5 h-5 flex-shrink-0" />
+              <item.icon className="w-5 h-5 shrink-0" />
               {isOpen && <span className="font-medium">{item.label}</span>}
             </Link>
           ))}
@@ -100,7 +104,7 @@ export default function Sidebar() {
               !isOpen && 'justify-center'
             }`}
           >
-            <LogOut className="w-5 h-5 flex-shrink-0" />
+            <LogOut className="w-5 h-5 shrink-0" />
             {isOpen && <span className="font-medium">Déconnexion</span>}
           </button>
         </div>

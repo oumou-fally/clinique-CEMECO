@@ -43,7 +43,7 @@ export default function Notifications() {
       id: 5,
       type: 'appointment',
       title: 'RDV confirmé',
-      message: 'Dr. Jean Rousseau a confirmé votre rendez-vous pour le 22/04/2024',
+      message: 'Dr. Jean Rousseau a confirmé votre rendez-vous pour le 22/04/2026',
       time: 'Il y a 3 jours',
       read: true,
       icon: Calendar

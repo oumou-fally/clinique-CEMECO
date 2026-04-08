@@ -1,13 +1,15 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
-import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
+import Login from './pages/ConnexionMedecin'
+import Dashboard from './pages/TableauDeBord'
 import Patients from './pages/Patients'
 import Consultations from './pages/Consultations'
-import MedicalReports from './pages/MedicalReports'
+import MedicalReports from './pages/RapportsMedicaux'
+import Prescriptions from './pages/Prescriptions'
+import Advice from './pages/GestionConseilsMedicaux'
 import Notifications from './pages/Notifications'
-import Settings from './pages/Settings'
+import Settings from './pages/ParametresPage'
 import './App.css'
 
 function App() {
@@ -50,6 +52,22 @@ function App() {
           element={
             <ProtectedRoute>
               <MedicalReports />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/prescriptions"
+          element={
+            <ProtectedRoute>
+              <Prescriptions />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/advice"
+          element={
+            <ProtectedRoute>
+              <Advice />
             </ProtectedRoute>
           }
         />

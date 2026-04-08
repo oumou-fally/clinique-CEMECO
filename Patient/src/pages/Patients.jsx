@@ -8,43 +8,43 @@ export default function Patients() {
   const patients = [
     { 
       id: 1, 
-      name: 'Jean Dupont', 
-      email: 'jean@email.com', 
-      phone: '06 12 34 56 78', 
-      dateOfBirth: '15/03/1990',
+      name: 'Baldé Oumou Fally', 
+      email: 'baldeoumoufally14@gmail.com', 
+      phone: '627634812', 
+      dateOfBirth: '06/06/2002',
       status: 'Actif',
-      lastVisit: '15/03/2024',
-      nextAppointment: '15/04/2024'
+      lastVisit: '15/03/2026',
+      nextAppointment: '15/04/2026'
     },
     { 
       id: 2, 
-      name: 'Marie Laurent', 
-      email: 'marie@email.com', 
-      phone: '06 98 76 54 32', 
-      dateOfBirth: '22/07/1985',
+      name: 'Barry Yaya', 
+      email: 'barryyaya12@gmail.com', 
+      phone: '623874632', 
+      dateOfBirth: '22/07/2003',
       status: 'Actif',
-      lastVisit: '01/03/2024',
-      nextAppointment: '22/04/2024'
+      lastVisit: '01/03/2026',
+      nextAppointment: '22/04/2026'
     },
     { 
       id: 3, 
-      name: 'Pierre Martin', 
-      email: 'pierre@email.com', 
-      phone: '06 45 67 89 01', 
-      dateOfBirth: '10/11/1988',
+      name: 'Bah Fatoumata Kenda', 
+      email: 'bahf@gmail.com', 
+      phone: '628843913', 
+      dateOfBirth: '10/11/2002',
       status: 'Inactif',
-      lastVisit: '18/02/2024',
+      lastVisit: '18/02/2026',
       nextAppointment: '-'
     },
     { 
       id: 4, 
-      name: 'Anne Rousseau', 
-      email: 'anne@email.com', 
-      phone: '06 23 45 67 89', 
-      dateOfBirth: '05/05/1992',
+      name: 'Diakité Kadiatou', 
+      email: 'diakitekadi@gmail.com', 
+      phone: '620682673', 
+      dateOfBirth: '05/05/2002',
       status: 'Actif',
-      lastVisit: '05/04/2024',
-      nextAppointment: '19/04/2024'
+      lastVisit: '05/04/2026',
+      nextAppointment: '19/04/2026'
     }
   ]
 

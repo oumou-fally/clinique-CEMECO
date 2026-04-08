@@ -14,7 +14,7 @@ export function AuthProvider({ children }) {
       setIsAuthenticated(true)
       setUser({
         id: Math.floor(Math.random() * 10000),
-        name: 'Dr. Sophie Martin',
+        name: 'Prof. Elhadj Yaya Baldé',
         email: email,
         phone: '06 12 34 56 78',
         specialty: 'Médecin Généraliste',

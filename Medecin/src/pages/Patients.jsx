@@ -1,65 +1,117 @@
 import Layout from '../layouts/Layout'
-import { Search, Filter, Plus, Eye, Phone, Calendar, FileText } from 'lucide-react'
+import { Search, Filter, Plus, Eye, Phone, Calendar, FileText, Edit, Trash2, X } from 'lucide-react'
 import { useState } from 'react'
 
 export default function Patients() {
   const [searchTerm, setSearchTerm] = useState('')
-  
-  const patients = [
+  const [showModal, setShowModal] = useState(false)
+  const [patients, setPatients] = useState([
     { 
       id: 1, 
-      name: 'Jean Dupont', 
-      email: 'jean@email.com', 
-      phone: '06 12 34 56 78', 
-      dateOfBirth: '15/03/1990',
+      name: 'Baldé Oumou Fally', 
+      email: 'baldeoumoufally14@gmail.com', 
+      phone: '627634812', 
       status: 'Actif',
-      lastVisit: '15/03/2024',
-      nextAppointment: '15/04/2024',
-      bloodType: 'O+',
-      allergies: 'Pénicilline'
+      lastVisit: '15/03/2026'
     },
     { 
       id: 2, 
-      name: 'Marie Laurent', 
-      email: 'marie@email.com', 
-      phone: '06 98 76 54 32', 
-      dateOfBirth: '22/07/1985',
+      name: 'Barry Yaya', 
+      email: 'barryy12@gmail.com', 
+      phone: '628456312', 
       status: 'Actif',
-      lastVisit: '01/03/2024',
-      nextAppointment: '22/04/2024',
-      bloodType: 'A+',
-      allergies: 'Aucune'
+      lastVisit: '01/03/2026'
     },
     { 
       id: 3, 
-      name: 'Pierre Martin', 
-      email: 'pierre@email.com', 
-      phone: '06 45 67 89 01', 
-      dateOfBirth: '10/11/1988',
+      name: 'Bah Fatoumata Kenda', 
+      email: 'bahfatouma12@gmail.com', 
+      phone: '627121314', 
       status: 'Inactif',
-      lastVisit: '18/02/2024',
-      nextAppointment: '-',
-      bloodType: 'B+',
-      allergies: 'Aucune'
-    },
-    { 
-      id: 4, 
-      name: 'Anne Rousseau', 
-      email: 'anne@email.com', 
-      phone: '06 23 45 67 89', 
-      dateOfBirth: '05/05/1992',
-      status: 'Actif',
-      lastVisit: '05/04/2024',
-      nextAppointment: '19/04/2024',
-      bloodType: 'AB+',
-      allergies: 'Aspirin'
+      lastVisit: '18/02/2026'
     }
-  ]
+  ])
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    status: 'Actif',
+    lastVisit: ''
+  })
+  const [selectedPatient, setSelectedPatient] = useState(null)
+  const [selectedPatientDetail, setSelectedPatientDetail] = useState(null)
 
   const filteredPatients = patients.filter(patient =>
     patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     patient.email.toLowerCase().includes(searchTerm.toLowerCase())
   )
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
+  }
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    if (selectedPatient) {
+      setPatients(prev => prev.map(p => 
+        p.id === selectedPatient.id 
+          ? { ...selectedPatient, ...formData }
+          : p
+      ))
+    } else {
+      const newPatient = {
+        id: Math.max(...patients.map(p => p.id), 0) + 1,
+        ...formData,
+        lastVisit: new Date().toLocaleDateString('fr-FR')
+      }
+      setPatients([...patients, newPatient])
+    }
+    resetForm()
+    setShowModal(false)
+  }
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      email: '',
+      phone: '',
+      dateOfBirth: '',
+      status: 'Actif',
+      nextAppointment: '',
+      bloodType: 'O+',
+      allergies: ''
+    })
+    setSelectedPatient(null)
+  }
+
+  const handleEdit = (patient) => {
+    setSelectedPatient(patient)
+    setFormData({
+      name: patient.name,
+      email: patient.email,
+      phone: patient.phone,
+      dateOfBirth: patient.dateOfBirth,
+      status: patient.status,
+      nextAppointment: patient.nextAppointment,
+      bloodType: patient.bloodType,
+      allergies: patient.allergies
+    })
+    setShowModal(true)
+  }
+
+  const handleDeletePatient = (id) => {
+    if (confirm('Êtes-vous sûr de vouloir supprimer ce patient?')) {
+      setPatients(prev => prev.filter(p => p.id !== id))
+    }
+  }
+
+  const handleViewDetail = (patient) => {
+    setSelectedPatientDetail(patient)
+  }
 
   return (
     <Layout>
@@ -69,7 +121,13 @@ export default function Patients() {
             <h1 className="text-3xl font-bold text-gray-900">Mes Patients</h1>
             <p className="text-gray-600 mt-2">Gestion de vos patients et consultations</p>
           </div>
-          <button className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition">
+          <button 
+            onClick={() => {
+              resetForm()
+              setShowModal(true)
+            }}
+            className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition"
+          >
             <Plus className="w-5 h-5" />
             Ajouter un Patient
           </button>
@@ -119,8 +177,6 @@ export default function Patients() {
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Nom</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Email</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Téléphone</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Date Naissance</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Groupe Sanguin</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Dernier RDV</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Statut</th>
                 <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Actions</th>
@@ -139,12 +195,6 @@ export default function Patients() {
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600">{patient.email}</td>
                   <td className="px-6 py-4 text-sm text-gray-600">{patient.phone}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{patient.dateOfBirth}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    <span className="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-semibold">
-                      {patient.bloodType}
-                    </span>
-                  </td>
                   <td className="px-6 py-4 text-sm text-gray-600">{patient.lastVisit}</td>
                   <td className="px-6 py-4">
                     <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
@@ -157,17 +207,26 @@ export default function Patients() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <button className="p-2 hover:bg-blue-100 rounded-lg text-blue-600 transition" title="Voir profil">
+                      <button 
+                        onClick={() => handleViewDetail(patient)}
+                        className="p-2 hover:bg-blue-100 rounded-lg text-blue-600 transition" 
+                        title="Voir profil"
+                      >
                         <Eye className="w-4 h-4" />
                       </button>
-                      <button className="p-2 hover:bg-green-100 rounded-lg text-green-600 transition" title="Appeler">
-                        <Phone className="w-4 h-4" />
+                      <button 
+                        onClick={() => handleEdit(patient)}
+                        className="p-2 hover:bg-green-100 rounded-lg text-green-600 transition" 
+                        title="Modifier"
+                      >
+                        <Edit className="w-4 h-4" />
                       </button>
-                      <button className="p-2 hover:bg-yellow-100 rounded-lg text-yellow-600 transition" title="Planifier un RDV">
-                        <Calendar className="w-4 h-4" />
-                      </button>
-                      <button className="p-2 hover:bg-purple-100 rounded-lg text-purple-600 transition" title="Consulter dossier">
-                        <FileText className="w-4 h-4" />
+                      <button 
+                        onClick={() => handleDeletePatient(patient.id)}
+                        className="p-2 hover:bg-red-100 rounded-lg text-red-600 transition" 
+                        title="Supprimer"
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </td>
@@ -184,22 +243,164 @@ export default function Patients() {
         )}
       </div>
 
-      {/* Pagination */}
-      <div className="mt-6 flex items-center justify-between">
-        <p className="text-sm text-gray-600">
-          Affichage de <strong>{filteredPatients.length}</strong> patient(s)
-        </p>
-        <div className="flex gap-2">
-          <button className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700 font-medium transition">
-            Précédent
-          </button>
-          <button className="px-3 py-2 bg-blue-600 text-white rounded-lg font-medium">1</button>
-          <button className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700 font-medium transition">2</button>
-          <button className="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700 font-medium transition">
-            Suivant
-          </button>
+      {/* Modal Ajouter/Modifier Patient */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200 sticky top-0 bg-white flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">
+                {selectedPatient ? 'Modifier Patient' : 'Ajouter un Nouveau Patient'}
+              </h2>
+              <button 
+                onClick={() => {
+                  setShowModal(false)
+                  resetForm()
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Nom Complet</label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    placeholder="Jean Dupont"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    placeholder="jean@email.com"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Téléphone</label>
+                  <input
+                    type="text"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    placeholder="06 12 34 56 78"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Statut</label>
+                  <select
+                    name="status"
+                    value={formData.status}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  >
+                    <option value="Actif">Actif</option>
+                    <option value="Inactif">Inactif</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowModal(false)
+                    resetForm()
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg font-medium transition"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition"
+                >
+                  {selectedPatient ? 'Modifier' : 'Ajouter'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Modal Détail Patient */}
+      {selectedPatientDetail && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full">
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">Détails du Patient</h2>
+              <button 
+                onClick={() => setSelectedPatientDetail(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs font-semibold text-gray-600 uppercase">Nom</p>
+                  <p className="text-gray-900 font-medium">{selectedPatientDetail.name}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-600 uppercase">Email</p>
+                  <p className="text-gray-900 font-medium">{selectedPatientDetail.email}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs font-semibold text-gray-600 uppercase">Email</p>
+                  <p className="text-gray-900 font-medium">{selectedPatientDetail.email}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-600 uppercase">Téléphone</p>
+                  <p className="text-gray-900 font-medium">{selectedPatientDetail.phone}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs font-semibold text-gray-600 uppercase">Statut</p>
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold inline-block ${
+                    selectedPatientDetail.status === 'Actif'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {selectedPatientDetail.status}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-600 uppercase">Dernier RDV</p>
+                  <p className="text-gray-900 font-medium">{selectedPatientDetail.lastVisit}</p>
+                </div>
+              </div>
+              <div className="flex gap-2 pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => setSelectedPatientDetail(null)}
+                  className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-medium transition"
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   )
 }

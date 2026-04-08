@@ -1,10 +1,12 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
-import ProtectedRoute from './components/ProtectedRoute'
-import Login from './pages/Login'
+import RouteProtegee from './components/admin/RouteProtegee'
+import PageConnexion from './pages/PageConnexion'
 import Dashboard from './pages/Dashboard'
-import Patients from './pages/Patients'
-import Appointments from './pages/Appointments'
+import GestionPatients from './pages/GestionPatients'
+import GestionRendezVous from './pages/GestionRendezVous'
+import GestionOrdonnances from './pages/GestionOrdonnances'
+import ParametresClinique from './pages/ParametresClinique'
 import './App.css'
 
 function App() {
@@ -15,30 +17,54 @@ function App() {
       <Routes>
         <Route
           path="/login"
-          element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />}
+          element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <PageConnexion />}
         />
         <Route
           path="/dashboard"
           element={
-            <ProtectedRoute>
+            <RouteProtegee>
               <Dashboard />
-            </ProtectedRoute>
+            </RouteProtegee>
+          }
+        />
+        <Route
+          path="/dashboard/admin"
+          element={
+            <RouteProtegee>
+              <Dashboard />
+            </RouteProtegee>
           }
         />
         <Route
           path="/dashboard/patients"
           element={
-            <ProtectedRoute>
-              <Patients />
-            </ProtectedRoute>
+            <RouteProtegee>
+              <GestionPatients />
+            </RouteProtegee>
           }
         />
         <Route
           path="/dashboard/appointments"
           element={
-            <ProtectedRoute>
-              <Appointments />
-            </ProtectedRoute>
+            <RouteProtegee>
+              <GestionRendezVous />
+            </RouteProtegee>
+          }
+        />
+        <Route
+          path="/dashboard/records"
+          element={
+            <RouteProtegee>
+              <GestionOrdonnances />
+            </RouteProtegee>
+          }
+        />
+        <Route
+          path="/dashboard/settings"
+          element={
+            <RouteProtegee>
+              <ParametresClinique />
+            </RouteProtegee>
           }
         />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />

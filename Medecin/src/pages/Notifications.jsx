@@ -7,7 +7,7 @@ export default function Notifications() {
       id: 1,
       type: 'appointment',
       title: 'Rappel de consultation',
-      message: 'Votre rendez-vous avec Dr. Sophie Martin est demain à 14h30',
+      message: 'Votre rendez-vous avec Prof. Elhadj Yaya Baldé est demain à 14h30',
       time: 'Il y a 2 heures',
       read: false,
       icon: Calendar
@@ -43,7 +43,7 @@ export default function Notifications() {
       id: 5,
       type: 'appointment',
       title: 'RDV confirmé',
-      message: 'Dr. Jean Rousseau a confirmé votre rendez-vous pour le 22/04/2024',
+      message: 'Dr. Mamadou Diallo a confirmé votre rendez-vous pour le 22/04/2024',
       time: 'Il y a 3 jours',
       read: true,
       icon: Calendar

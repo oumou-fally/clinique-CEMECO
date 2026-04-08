@@ -11,7 +11,8 @@ import {
   Bell,
   Clock,
   CreditCard,
-  Users
+  Users,
+  FileText
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
@@ -25,7 +26,8 @@ export default function Sidebar() {
     { icon: Calendar, label: 'Rendez-vous', path: '/dashboard/appointments' },
     { icon: Clock, label: 'Emploi de Temps', path: '/dashboard/schedule' },
     { icon: Users, label: 'Médecins', path: '/dashboard/doctors' },
-    { icon: CreditCard, label: 'Facturation', path: '/dashboard/billing' },
+    { icon: FileText, label: 'Ordonnances', path: '/dashboard/ordonnances' },
+    { icon: CreditCard, label: 'Facturation', path: '/dashboard/nouvelle_facture' },
     { icon: Bell, label: 'Notifications', path: '/dashboard/notifications' },
     { icon: Settings, label: 'Paramètres', path: '/dashboard/settings' }
   ]

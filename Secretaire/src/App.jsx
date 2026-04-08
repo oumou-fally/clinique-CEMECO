@@ -1,14 +1,15 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
-import Login from './pages/Login'
-import SecretaryDashboard from './pages/SecretaryDashboard'
-import AppointmentManager from './pages/AppointmentManager'
-import Schedule from './pages/Schedule'
-import Billing from './pages/Billing'
-import DoctorManagement from './pages/DoctorManagement'
+import Connexion from './pages/Connexion'
+import TableauDeBordSecretaire from './pages/TableauDeBordSecretaire'
+import GestionRendezVous from './pages/GestionRendezVous'
+import EmploiDuTempsMedecins from './pages/EmploiDuTempsMedecins'
+import NouvelleFacure from './pages/nouvelle_facture'
+import RenseignementMedecin from './pages/renseignement_medecin'
+import Ordonnance from './pages/ordonnance'
 import Notifications from './pages/Notifications'
-import Settings from './pages/Settings'
+import Parametres from './pages/parametres'
 
 import './App.css'
 
@@ -20,14 +21,14 @@ function App() {
       <Routes>
         <Route
           path="/login"
-          element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />}
+          element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Connexion />}
         />
 
         <Route
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <SecretaryDashboard />
+              <TableauDeBordSecretaire />
             </ProtectedRoute>
           }
         />
@@ -35,7 +36,7 @@ function App() {
           path="/dashboard/appointments"
           element={
             <ProtectedRoute>
-              <AppointmentManager />
+              <GestionRendezVous />
             </ProtectedRoute>
           }
         />
@@ -43,15 +44,15 @@ function App() {
           path="/dashboard/schedule"
           element={
             <ProtectedRoute>
-              <Schedule />
+              <EmploiDuTempsMedecins />
             </ProtectedRoute>
           }
         />
         <Route
-          path="/dashboard/billing"
+          path="/dashboard/nouvelle_facture"
           element={
             <ProtectedRoute>
-              <Billing />
+              <NouvelleFacure />
             </ProtectedRoute>
           }
         />
@@ -59,7 +60,15 @@ function App() {
           path="/dashboard/doctors"
           element={
             <ProtectedRoute>
-              <DoctorManagement />
+              <RenseignementMedecin />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/ordonnances"
+          element={
+            <ProtectedRoute>
+              <Ordonnance />
             </ProtectedRoute>
           }
         />
@@ -75,7 +84,7 @@ function App() {
           path="/dashboard/settings"
           element={
             <ProtectedRoute>
-              <Settings />
+              <Parametres />
             </ProtectedRoute>
           }
         />

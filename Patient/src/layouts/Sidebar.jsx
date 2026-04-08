@@ -22,8 +22,9 @@ export default function Sidebar() {
   const menuItems = [
     { icon: Home, label: 'Accueil', path: '/dashboard' },
     { icon: Calendar, label: 'Mes Rendez-vous', path: '/dashboard/appointments' },
-    { icon: FileText, label: 'Mon Dossier', path: '/dashboard/medical-record' },
+    { icon: FileText, label: 'Mon Dossier Médical', path: '/dashboard/medical-record' },
     { icon: Stethoscope, label: 'Médecins', path: '/dashboard/doctors' },
+    { icon: Heart, label: 'Conseils Médicaux', path: '/dashboard/consultations' },
     { icon: Bell, label: 'Notifications', path: '/dashboard/notifications' },
     { icon: Settings, label: 'Paramètres', path: '/dashboard/settings' }
   ]
@@ -53,9 +54,9 @@ export default function Sidebar() {
         <div className="flex items-center justify-center h-20 border-b border-white border-opacity-20 sticky top-0">
           <div className="flex items-center gap-3 px-4">
             <div className="bg-white p-2 rounded-lg">
-              <Heart className={`w-6 h-6 ${user?.role === 'admin' ? 'text-blue-900' : 'text-teal-900'}`} />
+              <Heart className={`w-6 h-6 ${user?.role === 'admin' ? 'text-blue-900' : 'text-red-900'}`} />
             </div>
-            {isOpen && <span className="font-bold text-lg whitespace-nowrap">MedCare</span>}
+            {isOpen && <span className="font-bold text-lg whitespace-nowrap">Cardiologie+</span>}
           </div>
         </div>
 

@@ -61,7 +61,7 @@ La secrétaire peut :
 - Navigation semaine précédente/suivante
 
 ### 4. 💳 Facturation en Ligne
-**Page** : `src/pages/Billing.jsx`
+**Page** : `src/pages/nouvelle_facture.jsx`
 
 La secrétaire peut :
 - **Vue d'ensemble financière** :
@@ -149,7 +149,7 @@ user = {
 /dashboard/appointments → AppointmentManager
 /dashboard/schedule     → Schedule
 /dashboard/doctors      → DoctorManagement
-/dashboard/billing      → Billing
+/dashboard/nouvelle_facture      → nouvelle_facture
 /dashboard/notifications → Notifications
 /dashboard/settings     → Settings
 ```
@@ -267,7 +267,7 @@ Password: admin123
 - ✨ `src/pages/SecretaryDashboard.jsx` - Tableau de bord
 - ✨ `src/pages/AppointmentManager.jsx` - Gestion rendez-vous
 - ✨ `src/pages/Schedule.jsx` - Emploi de temps
-- ✨ `src/pages/Billing.jsx` - Facturation
+- ✨ `src/pages/nouvelle_facture.jsx` - Facturation
 - ✨ `src/pages/DoctorManagement.jsx` - Gestion médecins
 
 ### Non Modifiés (Patients)

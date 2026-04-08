@@ -1,19 +1,23 @@
-import { BarChart3, Users, Calendar, FileText, TrendingUp, Bell, Search } from 'lucide-react'
+import { BarChart3, Users, Calendar, FileText, TrendingUp, Bell, Search, Shield, Settings, ArrowRight } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 import Layout from '../layouts/Layout'
 
 export default function Dashboard() {
+  const { user } = useAuth()
+
   const stats = [
-    { icon: Users, label: 'Patients', value: '1,234', change: '+12%', color: 'blue' },
-    { icon: Calendar, label: 'Rendez-vous', value: '156', change: '+8%', color: 'green' },
-    { icon: FileText, label: 'Dossiers', value: '892', change: '+5%', color: 'purple' },
-    { icon: TrendingUp, label: 'Revenus', value: '45.2K€', change: '+23%', color: 'orange' }
+    { icon: Users, label: 'Total Patients', value: '1,234', change: '+12%', color: 'blue' },
+    { icon: Calendar, label: 'Rendez-vous Aujourd\'hui', value: '156', change: '+8%', color: 'green' },
+    { icon: FileText, label: 'Ordonnances Actives', value: '892', change: '+5%', color: 'purple' },
+    { icon: TrendingUp, label: 'Revenus Mensuels', value: '45.2K GNF', change: '+23%', color: 'orange' }
   ]
 
   const recentAppointments = [
-    { id: 1, patient: 'Jean Dupont', time: '10:30 AM', doctor: 'Dr. Martin', status: 'Confirmé' },
-    { id: 2, patient: 'Marie Laurent', time: '11:00 AM', doctor: 'Dr. Sophie', status: 'En attente' },
-    { id: 3, patient: 'Pierre Martin', time: '02:00 PM', doctor: 'Dr. Martin', status: 'Confirmé' },
-    { id: 4, patient: 'Anne Rousseau', time: '03:30 PM', doctor: 'Dr. Sophie', status: 'Annulé' }
+    { id: 1, patient: 'Oumou Baldé', time: '10:30 AM', doctor: 'Dr. Mamadou Diallo', status: 'Confirmé' },
+    { id: 2, patient: 'Yaya Barry', time: '11:00 AM', doctor: 'Dr. Thierno Siradjo Baldé', status: 'En attente' },
+    { id: 3, patient: 'Kenda Bah', time: '02:00 PM', doctor: 'Dr. Thierno Boubacar Barry', status: 'Confirmé' },
+    { id: 4, patient: 'Kadiatou Diakité', time: '03:30 PM', doctor: 'Dr. Mamadou Bassirou Bah', status: 'Annulé' }
   ]
 
   const getStatusColor = (status) => {
@@ -41,6 +45,27 @@ export default function Dashboard() {
 
   return (
     <Layout>
+      {/* Admin Welcome Banner */}
+      <div className="mb-8 bg-gradient-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-500 rounded-lg p-6 flex items-start justify-between">
+        <div className="flex items-start gap-4">
+          <div className="p-2 bg-yellow-100 rounded-lg">
+            <Shield className="w-6 h-6 text-yellow-600" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">Bienvenue, {user?.name}</h2>
+            <p className="text-gray-600 text-sm mt-1">En tant qu'administrateur, vous pouvez contrôler et gérer tous les aspects de la clinique.</p>
+          </div>
+        </div>
+        <Link
+          to="/dashboard/admin"
+          className="flex items-center gap-2 bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg font-semibold transition whitespace-nowrap"
+        >
+          <Settings className="w-4 h-4" />
+          Panneau Admin
+          <ArrowRight className="w-4 h-4" />
+        </Link>
+      </div>
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
         <div>

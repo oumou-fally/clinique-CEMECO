@@ -1,13 +1,14 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
-import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
-import Appointments from './pages/Appointments'
-import MedicalRecord from './pages/MedicalRecord'
-import Doctors from './pages/Doctors'
+import Connexion from './pages/Connexion'
+import TableauDeBordPatient from './pages/TableauDeBordPatient'
+import MesRendezVous from './pages/MesRendezVous'
+import DossierMedical from './pages/DossierMedical'
+import Medecins from './pages/Medecins'
+import Consultations from './pages/Consultations'
 import Notifications from './pages/Notifications'
-import Settings from './pages/Settings'
+import ParametresCompte from './pages/ParametresCompte'
 import './App.css'
 
 function App() {
@@ -18,13 +19,13 @@ function App() {
       <Routes>
         <Route
           path="/login"
-          element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />}
+          element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Connexion />}
         />
         <Route
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <Dashboard />
+              <TableauDeBordPatient />
             </ProtectedRoute>
           }
         />
@@ -33,7 +34,7 @@ function App() {
           path="/dashboard/appointments"
           element={
             <ProtectedRoute>
-              <Appointments />
+              <MesRendezVous />
             </ProtectedRoute>
           }
         />
@@ -41,7 +42,7 @@ function App() {
           path="/dashboard/medical-record"
           element={
             <ProtectedRoute>
-              <MedicalRecord />
+              <DossierMedical />
             </ProtectedRoute>
           }
         />
@@ -49,7 +50,15 @@ function App() {
           path="/dashboard/doctors"
           element={
             <ProtectedRoute>
-              <Doctors />
+              <Medecins />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/consultations"
+          element={
+            <ProtectedRoute>
+              <Consultations />
             </ProtectedRoute>
           }
         />
@@ -65,7 +74,7 @@ function App() {
           path="/dashboard/settings"
           element={
             <ProtectedRoute>
-              <Settings />
+              <ParametresCompte />
             </ProtectedRoute>
           }
         />
