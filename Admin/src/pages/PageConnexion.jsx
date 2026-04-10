@@ -52,9 +52,12 @@ export default function PageConnexion() {
                 <Activity className="w-10 h-10 text-blue-600" />
               </div>
             </div>
-            <h1 className="text-4xl font-bold text-white">MedAdmin</h1>
-            <p className="text-blue-100 mt-3 text-lg">
-              Gestion Professionnelle des Cliniques
+            <h1 className="text-4xl font-bold text-white">CEMECO</h1>
+            <p className="text-blue-100 mt-2 text-sm font-medium inline-block">
+              Cabinet de Cardiologie
+            </p>
+            <p className="text-blue-100 mt-1 text-xs font-light">
+              Gestion Administrative
             </p>
           </div>
 
@@ -128,32 +131,12 @@ export default function PageConnexion() {
             >
               {loading ? 'Connexion en cours...' : 'Se connecter'}
             </button>
-
-            {/* Informations de démo */}
-            <div className="border-t border-gray-200 pt-6">
-              <p className="text-xs text-gray-500 text-center mb-4 font-semibold">
-                COMPTES DE DÉMONSTRATION
-              </p>
-              <div className="space-y-3 text-xs">
-                <div className="bg-blue-50 p-4 rounded-2xl">
-                  <p className="font-semibold text-gray-800">Prof. Elhadj Yaya Baldé</p>
-                  <p className="text-gray-600">elhadj.balde@clinic.com</p>
-                </div>
-                <div className="bg-blue-50 p-4 rounded-2xl">
-                  <p className="font-semibold text-gray-800">Dr. Mamadou Bassirou Bah</p>
-                  <p className="text-gray-600">mamadou.bah@clinic.com</p>
-                </div>
-                <p className="text-center text-gray-500 mt-3">
-                  Mot de passe : <span className="font-mono font-medium">Admin@123</span>
-                </p>
-              </div>
-            </div>
           </form>
         </div>
 
         {/* Footer */}
         <p className="text-center text-gray-500 text-sm mt-8">
-          © 2024 MedAdmin - Clinique Santé Plus
+          © 2026 CEMECO - Cabinet de Cardiologie
         </p>
       </div>
     </div>

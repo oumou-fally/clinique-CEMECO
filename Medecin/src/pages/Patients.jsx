@@ -16,16 +16,16 @@ export default function Patients() {
     },
     { 
       id: 2, 
-      name: 'Barry Yaya', 
-      email: 'barryy12@gmail.com', 
+      name: 'Camara Aissatou', 
+      email: 'camara.aissatou@gmail.com', 
       phone: '628456312', 
       status: 'Actif',
       lastVisit: '01/03/2026'
     },
     { 
       id: 3, 
-      name: 'Bah Fatoumata Kenda', 
-      email: 'bahfatouma12@gmail.com', 
+      name: 'Touré Mariama', 
+      email: 'toure.mariama@gmail.com', 
       phone: '627121314', 
       status: 'Inactif',
       lastVisit: '18/02/2026'
@@ -245,18 +245,18 @@ export default function Patients() {
 
       {/* Modal Ajouter/Modifier Patient */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-200 sticky top-0 bg-white flex items-center justify-between">
+        <div className="fixed inset-0 bg-linear-to-br from-blue-50/60 via-indigo-50/60 to-purple-50/60 backdrop-blur-[2px] flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto border border-blue-100">
+            <div className="p-6 border-b border-gray-200 sticky top-0 bg-white rounded-t-2xl flex items-center justify-between">
               <h2 className="text-xl font-bold text-gray-900">
                 {selectedPatient ? 'Modifier Patient' : 'Ajouter un Nouveau Patient'}
               </h2>
-              <button 
+              <button
                 onClick={() => {
                   setShowModal(false)
                   resetForm()
                 }}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition-colors"
               >
                 <X className="w-6 h-6" />
               </button>
@@ -316,20 +316,20 @@ export default function Patients() {
                 </div>
               </div>
 
-              <div className="flex gap-2 pt-4 border-t border-gray-200">
+              <div className="flex gap-3 pt-4 border-t border-gray-200">
                 <button
                   type="button"
                   onClick={() => {
                     setShowModal(false)
                     resetForm()
                   }}
-                  className="flex-1 px-4 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg font-medium transition"
+                  className="flex-1 px-4 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg font-medium transition-colors"
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition"
+                  className="flex-1 px-4 py-2 bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium transition-colors"
                 >
                   {selectedPatient ? 'Modifier' : 'Ajouter'}
                 </button>

@@ -2,54 +2,61 @@ import { useState } from 'react'
 import Layout from '../layouts/Layout'
 import { MessageCircle, Send, CheckCircle, Clock, AlertCircle, Plus, Filter, Search } from 'lucide-react'
 import AskDoctorForm from '../components/AskDoctorForm'
+import { DOCTORS } from '../data/clinicData'
 
 export default function Consultations() {
   const [showAskForm, setShowAskForm] = useState(false)
   const [activeTab, setActiveTab] = useState('pending')
   const [searchTerm, setSearchTerm] = useState('')
 
+  // Doctors who have previously treated this patient - restricted to only allowed clinic doctors
+  const treatingDoctors = DOCTORS.map(doc => doc.name)
+
   const consultations = [
     {
       id: 1,
-      doctor: 'Professeur Elhadji Yaya Baldé',
+      doctor: 'Professeur Elhadj Yaya Baldé',
       subject: 'Question sur l\'hypertension',
       message: 'J\'ai remarqué une légère augmentation de ma tension artérielle ces derniers jours. Dois-je ajuster mon traitement?',
-      date: '2024-03-28',
+      date: '2026-03-28',
       status: 'Répondu',
       response: 'Je vous recommande de mesurer votre tension deux fois par jour et de tenir un carnet. Évitez le sel et continuez votre traitement actuel.',
-      responseDate: '2024-03-29'
+      responseDate: '2026-03-29'
     },
     {
       id: 2,
-      doctor: 'Dr. Mamadou Bassirou',
+      doctor: 'Docteur Mamadou Bassirou Bah',
       subject: 'Douleur thoracique intermittente',
       message: 'J\'ai une douleur légère et intermittente dans la poitrine depuis deux jours. Est-ce inquiétant?',
-      date: '2024-03-27',
+      date: '2026-03-27',
       status: 'Répondu',
       response: 'Cette douleur peut être musculaire ou cardiaque. Je vous conseille une consultation urgente pour un ECG et nous rassurer.',
-      responseDate: '2024-03-28'
+      responseDate: '2026-03-28'
     },
     {
       id: 3,
-      doctor: 'Dr. Thierno Boubacar Barry',
+      doctor: 'Docteur Thierno Boubacar Barry',
       subject: 'Essoufflement à l\'effort',
       message: 'Je suis essoufflé très rapidement en montant les escaliers depuis une semaine...',
-      date: '2024-03-26',
+      date: '2026-03-26',
       status: 'En attente',
       response: null,
       responseDate: null
     },
     {
       id: 4,
-      doctor: 'Dr. Mamadou Diallo',
+      doctor: 'Docteur Mamadou Diallo',
       subject: 'Effet secondaire du béta-bloquant',
       message: 'Depuis que j\'ai commencé le béta-bloquant, j\'ai une grande fatigue et des vertiges...',
-      date: '2024-03-25',
+      date: '2026-03-25',
       status: 'En attente',
       response: null,
       responseDate: null
     }
   ]
+
+  // Filter consultations to only show from treating doctors
+  const filteredByDoctor = consultations.filter(c => treatingDoctors.includes(c.doctor))
 
   const handleConsultationSubmit = (formData) => {
     console.log('New consultation:', formData)
@@ -69,7 +76,7 @@ export default function Consultations() {
     }
   }
 
-  const filteredConsultations = consultations.filter(consultation => {
+  const filteredConsultations = filteredByDoctor.filter(consultation => {
     const matchesSearch =
       consultation.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
       consultation.doctor.toLowerCase().includes(searchTerm.toLowerCase())
@@ -271,6 +278,7 @@ export default function Consultations() {
         isOpen={showAskForm}
         onClose={() => setShowAskForm(false)}
         onSubmit={handleConsultationSubmit}
+        allowedDoctors={treatingDoctors}
       />
     </Layout>
   )

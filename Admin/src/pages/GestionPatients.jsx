@@ -6,10 +6,10 @@ export default function GestionPatients() {
   const [recherche, setRecherche] = useState('');
 
   const patients = [
-    { id: 1, nom: 'Oumou Baldé', email: 'oumou.balde@example.com', telephone: '07 01 02 03 04', statut: 'Actif' },
-    { id: 2, nom: 'Yaya Barry', email: 'yaya.barry@example.com', telephone: '07 05 06 07 08', statut: 'Actif' },
-    { id: 3, nom: 'Kenda Bah', email: 'kenda.bah@example.com', telephone: '07 09 10 11 12', statut: 'Actif' },
-    { id: 4, nom: 'Kadiatou Diakité', email: 'kadiatou.diakite@example.com', telephone: '07 13 14 15 16', statut: 'Inactif' },
+    { id: 1, nom: 'Aminata Diallo', email: 'aminata.diallo@example.com', telephone: '07 01 02 03 04', statut: 'Actif' },
+    { id: 2, nom: 'Fatoumata Bah', email: 'fatoumata.bah@example.com', telephone: '07 05 06 07 08', statut: 'Actif' },
+    { id: 3, nom: 'Mariama Traoré', email: 'mariama.traore@example.com', telephone: '07 09 10 11 12', statut: 'Actif' },
+    { id: 4, nom: 'Mmady Sacko', email: 'mmady.sacko@example.com', telephone: '07 13 14 15 16', statut: 'Inactif' },
   ];
 
   // Filtrage des patients selon la recherche

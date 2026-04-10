@@ -5,9 +5,8 @@ import Connexion from './pages/Connexion'
 import TableauDeBordSecretaire from './pages/TableauDeBordSecretaire'
 import GestionRendezVous from './pages/GestionRendezVous'
 import EmploiDuTempsMedecins from './pages/EmploiDuTempsMedecins'
-import NouvelleFacure from './pages/nouvelle_facture'
+import ComposantFacturation from './pages/ComposantFacturation'
 import RenseignementMedecin from './pages/renseignement_medecin'
-import Ordonnance from './pages/ordonnance'
 import Notifications from './pages/Notifications'
 import Parametres from './pages/parametres'
 
@@ -33,7 +32,7 @@ function App() {
           }
         />
         <Route
-          path="/dashboard/appointments"
+          path="/dashboard/rendez-vous"
           element={
             <ProtectedRoute>
               <GestionRendezVous />
@@ -41,7 +40,7 @@ function App() {
           }
         />
         <Route
-          path="/dashboard/schedule"
+          path="/dashboard/emploi-du-temps"
           element={
             <ProtectedRoute>
               <EmploiDuTempsMedecins />
@@ -49,10 +48,10 @@ function App() {
           }
         />
         <Route
-          path="/dashboard/nouvelle_facture"
+          path="/dashboard/facturation"
           element={
             <ProtectedRoute>
-              <NouvelleFacure />
+              <ComposantFacturation />
             </ProtectedRoute>
           }
         />
@@ -61,14 +60,6 @@ function App() {
           element={
             <ProtectedRoute>
               <RenseignementMedecin />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/dashboard/ordonnances"
-          element={
-            <ProtectedRoute>
-              <Ordonnance />
             </ProtectedRoute>
           }
         />

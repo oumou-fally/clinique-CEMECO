@@ -13,7 +13,7 @@ export default function GestionConseilsMedicaux() {
   const [conseils, setConseils] = useState([
     {
       id: 1,
-      patient: 'Baldé Oumou',
+      patient: 'Baldé Oumou Fally',
       sujet: 'Hypertension et alimentation',
       conseil: 'Réduisez votre consommation de sel et privilégiez les aliments riches en potassium comme les bananes et les épinards.',
       date: '2026-04-15',
@@ -24,7 +24,7 @@ export default function GestionConseilsMedicaux() {
     },
     {
       id: 2,
-      patient: 'Barry Yaya',
+      patient: 'Camara Aissatou',
       sujet: 'Exercice physique après intervention',
       conseil: 'Commencez graduellement avec 15 minutes de marche légère par jour pendant la première semaine.',
       date: '2026-04-13',
@@ -35,7 +35,7 @@ export default function GestionConseilsMedicaux() {
     },
     {
       id: 3,
-      patient: 'Bah Fatoumata',
+      patient: 'Touré Mariama',
       sujet: 'Prévention du diabète',
       conseil: 'Maintenez un poids santé, mangez équilibré avec beaucoup de fibres.',
       date: '2026-04-10',
@@ -46,7 +46,7 @@ export default function GestionConseilsMedicaux() {
     },
     {
       id: 4,
-      patient: 'Diakité Kadiatou',
+      patient: 'Diallo Mamadou',
       sujet: 'Gestion du stress',
       conseil: 'Pratiquez la respiration profonde 5 minutes par jour et dormez suffisamment.',
       date: '2026-04-08',

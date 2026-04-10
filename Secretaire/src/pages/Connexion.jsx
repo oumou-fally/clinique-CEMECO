@@ -18,64 +18,63 @@ export default function Connexion() {
   // =========================
   // AUTHENTIFICATION ET NAVIGATION
   // =========================
-  const { login, loading } = useAuth()
+  const { connexion, loading } = useAuth()
   const navigate = useNavigate()
 
   // =========================
   // SOUMISSION DU FORMULAIRE
   // =========================
-  const handleSubmit = (e) => {
+  const soumettreFormulaire = (e) => {
     e.preventDefault()
 
-    // Vérification des champs vides
     if (!email || !password) {
       setError('Veuillez remplir tous les champs')
       return
     }
 
-    // Vérification du format email
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError('Veuillez entrer un email valide')
+      setError('Veuillez entrer une adresse email valide')
       return
     }
 
-    // Appel de la fonction de connexion
-    login(email, password)
+    connexion(email, password)
 
-    // Redirection après connexion
     setTimeout(() => {
       navigate('/dashboard')
     }, 600)
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-teal-50 via-blue-50 to-green-50 flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md">
 
         {/* ========================= */}
         {/* EN-TÊTE / LOGO */}
         {/* ========================= */}
-        <div className="bg-linear-to-r from-teal-600 to-green-600 px-8 py-16">
+        <div className="bg-linear-to-r from-emerald-600 to-teal-600 px-8 py-16 rounded-t-3xl shadow-xl">
           <div className="flex items-center justify-center mb-4">
             <div className="bg-white p-4 rounded-full shadow-lg">
-              <Activity className="w-10 h-10 text-teal-600" />
+              <Activity className="w-10 h-10 text-emerald-600" />
             </div>
           </div>
-          <h1 className="text-4xl font-bold text-white text-center">MedCare</h1>
-          <p className="text-teal-100 text-center mt-3 text-sm font-medium">
-            Plateforme de Gestion Médicale - Secrétaire
+          <h1 className="text-4xl font-bold text-white text-center\">CEMECO</h1>
+          <p className="text-emerald-100 text-center mt-2 text-sm font-medium\">
+            Excellence en Cardiologie
+          </p>
+          <p className="text-emerald-100 text-center mt-1 text-xs font-light\">
+            Espace Secrétaire
           </p>
         </div>
 
         {/* ========================= */}
         {/* FORMULAIRE DE CONNEXION */}
         {/* ========================= */}
-        <form onSubmit={handleSubmit} className="p-8 space-y-6">
+        <form onSubmit={soumettreFormulaire} className="bg-white px-8 py-8 space-y-6 rounded-b-3xl shadow-xl\">
 
           {/* Affichage des erreurs */}
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-              {error}
+            <div className="bg-rose-50 border border-rose-200 text-rose-700 px-4 py-3 rounded-2xl text-sm font-medium\">
+              ⚠️ {error}
             </div>
           )}
 
@@ -83,11 +82,11 @@ export default function Connexion() {
           {/* CHAMP EMAIL */}
           {/* ========================= */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block text-sm font-semibold text-slate-700 mb-2">
               Adresse Email
             </label>
             <div className="relative">
-              <Mail className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+              <Mail className="absolute left-3 top-4 w-5 h-5 text-slate-400" />
               <input
                 type="email"
                 value={email}
@@ -95,8 +94,8 @@ export default function Connexion() {
                   setEmail(e.target.value)
                   setError('')
                 }}
-                placeholder="secretaire@clinic.com"
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg"
+                placeholder="secretaire@cemeco.com"
+                className="w-full pl-14 pr-4 py-3 border-2 border-slate-200 rounded-2xl focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
               />
             </div>
           </div>
@@ -105,11 +104,11 @@ export default function Connexion() {
           {/* CHAMP MOT DE PASSE */}
           {/* ========================= */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
+            <label className="block text-sm font-semibold text-slate-700 mb-2">
               Mot de passe
             </label>
             <div className="relative">
-              <Lock className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+              <Lock className="absolute left-3 top-4 w-5 h-5 text-slate-400" />
               <input
                 type="password"
                 value={password}
@@ -118,7 +117,7 @@ export default function Connexion() {
                   setError('')
                 }}
                 placeholder="••••••••"
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg"
+                className="w-full pl-14 pr-4 py-3 border-2 border-slate-200 rounded-2xl focus:border-emerald-600 focus:ring-4 focus:ring-emerald-100"
               />
             </div>
           </div>
@@ -127,11 +126,11 @@ export default function Connexion() {
           {/* OPTIONS SUPPLÉMENTAIRES */}
           {/* ========================= */}
           <div className="flex items-center justify-between">
-            <label className="flex items-center">
-              <input type="checkbox" className="w-4 h-4" />
-              <span className="ml-2 text-sm text-gray-600">Se souvenir de moi</span>
+            <label className="flex items-center space-x-2">
+              <input type="checkbox" className="w-4 h-4 text-teal-600 bg-gray-100 border-gray-300 rounded focus:ring-teal-500 focus:ring-2" />
+              <span className="text-sm text-gray-600 font-medium">Se souvenir de moi</span>
             </label>
-            <a href="#" className="text-sm text-teal-600 font-medium">
+            <a href="#" className="text-sm text-teal-600 font-medium hover:text-teal-700 transition-colors">
               Mot de passe oublié?
             </a>
           </div>
@@ -146,14 +145,6 @@ export default function Connexion() {
           >
             {loading ? 'Connexion en cours...' : 'Se connecter'}
           </button>
-
-          {/* ========================= */}
-          {/* INFORMATIONS DE DÉMONSTRATION */}
-          {/* ========================= */}
-          <div className="border-t border-gray-200 pt-4 text-center text-xs">
-            <p>Email: secretaire@clinic.com</p>
-            <p>Mot de passe: secretaire123</p>
-          </div>
 
         </form>
       </div>

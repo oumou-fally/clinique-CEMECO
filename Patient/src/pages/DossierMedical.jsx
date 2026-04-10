@@ -1,5 +1,6 @@
 import Layout from '../layouts/Layout'
 import { FileText, Download, Eye, Filter, Search } from 'lucide-react'
+import { DOCTORS } from '../data/clinicData'
 
 // Composant de la page dossier médical (nom en français pour faciliter la recherche)
 export default function DossierMedical() {
@@ -10,7 +11,7 @@ export default function DossierMedical() {
       id: 1,
       date: '15/03/2026',
       type: 'Échocardiographie',
-      doctor: 'Professeur Elhadji Yaya Baldé',
+      doctor: DOCTORS[0].name, // Professeur Elhadj
       status: 'Reçu',
       results: ['Ventricule gauche: normal', 'Fraction d\'éjection: 60%', 'Valves: normales']
     },
@@ -18,7 +19,7 @@ export default function DossierMedical() {
       id: 2,
       date: '01/03/2026',
       type: 'Électrocardiogramme (ECG)',
-      doctor: 'Dr. Mamadou Bassirou',
+      doctor: DOCTORS[1].name, // Docteur Mamadou Bassirou Bah
       status: 'Confirmé',
       results: ['Rythme sinusal régulier', 'Pas d\'ischémie', 'Intervalle PR normal']
     }
@@ -27,8 +28,8 @@ export default function DossierMedical() {
 
   // Données des ordonnances
   const prescriptions = [
-    { id: 1, date: '15/03/2026', medicine: 'Aspirine 100mg', quantity: '30 comprimés', doctor: 'Professeur Elhadji Yaya Baldé' },
-    { id: 2, date: '01/03/2026', medicine: 'Lisinopril 10mg', quantity: '30 comprimés', doctor: 'Dr. Mamadou Bassirou' }
+    { id: 1, date: '15/03/2026', medicine: 'Aspirine 100mg', quantity: '30 comprimés', doctor: DOCTORS[0].name }, // Professeur Elhadj
+    { id: 2, date: '01/03/2026', medicine: 'Lisinopril 10mg', quantity: '30 comprimés', doctor: DOCTORS[3].name } // Docteur Thierno Siradjo
   ]
 
   return (

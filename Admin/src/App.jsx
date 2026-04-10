@@ -3,10 +3,10 @@ import { useAuth } from './context/AuthContext'
 import RouteProtegee from './components/admin/RouteProtegee'
 import PageConnexion from './pages/PageConnexion'
 import Dashboard from './pages/Dashboard'
-import GestionPatients from './pages/GestionPatients'
-import GestionRendezVous from './pages/GestionRendezVous'
-import GestionOrdonnances from './pages/GestionOrdonnances'
-import ParametresClinique from './pages/ParametresClinique'
+import GestionUtilisateurs from './pages/GestionUtilisateurs'
+import GestionSysteme from './pages/GestionSysteme'
+import Supervision from './pages/Supervision'
+import GestionFinanciere from './pages/GestionFinanciere'
 import './App.css'
 
 function App() {
@@ -28,42 +28,34 @@ function App() {
           }
         />
         <Route
-          path="/dashboard/admin"
+          path="/dashboard/users"
           element={
             <RouteProtegee>
-              <Dashboard />
+              <GestionUtilisateurs />
             </RouteProtegee>
           }
         />
         <Route
-          path="/dashboard/patients"
+          path="/dashboard/system"
           element={
             <RouteProtegee>
-              <GestionPatients />
+              <GestionSysteme />
             </RouteProtegee>
           }
         />
         <Route
-          path="/dashboard/appointments"
+          path="/dashboard/supervision"
           element={
             <RouteProtegee>
-              <GestionRendezVous />
+              <Supervision />
             </RouteProtegee>
           }
         />
         <Route
-          path="/dashboard/records"
+          path="/dashboard/finance"
           element={
             <RouteProtegee>
-              <GestionOrdonnances />
-            </RouteProtegee>
-          }
-        />
-        <Route
-          path="/dashboard/settings"
-          element={
-            <RouteProtegee>
-              <ParametresClinique />
+              <GestionFinanciere />
             </RouteProtegee>
           }
         />

@@ -3,6 +3,7 @@ import Layout from '../layouts/Layout'
 import { Star, MapPin, Phone, Mail, Calendar, MessageCircle, Search, Filter } from 'lucide-react'
 import AskDoctorForm from '../components/AskDoctorForm'
 import AppointmentForm from '../components/AppointmentForm'
+import { DOCTORS, CLINIC_INFO } from '../data/clinicData'
 
 // Composant principal de la page des médecins (renommé en français pour faciliter la recherche)
 export default function Medecins() {
@@ -11,43 +12,10 @@ export default function Medecins() {
   const [showAppointmentForm, setShowAppointmentForm] = useState(false)
   const [selectedDoctor, setSelectedDoctor] = useState(null)
 
-  // Liste des médecins (données affichées)
-  const doctors = [
-    {
-      id: 1,
-      name: 'Professeur Elhadji Yaya Baldé',
-      specialty: 'Cardiologue',
-      rating: 4.9,
-      reviews: 185,
-      location: 'Cabinet de Cardiologie',
-      phone: '224 33 849 XX XX',
-      email: 'yaya.balde@cardiologie.sn',
-      availability: 'Lundi-Vendredi après-midi, Samedi 8h-17h',
-      nextAvailable: 'Demain 10:00'
-    },
-    {
-      id: 2,
-      name: 'Dr. Mamadou Bassirou Bah',
-      specialty: 'Cardiologue',
-      rating: 4.8,
-      reviews: 156,
-      location: 'Cabinet de Cardiologie',
-      phone: '224 33 849 XX XX',
-      email: 'mamadou.bassirou@cardiologie.sn',
-      availability: 'Lundi-Vendredi 8h-17h',
-      nextAvailable: '20/04/2024 14:30'
-    }
-    // Autres médecins...
-  ]
-
   // Liste des spécialités pour filtrage
   const specialties = [
     'Tous',
-    'Cardiologie',
-    'Arythmie',
-    'Hypertension',
-    'Insuffisance Cardiaque',
-    'Prévention'
+    'Cardiologie'
   ]
 
   return (
@@ -97,7 +65,7 @@ export default function Medecins() {
 
       {/* Liste des médecins */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
-        {doctors.map((doctor) => (
+        {DOCTORS.map((doctor) => (
           <div key={doctor.id} className="bg-white rounded-xl shadow-lg hover:shadow-xl transition overflow-hidden">
             {/* En-tête carte médecin */}
             <div className="bg-gradient-to-r from-teal-600 to-green-600 p-6 text-white">

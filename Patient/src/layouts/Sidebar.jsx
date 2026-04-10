@@ -56,7 +56,12 @@ export default function Sidebar() {
             <div className="bg-white p-2 rounded-lg">
               <Heart className={`w-6 h-6 ${user?.role === 'admin' ? 'text-blue-900' : 'text-red-900'}`} />
             </div>
-            {isOpen && <span className="font-bold text-lg whitespace-nowrap">Cardiologie+</span>}
+            {isOpen && (
+              <div>
+                <span className="font-bold text-lg whitespace-nowrap">CEMECO</span>
+                <p className="text-xs text-white text-opacity-70 whitespace-normal">Cardiologie</p>
+              </div>
+            )}
           </div>
         </div>
 

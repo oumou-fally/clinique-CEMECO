@@ -9,19 +9,19 @@ export default function Prescriptions() {
   const [prescriptions, setPrescriptions] = useState([
     {
       id: 1,
-      patient: 'Baldé Oumou',
-      medication: 'Amoxicilline 500mg',
-      dosage: '1 comprimé x 3/jour',
-      duration: '7 jours',
+      patient: 'Baldé Oumou Fally',
+      medication: 'Bisoprolol 5mg',
+      dosage: '1 comprimé x 1/jour',
+      duration: 'Continu',
       date: '2026-04-15',
-      status: 'Prescrite',
-      indication: 'Infection respiratoire',
-      notes: 'Prendre avec de la nourriture'
+      status: 'Active',
+      indication: 'Hypertension artérielle',
+      notes: 'Contrôle tensionnel régulier'
     },
     {
       id: 2,
-      patient: 'Barry Yaya',
-      medication: 'Métoprolol 50mg',
+      patient: 'Camara Aissatou',
+      medication: 'Amlodipine 10mg',
       dosage: '1 comprimé matin et soir',
       duration: 'Continu',
       date: '2026-04-10',
@@ -31,19 +31,19 @@ export default function Prescriptions() {
     },
     {
       id: 3,
-      patient: 'Bah Kenda',
-      medication: 'Ibuprofène 400mg',
-      dosage: '1 comprimé toutes les 6h si douleur',
-      duration: 'Selon besoin',
+      patient: 'Touré Mariama',
+      medication: 'Atorvastatine 20mg',
+      dosage: '1 comprimé le soir',
+      duration: 'Continu',
       date: '2026-04-08',
-      status: 'Prescrite',
-      indication: 'Douleur musculaire',
-      notes: 'Ne pas dépasser 4 comprimés par jour'
+      status: 'Active',
+      indication: 'Hypercholestérolémie',
+      notes: 'Bilan lipidique annuel recommandé'
     },
     {
       id: 4,
-      patient: 'Diakité Kadiatou',
-      medication: 'Atorvastatine 20mg',
+      patient: 'Diallo Mamadou',
+      medication: 'Warfarine 5mg',
       dosage: '1 comprimé le soir',
       duration: 'Continu',
       date: '2026-04-05',

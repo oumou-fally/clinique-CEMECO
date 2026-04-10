@@ -7,30 +7,29 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(false)
 
-  const login = (email, password) => {
+  const connexion = (email, password) => {
     setLoading(true)
-    // Simulation d'une requête API
     setTimeout(() => {
       setIsAuthenticated(true)
       setUser({
         id: Math.floor(Math.random() * 10000),
         name: 'Baldé Aissatou',
-        email: email,
+        email,
         phone: '06 12 34 56 78',
         department: 'Secrétariat Médical',
-        permissions: ['manage_appointments', 'manage_doctors', 'manage_nouvelle_facture']
+        permissions: ['manage_appointments', 'manage_doctors', 'manage_facturation']
       })
       setLoading(false)
     }, 500)
   }
 
-  const logout = () => {
+  const deconnexion = () => {
     setIsAuthenticated(false)
     setUser(null)
   }
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, loading, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, user, loading, connexion, deconnexion }}>
       {children}
     </AuthContext.Provider>
   )

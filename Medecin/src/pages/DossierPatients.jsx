@@ -11,36 +11,36 @@ export default function DossierPatients() {
   const medicalRecords = [
     {
       id: 1,
-      patient: 'Amadou Diallo',
+      patient: 'Aminata Diallo',
       date: '15/03/2024',
       type: 'Bilan Sanguin',
-      doctor: 'Prof. Elhadj Yaya Baldé',
+      doctor: 'Professeur Elhadj Yaya Baldé',
       status: 'Disponible',
       results: ['Hémoglobine: 14.5 g/dL', 'Leucocytes: 7200 /µL', 'Plaquettes: 250K /µL']
     },
     {
       id: 2,
-      patient: 'Fatou Camara',
+      patient: 'Fatoumata Bah',
       date: '01/03/2024',
       type: 'Radiographie Thorax',
-      doctor: 'Dr. Mamadou Diallo',
+      doctor: 'Docteur Mamadou Bassirou Bah',
       status: 'Validé',
       results: ['Poumons normaux', 'Cœur normal']
     },
     {
       id: 3,
-      patient: 'Ibrahima Bah',
+      patient: 'Mariama Traoré',
       date: '18/02/2024',
       type: 'ECG',
-      doctor: 'Prof. Elhadj Yaya Baldé',
+      doctor: 'Docteur Thierno Boubacar Barry',
       status: 'Disponible',
       results: ['Rythme cardiaque régulier', 'Pas d\'anomalies']
     }
   ]
 
   const prescriptions = [
-    { id: 1, patient: 'Amadou Diallo', date: '15/03/2024', medicine: 'Aspirine 500mg', quantity: '30 comprimés', doctor: 'Prof. Elhadj Yaya Baldé' },
-    { id: 2, patient: 'Fatou Camara', date: '01/03/2024', medicine: 'Vitamine C 1000mg', quantity: '30 comprimés', doctor: 'Dr. Mamadou Diallo' }
+    { id: 1, patient: 'Aminata Diallo', date: '15/03/2024', medicine: 'Bisoprolol 5mg', quantity: '30 comprimés', doctor: 'Professeur Elhadj Yaya Baldé' },
+    { id: 2, patient: 'Fatoumata Bah', date: '01/03/2024', medicine: 'Amlodipine 10mg', quantity: '30 comprimés', doctor: 'Docteur Mamadou Diallo' }
   ]
 
   return (

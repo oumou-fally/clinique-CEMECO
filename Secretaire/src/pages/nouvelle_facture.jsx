@@ -1,208 +1,189 @@
-import { useState } from 'react'
-import Layout from '../layouts/Layout'
-import InvoiceList from './ComposantFacturation'
-import InvoiceForm from './ComposantFormulaire'
+import { X } from 'lucide-react'
 
-export default function NouvelleFacure() {
-  const [showModal, setShowModal] = useState(false)
-  const [filter, setFilter] = useState('all')
-  const [searchTerm, setSearchTerm] = useState('')
-  
-  // Formulaire nouvelle facture
-  const [formData, setFormData] = useState({
-    patient: '',
-    service: '',
-    amount: '',
-    date: '',
-    patientType: '',
-    insuranceProvider: '',
-    paymentMethod: '',
-    bankName: '',
-    bankAccountNumber: '',
-    bankRIB: '',
-    orangeNumber: '',
-    orangeName: '',
-    orangeTransactionId: ''
-  })
-
-  const [invoices, setInvoices] = useState([
-    {
-      id: 'FAC-001',
-      patient: 'Jean Dupont',
-      date: '25/03/2024',
-      amount: 150.00,
-      status: 'paid',
-      service: 'Visite générale'
-    },
-    {
-      id: 'FAC-002',
-      patient: 'Marie Lefevre',
-      date: '26/03/2024',
-      amount: 200.00,
-      status: 'pending',
-      service: 'Consultation cardiologie'
-    },
-    {
-      id: 'FAC-003',
-      patient: 'Pierre Martin',
-      date: '27/03/2024',
-      amount: 120.00,
-      status: 'paid',
-      service: 'Visite de suivi'
-    },
-    {
-      id: 'FAC-004',
-      patient: 'Anne Durand',
-      date: '28/03/2024',
-      amount: 180.00,
-      status: 'pending',
-      service: 'Dermatologie'
-    },
-    {
-      id: 'FAC-005',
-      patient: 'Luc Bernard',
-      date: '28/03/2024',
-      amount: 250.00,
-      status: 'overdue',
-      service: 'Bilan complet'
-    }
-  ])
-
-  const handleFormChange = (e) => {
-    const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
-  }
-
-  const handleMarkPaidByBank = (invoiceId) => {
-    setInvoices((currentInvoices) =>
-      currentInvoices.map((invoice) =>
-        invoice.id === invoiceId
-          ? {
-              ...invoice,
-              status: 'paid',
-              paymentDetails: {
-                ...invoice.paymentDetails,
-                bankDeposit: `Dépôt simulé sur le compte bancaire de l'administrateur Elhadj Yaya Baldé.`
-              }
-            }
-          : invoice
-      )
-    )
-  }
-
-  const handleAddInvoice = () => {
-    const errors = []
-
-    if (!formData.patient.trim()) errors.push('patient')
-    if (!formData.service.trim()) errors.push('service')
-    if (!formData.amount || Number(formData.amount) <= 0) errors.push('amount')
-    if (!formData.date) errors.push('date')
-    if (!formData.patientType) errors.push('patientType')
-    if (formData.patientType !== 'insured' && !formData.paymentMethod) errors.push('paymentMethod')
-
-    if (formData.patientType === 'insured') {
-      if (!formData.insuranceProvider) errors.push('insuranceProvider')
-    }
-
-    if (formData.paymentMethod === 'banque') {
-      if (!formData.bankName.trim()) errors.push('bankName')
-      if (!formData.bankAccountNumber.trim()) errors.push('bankAccountNumber')
-      if (!formData.bankRIB.trim()) errors.push('bankRIB')
-    }
-    if (formData.paymentMethod === 'orange-money') {
-      if (!formData.orangeNumber.trim()) errors.push('orangeNumber')
-      if (!formData.orangeName.trim()) errors.push('orangeName')
-      if (!formData.orangeTransactionId.trim()) errors.push('orangeTransactionId')
-    }
-
-    if (errors.length > 0) {
-      alert('Veuillez remplir tous les champs de facturation requis.')
-      return
-    }
-
-    const newInvoice = {
-      id: `FAC-${String(invoices.length + 1).padStart(3, '0')}`,
-      patient: formData.patient,
-      date: formData.date,
-      amount: parseFloat(formData.amount),
-      status: 'pending',
-      service: formData.service,
-      patientType: formData.patientType,
-      insuranceProvider: formData.insuranceProvider,
-      paymentMethod: formData.patientType === 'insured' ? 'assurance' : formData.paymentMethod,
-      paymentDetails: formData.patientType === 'insured' ? {
-        insuranceProvider: formData.insuranceProvider,
-        adminAccount: 'Elhadj Yaya Baldé',
-        note: `Facture envoyée à ${formData.insuranceProvider}. Dépôt attendu sur le compte bancaire de l'administrateur Elhadj Yaya Baldé.`
-      } : formData.paymentMethod === 'banque' ? {
-        bankName: formData.bankName,
-        accountNumber: formData.bankAccountNumber,
-        rib: formData.bankRIB
-      } : {
-        orangeNumber: formData.orangeNumber,
-        orangeName: formData.orangeName,
-        transactionId: formData.orangeTransactionId
-      }
-    }
-
-    setInvoices([...invoices, newInvoice])
-    setFormData({
-      patient: '',
-      service: '',
-      amount: '',
-      date: '',
-      patientType: '',
-      insuranceProvider: '',
-      paymentMethod: '',
-      bankName: '',
-      bankAccountNumber: '',
-      bankRIB: '',
-      orangeNumber: '',
-      orangeName: '',
-      orangeTransactionId: ''
-    })
-    setShowModal(false)
-  }
-
-  const closeModal = () => {
-    setShowModal(false)
-    setFormData({ 
-      patient: '', 
-      service: '', 
-      amount: '', 
-      date: '',
-      patientType: '',
-      insuranceProvider: '',
-      paymentMethod: '',
-      bankName: '',
-      bankAccountNumber: '',
-      bankRIB: '',
-      orangeNumber: '',
-      orangeName: '',
-      orangeTransactionId: ''
-    })
-  }
+export default function Nouvelle_Facture({
+  showModal,
+  onClose,
+  formData,
+  onFormChange,
+  onAddInvoice
+}) {
+  if (!showModal) return null
 
   return (
-    <Layout>
-      <div className="p-6">
-        <InvoiceList
-          invoices={invoices}
-          filter={filter}
-          onFilterChange={setFilter}
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          onNewInvoiceClick={() => setShowModal(true)}
-          onMarkPaidByBank={handleMarkPaidByBank}
+    <div
+      className="fixed inset-0 flex items-center justify-center bg-black/60 z-50"
+      style={{
+        backgroundImage: "url('/images/facture-bg.jpg')",
+        backgroundSize: "cover",
+        backgroundPosition: "center"
+      }}
+    >
+      <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-xl w-full max-w-3xl p-6 max-h-[90vh] overflow-y-auto">
+
+        {/* HEADER */}
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold">Nouvelle Facture</h2>
+          <button onClick={onClose}>
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* CHAMPS DE BASE */}
+        <input
+          type="text"
+          name="patient"
+          placeholder="Nom du patient"
+          value={formData.patient}
+          onChange={onFormChange}
+          className="w-full border p-2 rounded-lg mb-3"
         />
-        <InvoiceForm
-          showModal={showModal}
-          onClose={closeModal}
-          formData={formData}
-          onFormChange={handleFormChange}
-          onAddInvoice={handleAddInvoice}
+
+        <input
+          type="text"
+          name="service"
+          placeholder="Service"
+          value={formData.service}
+          onChange={onFormChange}
+          className="w-full border p-2 rounded-lg mb-3"
         />
+
+        <input
+          type="number"
+          name="amount"
+          placeholder="Montant"
+          value={formData.amount}
+          onChange={onFormChange}
+          className="w-full border p-2 rounded-lg mb-3"
+        />
+
+        <input
+          type="date"
+          name="date"
+          value={formData.date}
+          onChange={onFormChange}
+          className="w-full border p-2 rounded-lg mb-3"
+        />
+
+        {/* TYPE PATIENT */}
+        <select
+          name="patientType"
+          value={formData.patientType}
+          onChange={onFormChange}
+          className="w-full border p-2 rounded-lg mb-3"
+        >
+          <option value="">Type de patient</option>
+          <option value="insured">Patient assuré</option>
+          <option value="non-insured">Patient non assuré</option>
+        </select>
+
+        {/* PATIENT ASSURÉ */}
+        {formData.patientType === 'insured' && (
+          <div className="space-y-3 mb-3">
+            <input
+              type="text"
+              name="insuranceProvider"
+              placeholder="Nom de l'assurance"
+              value={formData.insuranceProvider}
+              onChange={onFormChange}
+              className="w-full border p-2 rounded-lg"
+            />
+
+            <div className="p-3 bg-green-50 text-green-700 rounded-lg">
+              ✅ Facture prise en charge par l’assurance
+            </div>
+          </div>
+        )}
+
+        {/* PATIENT NON ASSURÉ */}
+        {formData.patientType === 'non-insured' && (
+          <div className="space-y-3 mb-3">
+
+            <select
+              name="paymentMethod"
+              value={formData.paymentMethod}
+              onChange={onFormChange}
+              className="w-full border p-2 rounded-lg"
+            >
+              <option value="">Mode de paiement</option>
+              <option value="banque">Banque</option>
+              <option value="orange-money">Orange Money</option>
+            </select>
+
+            {/* BANQUE */}
+            {formData.paymentMethod === 'banque' && (
+              <>
+                <input
+                  name="bankName"
+                  placeholder="Nom de la banque"
+                  value={formData.bankName}
+                  onChange={onFormChange}
+                  className="w-full border p-2 rounded-lg"
+                />
+                <input
+                  name="bankAccountNumber"
+                  placeholder="Numéro de compte"
+                  value={formData.bankAccountNumber}
+                  onChange={onFormChange}
+                  className="w-full border p-2 rounded-lg"
+                />
+                <input
+                  name="bankRIB"
+                  placeholder="RIB"
+                  value={formData.bankRIB}
+                  onChange={onFormChange}
+                  className="w-full border p-2 rounded-lg"
+                />
+              </>
+            )}
+
+            {/* ORANGE MONEY */}
+            {formData.paymentMethod === 'orange-money' && (
+              <>
+                <input
+                  name="orangeNumber"
+                  placeholder="Numéro Orange Money"
+                  value={formData.orangeNumber}
+                  onChange={onFormChange}
+                  className="w-full border p-2 rounded-lg"
+                />
+                <input
+                  name="orangeName"
+                  placeholder="Nom du titulaire"
+                  value={formData.orangeName}
+                  onChange={onFormChange}
+                  className="w-full border p-2 rounded-lg"
+                />
+                <input
+                  name="orangeTransactionId"
+                  placeholder="ID transaction"
+                  value={formData.orangeTransactionId}
+                  onChange={onFormChange}
+                  className="w-full border p-2 rounded-lg"
+                />
+              </>
+            )}
+
+          </div>
+        )}
+
+        {/* BOUTONS */}
+        <div className="flex justify-end gap-3 mt-6">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 border rounded-lg"
+          >
+            Annuler
+          </button>
+
+          <button
+            onClick={onAddInvoice}
+            className="px-4 py-2 bg-teal-600 text-white rounded-lg"
+          >
+            Enregistrer
+          </button>
+        </div>
+
       </div>
-    </Layout>
+    </div>
   )
 }

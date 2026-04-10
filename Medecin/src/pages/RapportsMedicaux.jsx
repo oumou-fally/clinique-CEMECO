@@ -12,7 +12,7 @@ export default function MedicalReports() {
   const [reports, setReports] = useState([
     {
       id: 1,
-      patient: 'Jean Dupont',
+      patient: 'Baldé Oumou Fally',
       title: 'Suivi Cardiovasculaire',
       date: '2026-04-01',
       type: 'Consultation',
@@ -24,7 +24,7 @@ export default function MedicalReports() {
     },
     {
       id: 2,
-      patient: 'Fatoumata Diallo',
+      patient: 'Camara Aissatou',
       title: 'Bilan Biologique',
       date: '2026-04-04',
       type: 'Analyse',
@@ -228,8 +228,8 @@ export default function MedicalReports() {
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4 py-6">
-          <div className="w-full max-w-4xl overflow-hidden rounded-3xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-5">
+          <div className="w-full max-w-3xl rounded-3xl bg-white shadow-2xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-5 shrink-0">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">{editingReport ? 'Modifier le rapport médical' : 'Nouveau rapport médical'}</h2>
                 <p className="text-gray-600 mt-1">Remplissez les détails du rapport puis enregistrez.</p>
@@ -238,97 +238,99 @@ export default function MedicalReports() {
                 <X className="w-6 h-6" />
               </button>
             </div>
-            <div className="grid gap-4 px-6 py-6 md:grid-cols-2">
-              <label className="block">
-                <span className="text-sm font-medium text-gray-700">Patient</span>
-                <input
-                  name="patient"
-                  value={formData.patient}
-                  onChange={handleInputChange}
-                  className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Nom du patient"
-                />
-              </label>
-              <label className="block">
-                <span className="text-sm font-medium text-gray-700">Titre</span>
-                <input
-                  name="title"
-                  value={formData.title}
-                  onChange={handleInputChange}
-                  className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Titre du rapport"
-                />
-              </label>
-              <label className="block">
-                <span className="text-sm font-medium text-gray-700">Type</span>
-                <select
-                  name="type"
-                  value={formData.type}
-                  onChange={handleInputChange}
-                  className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option>Consultation</option>
-                  <option>Analyse</option>
-                  <option>Bilan</option>
-                  <option>Urgence</option>
-                </select>
-              </label>
-              <label className="block">
-                <span className="text-sm font-medium text-gray-700">Statut</span>
-                <select
-                  name="status"
-                  value={formData.status}
-                  onChange={handleInputChange}
-                  className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option>En cours</option>
-                  <option>Complété</option>
-                  <option>Brouillon</option>
-                  <option>Annulé</option>
-                </select>
-              </label>
-              <label className="block md:col-span-2">
-                <span className="text-sm font-medium text-gray-700">Diagnostic</span>
-                <textarea
-                  name="diagnosis"
-                  value={formData.diagnosis}
-                  onChange={handleInputChange}
-                  className="mt-2 w-full min-h-[120px] rounded-2xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Résumé du diagnostic"
-                />
-              </label>
-              <label className="block md:col-span-2">
-                <span className="text-sm font-medium text-gray-700">Traitement</span>
-                <textarea
-                  name="treatment"
-                  value={formData.treatment}
-                  onChange={handleInputChange}
-                  className="mt-2 w-full min-h-[120px] rounded-2xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Plan de traitement"
-                />
-              </label>
-              <label className="block md:col-span-2">
-                <span className="text-sm font-medium text-gray-700">Notes</span>
-                <textarea
-                  name="notes"
-                  value={formData.notes}
-                  onChange={handleInputChange}
-                  className="mt-2 w-full min-h-[120px] rounded-2xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Notes complémentaires"
-                />
-              </label>
-              <label className="block md:col-span-2">
-                <span className="text-sm font-medium text-gray-700">Suivi prévu</span>
-                <input
-                  type="date"
-                  name="nextFollow"
-                  value={formData.nextFollow}
-                  onChange={handleInputChange}
-                  className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </label>
+            <div className="flex-1 overflow-y-auto px-6 py-6">
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="block">
+                  <span className="text-sm font-medium text-gray-700">Patient</span>
+                  <input
+                    name="patient"
+                    value={formData.patient}
+                    onChange={handleInputChange}
+                    className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Nom du patient"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-sm font-medium text-gray-700">Titre</span>
+                  <input
+                    name="title"
+                    value={formData.title}
+                    onChange={handleInputChange}
+                    className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Titre du rapport"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-sm font-medium text-gray-700">Type</span>
+                  <select
+                    name="type"
+                    value={formData.type}
+                    onChange={handleInputChange}
+                    className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option>Consultation</option>
+                    <option>Analyse</option>
+                    <option>Bilan</option>
+                    <option>Urgence</option>
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="text-sm font-medium text-gray-700">Statut</span>
+                  <select
+                    name="status"
+                    value={formData.status}
+                    onChange={handleInputChange}
+                    className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option>En cours</option>
+                    <option>Complété</option>
+                    <option>Brouillon</option>
+                    <option>Annulé</option>
+                  </select>
+                </label>
+                <label className="block md:col-span-2">
+                  <span className="text-sm font-medium text-gray-700">Diagnostic</span>
+                  <textarea
+                    name="diagnosis"
+                    value={formData.diagnosis}
+                    onChange={handleInputChange}
+                    className="mt-2 w-full min-h-24 rounded-2xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Résumé du diagnostic"
+                  />
+                </label>
+                <label className="block md:col-span-2">
+                  <span className="text-sm font-medium text-gray-700">Traitement</span>
+                  <textarea
+                    name="treatment"
+                    value={formData.treatment}
+                    onChange={handleInputChange}
+                    className="mt-2 w-full min-h-24 rounded-2xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Plan de traitement"
+                  />
+                </label>
+                <label className="block md:col-span-2">
+                  <span className="text-sm font-medium text-gray-700">Notes</span>
+                  <textarea
+                    name="notes"
+                    value={formData.notes}
+                    onChange={handleInputChange}
+                    className="mt-2 w-full min-h-24 rounded-2xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Notes complémentaires"
+                  />
+                </label>
+                <label className="block md:col-span-2">
+                  <span className="text-sm font-medium text-gray-700">Suivi prévu</span>
+                  <input
+                    type="date"
+                    name="nextFollow"
+                    value={formData.nextFollow}
+                    onChange={handleInputChange}
+                    className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </label>
+              </div>
             </div>
-            <div className="flex flex-col gap-3 border-t border-gray-200 px-6 py-5 sm:flex-row sm:justify-end">
+            <div className="flex flex-col gap-3 border-t border-gray-200 px-6 py-5 shrink-0 sm:flex-row sm:justify-end">
               <button
                 onClick={() => handleSaveReport(true)}
                 className="w-full rounded-2xl border border-gray-300 px-6 py-3 text-gray-700 hover:bg-gray-100 transition sm:w-auto"

@@ -14,15 +14,15 @@ export default function PanneauAdministration() {
 
   // Données partagées entre les composants
   const [membresPersonnel, setMembresPersonnel] = useState([
-    { id: 1, nom: 'Dr. Sophie Martin', role: 'Médecin', statut: 'active', specialite: 'Cardiologie' },
-    { id: 2, nom: 'Dr. Jean Dupont', role: 'Médecin', statut: 'active', specialite: 'Pneumologie' },
+    { id: 1, nom: 'Professeur Elhadj Yaya Baldé', role: 'Médecin', statut: 'active', specialite: 'Cardiologie' },
+    { id: 2, nom: 'Docteur Mamadou Bassirou Bah', role: 'Médecin', statut: 'active', specialite: 'Cardiologie' },
     { id: 3, nom: 'Infirmière Anne Dubois', role: 'Infirmière', statut: 'active', specialite: 'Soins Généraux' }
   ]);
 
   const [journalActivites, setJournalActivites] = useState([
-    { id: 1, date: '2024-03-28', activite: 'Rendez-vous confirmé', utilisateur: 'Dr. Sophie Martin', statut: 'completed' },
+    { id: 1, date: '2024-03-28', activite: 'Rendez-vous confirmé', utilisateur: 'Professeur Elhadj Yaya Baldé', statut: 'completed' },
     { id: 2, date: '2024-03-28', activite: 'Nouveau patient enregistré', utilisateur: 'Réception', statut: 'completed' },
-    { id: 3, date: '2024-03-28', activite: 'Dossier médical mis à jour', utilisateur: 'Dr. Jean Dupont', statut: 'in-progress' }
+    { id: 3, date: '2024-03-28', activite: 'Dossier médical mis à jour', utilisateur: 'Docteur Mamadou Bassirou Bah', statut: 'in-progress' }
   ]);
 
   return (

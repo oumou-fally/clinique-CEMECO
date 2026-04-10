@@ -20,12 +20,12 @@ export default function MesRendezVous() {
   const upcomingAppointments = [
     {
       id: 1,
-      doctor: 'Dr. Sophie Martin',
-      specialty: 'Médecin Généraliste',
+      doctor: 'Professeur Elhadj Yaya Baldé',
+      specialty: 'Cardiologie',
       date: '2024-04-15',
       time: '14:30',
-      location: 'Clinique Santé Plus - Bureau 301',
-      type: 'Consultation Générale',
+      location: 'Clinique Santé Plus - Bureau 101',
+      type: 'Consultation Cardiologique',
       status: 'Confirmé'
     }
   ]

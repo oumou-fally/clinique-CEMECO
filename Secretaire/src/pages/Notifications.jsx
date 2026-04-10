@@ -7,7 +7,7 @@ export default function Notifications() {
       id: 1,
       type: 'appointment',
       title: 'Rappel de consultation',
-      message: 'Votre rendez-vous avec Dr. Sophie Martin est demain à 14h30',
+      message: 'Votre rendez-vous avec Professeur Elhadj Yaya Baldé est demain à 14h30',
       time: 'Il y a 2 heures',
       read: false,
       icon: Calendar
@@ -34,7 +34,7 @@ export default function Notifications() {
       id: 4,
       type: 'info',
       title: 'Mise à jour disponible',
-      message: 'Un nouveau médecin spécialiste a rejoint notre clinique',
+      message: 'Un nouveau médecin spécialiste a rejoint notre clinique : Docteur Mamadou Diallo',
       time: 'Il y a 2 jours',
       read: true,
       icon: Info
@@ -43,7 +43,7 @@ export default function Notifications() {
       id: 5,
       type: 'appointment',
       title: 'RDV confirmé',
-      message: 'Dr. Jean Rousseau a confirmé votre rendez-vous pour le 22/04/2024',
+      message: 'Docteur Thierno Siradjo Baldé a confirmé votre rendez-vous pour le 22/04/2024',
       time: 'Il y a 3 jours',
       read: true,
       icon: Calendar
@@ -96,23 +96,6 @@ export default function Notifications() {
         <p className="text-gray-600 mt-2">Restez informé de vos consultations et résultats</p>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex gap-2 mb-6 flex-wrap">
-        <button className="px-4 py-2 bg-teal-600 text-white rounded-full text-sm font-medium">
-          Tous
-        </button>
-        <button className="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-full text-sm font-medium transition">
-          Non lus
-        </button>
-        <button className="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-full text-sm font-medium transition">
-          Rendez-vous
-        </button>
-        <button className="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-full text-sm font-medium transition">
-          Résultats
-        </button>
-      </div>
-
-      {/* Notifications List */}
       <div className="space-y-4">
         {allNotifications.map((notification) => {
           const Icon = notification.icon
@@ -133,6 +116,7 @@ export default function Notifications() {
                   }`}>
                     <Icon className={`w-6 h-6 ${getIconColor(notification.type)}`} />
                   </div>
+
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="font-bold text-gray-900">{notification.title}</h3>
@@ -140,39 +124,21 @@ export default function Notifications() {
                         <span className="w-2 h-2 bg-teal-600 rounded-full"></span>
                       )}
                     </div>
+
                     <p className="text-gray-700 mb-2">{notification.message}</p>
                     <p className="text-sm text-gray-500">{notification.time}</p>
                   </div>
                 </div>
+
                 <button className="flex-shrink-0 p-2 hover:bg-gray-200 rounded-lg transition ml-4">
                   <X className="w-5 h-5 text-gray-400" />
                 </button>
               </div>
-
-              {notification.type === 'result' && (
-                <div className="mt-4 ml-16">
-                  <button className="text-teal-600 hover:text-teal-700 font-semibold text-sm">
-                    Voir les résultats →
-                  </button>
-                </div>
-              )}
-
-              {notification.type === 'appointment' && (
-                <div className="mt-4 ml-16 flex gap-2">
-                  <button className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-medium transition">
-                    Confirmer
-                  </button>
-                  <button className="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-100 rounded-lg text-sm font-medium transition">
-                    Modifier
-                  </button>
-                </div>
-              )}
             </div>
           )
         })}
       </div>
 
-      {/* Empty State */}
       <div className="mt-12 text-center py-8">
         <p className="text-gray-500 mb-4">Vous êtes à jour avec vos notifications</p>
         <button className="px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium transition">

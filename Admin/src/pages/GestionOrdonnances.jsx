@@ -9,7 +9,7 @@ export default function GestionOrdonnances() {
   const [ordonnances, setOrdonnances] = useState([
     {
       id: 1,
-      patientNom: 'Oumou Baldé',
+      patientNom: 'Aminata Diallo',
       patientID: 'P001',
       date: '2026-03-28',
       medicament: 'Amoxicilline 500mg',
@@ -20,18 +20,18 @@ export default function GestionOrdonnances() {
     },
     {
       id: 2,
-      patientNom: 'Yaya Barry',
+      patientNom: 'Fatoumata Bah',
       patientID: 'P002',
       date: '2026-03-27',
       medicament: 'Métoprolol 50mg',
       dosage: '1 comprimé matin et soir',
       duree: 'Continu',
-      medecin: 'Dr. Aminata Cissé',
+      medecin: 'Dr. Thierno Boubacar Barry',
       statut: 'Active'
     },
     {
       id: 3,
-      patientNom: 'Kenda Bah',
+      patientNom: 'Mariama Traoré',
       patientID: 'P003',
       date: '2026-03-26',
       medicament: 'Ibuprofène 400mg',
@@ -42,18 +42,18 @@ export default function GestionOrdonnances() {
     },
     {
       id: 4,
-      patientNom: 'Kadiatou Diakité',
+      patientNom: 'Mmady Sacko',
       patientID: 'P004',
       date: '2026-03-25',
       medicament: 'Atorvastatine 20mg',
       dosage: '1 comprimé le soir',
       duree: 'Continu',
-      medecin: 'Dr. Aminata Cissé',
+      medecin: 'Dr. Thierno Siradjo Baldé',
       statut: 'Active'
     },
     {
       id: 5,
-      patientNom: 'Michel Blanc',
+      patientNom: 'Sekou Cisse',
       patientID: 'P005',
       date: '2026-03-24',
       medicament: 'Salbutamol',

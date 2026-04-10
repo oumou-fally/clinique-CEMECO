@@ -55,9 +55,12 @@ export default function Connexion() {
                 <Activity className="w-10 h-10 text-teal-600" />
               </div>
             </div>
-            <h1 className="text-4xl font-bold text-white text-center">MedCare</h1>
-            <p className="text-teal-100 text-center mt-3 text-sm font-medium">
-              Plateforme de Gestion Médicale
+            <h1 className="text-4xl font-bold text-white text-center">CEMECO</h1>
+            <p className="text-teal-100 text-center mt-2 text-sm font-medium">
+              Cabinet de Cardiologie
+            </p>
+            <p className="text-teal-100 text-center mt-1 text-xs font-light">
+              Kipé, près de Heroes Coffee - En face de Plaza Diamond
             </p>
           </div>
 
@@ -131,20 +134,7 @@ export default function Connexion() {
               {loading ? 'Connexion en cours...' : 'Se connecter'}
             </button>
 
-            {/* Informations de démonstration */}
-            <div className="border-t border-gray-200 pt-4 space-y-2">
-              <p className="text-xs text-gray-600 text-center font-semibold mb-2">
-                Identifiants de démonstration:
-              </p>
-              <p className="text-xs text-center">
-                <span className="text-gray-600">Email:</span>{' '}
-                <span className="font-mono text-teal-600">patient@clinic.com</span>
-              </p>
-              <p className="text-xs text-center">
-                <span className="text-gray-600">Mot de passe:</span>{' '}
-                <span className="font-mono text-teal-600">patient123</span>
-              </p>
-            </div>
+
 
             {/* Lien vers inscription */}
             <div className="text-center pt-2 border-t border-gray-200">

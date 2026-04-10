@@ -19,9 +19,9 @@ export default function MesRendezVous() {
   const upcomingAppointments = [
     {
       id: 1,
-      doctor: 'Professeur Elhadji Yaya Baldé',
+      doctor: 'Professeur Elhadj Yaya Baldé',
       specialty: 'Cardiologue',
-      date: '2024-04-15',
+      date: '2026-04-15',
       time: '14:30',
       location: 'Cabinet de Cardiologie - Bureau 101',
       type: 'Consultation Cardiaque',
@@ -33,9 +33,9 @@ export default function MesRendezVous() {
   const pastAppointments = [
     {
       id: 1,
-      doctor: 'Professeur Elhadji Yaya Baldé',
+      doctor: 'Professeur Elhadj Yaya Baldé',
       specialty: 'Cardiologue',
-      date: '2024-03-15',
+      date: '2026-03-15',
       time: '14:30',
       location: 'Cabinet de Cardiologie - Bureau 101',
       type: 'Consultation Cardiaque',
@@ -47,11 +47,11 @@ export default function MesRendezVous() {
   const cancelledAppointments = [
     {
       id: 1,
-      doctor: 'Dr. Thierno Siradjo Baldé',
+      doctor: 'Docteur Mamadou Diallo',
       specialty: 'Cardiologue',
-      date: '2024-02-20',
+      date: '2026-02-20',
       time: '09:00',
-      location: 'Cabinet de Cardiologie - Bureau 105',
+      location: 'CEMECO Cabinet de Cardiologie - Kipé',
       type: 'Électrocardiogramme',
       status: 'Annulé',
       reason: 'Annulé par le patient'
@@ -67,7 +67,7 @@ export default function MesRendezVous() {
       specialty: 'Consultation',
       date: formData.date,
       time: formData.time,
-      location: 'Clinique Santé Plus - Bureau 301',
+      location: 'CEMECO Cabinet de Cardiologie - Kipé',
       type: formData.reason,
       status: 'En attente',
       consultationType: formData.consultationType,

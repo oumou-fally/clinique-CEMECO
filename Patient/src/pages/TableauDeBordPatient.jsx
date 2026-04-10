@@ -26,20 +26,20 @@ export default function TableauDeBordPatient() {
   const upcomingAppointments = [
     {
       id: 1,
-      doctor: 'Professeur Elhadji Yaya Baldé',
+      doctor: 'Professeur Elhadj Yaya Baldé',
       specialty: 'Cardiologue',
-      date: '2024-04-15',
+      date: '2026-04-15',
       time: '14:30',
-      location: 'Cabinet de Cardiologie - Bureau 101',
+      location: 'CEMECO Cabinet de Cardiologie - Kipé',
       type: 'Consultation Cardiaque'
     },
     {
       id: 2,
-      doctor: 'Dr. Mamadou Bassirou',
+      doctor: 'Docteur Mamadou Bassirou Bah',
       specialty: 'Cardiologue',
-      date: '2024-04-22',
+      date: '2026-04-22',
       time: '10:00',
-      location: 'Cabinet de Cardiologie - Bureau 102',
+      location: 'CEMECO Cabinet de Cardiologie - Kipé',
       type: 'Suivi Tensionnel'
     }
   ]

@@ -1,422 +1,309 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import {
   Users,
-  Plus,
-  Edit,
-  Trash2,
-  User,
-  Briefcase,
   Phone,
   Mail,
   MapPin,
-  Award,
   Clock,
-  X
+  Award,
+  Star,
+  Calendar,
+  User
 } from 'lucide-react'
 import Layout from '../layouts/Layout'
+import { DOCTORS, CLINIC_INFO } from '../data/clinicData'
 
-export default function DoctorManagement() {
-  const [showModal, setShowModal] = useState(false)
-  
-  // Formulaire nouveau médecin
-  const [formData, setFormData] = useState({
-    name: '',
-    specialty: 'Cardiologue',
-    phone: '',
-    email: '',
-    location: '',
-    experience: '',
-    patients: ''
-  })
+const JOURS_SEMAINE = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
 
-  const [doctors, setDoctors] = useState([
-    {
-      id: 1,
-      name: 'Professeur Elhadj Yaya Baldé',
-      specialty: 'Cardiologue',
-      phone: '01 45 67 89 00',
-      email: 'elhadj.yaya@clinic.com',
-      location: 'Bureau 301',
-      experience: '18 ans',
-      patients: 52,
-      rating: 4.9,
-      status: 'active'
-    },
-    {
-      id: 2,
-      name: 'Docteur Mamadou Bassirou Bah',
-      specialty: 'Cardiologue',
-      phone: '01 45 67 89 01',
-      email: 'mamadou.bah@clinic.com',
-      location: 'Bureau 105',
-      experience: '12 ans',
-      patients: 42,
-      rating: 4.8,
-      status: 'active'
-    },
-    {
-      id: 3,
-      name: 'Docteur Mamadou Diallo',
-      specialty: 'Cardiologue',
-      phone: '01 45 67 89 02',
-      email: 'mamadou.diallo@clinic.com',
-      location: 'Bureau 202',
-      experience: '5 ans',
-      patients: 28,
-      rating: 4.6,
-      status: 'active'
-    },
-    {
-      id: 4,
-      name: 'Docteur Thierno Siradjo Baldé',
-      specialty: 'Cardiologue',
-      phone: '01 45 67 89 03',
-      email: 'thierno.siradjo@clinic.com',
-      location: 'Bureau 401',
-      experience: '7 ans',
-      patients: 35,
-      rating: 4.7,
-      status: 'active'
-    },
-    {
-      id: 5,
-      name: 'Docteur Thierno Boubacar Barry',
-      specialty: 'Cardiologue',
-      phone: '01 45 67 89 04',
-      email: 'thierno.barry@clinic.com',
-      location: 'Bureau 501',
-      experience: '10 ans',
-      patients: 42,
-      rating: 4.8,
-      status: 'active'
-    }
-  ])
+const COULEURS_MEDECINS = [
+  'from-purple-500 to-pink-500',
+  'from-blue-500 to-cyan-500',
+  'from-emerald-500 to-teal-500',
+  'from-orange-500 to-red-500',
+  'from-indigo-500 to-purple-500'
+]
 
-  const [selectedDoctor, setSelectedDoctor] = useState(null)
-  const [patients, setPatients] = useState([
-    { id: 1, name: 'Jean Dupont', age: 45, phone: '06 12 34 56 78' },
-    { id: 2, name: 'Marie Lefevre', age: 32, phone: '06 23 45 67 89' },
-    { id: 3, name: 'Pierre Martin', age: 58, phone: '06 34 56 78 90' },
-    { id: 4, name: 'Anne Durand', age: 28, phone: '06 45 67 89 01' },
-    {
-      id: 5,
-      name: 'Luc Bernard',
-      age: 72,
-      phone: '06 56 78 90 12'
-    }
-  ])
+export default function RenseignementMedecin() {
+  const [medecinSelectionne, setMedecinSelectionne] = useState(null)
 
-  const handleFormChange = (e) => {
-    const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
-  }
-
-  const handleAddDoctor = () => {
-    if (formData.name && formData.phone && formData.email && formData.location && formData.experience) {
-      const newDoctor = {
-        id: doctors.length + 1,
-        name: formData.name,
-        specialty: formData.specialty,
-        phone: formData.phone,
-        email: formData.email,
-        location: formData.location,
-        experience: formData.experience,
-        patients: parseInt(formData.patients) || 0,
-        rating: 4.5,
-        status: 'active'
+  const medecinsAvecHoraires = useMemo(() => {
+    console.log('DOCTORS:', DOCTORS)
+    return DOCTORS.map((medecin, index) => ({
+      ...medecin,
+      couleur: COULEURS_MEDECINS[index % COULEURS_MEDECINS.length],
+      horaires: medecin.id === 1 ? {
+        // Prof. Elhadj Yaya Baldé
+        'Lundi': '12:00 - 17:00',
+        'Mardi': '12:00 - 17:00',
+        'Mercredi': '12:00 - 17:00',
+        'Jeudi': '12:00 - 17:00',
+        'Vendredi': '12:00 - 17:00',
+        'Samedi': '08:00 - 17:00'
+      } : {
+        // Autres médecins
+        'Lundi': '08:00 - 17:00',
+        'Mardi': '08:00 - 17:00',
+        'Mercredi': '08:00 - 17:00',
+        'Jeudi': '08:00 - 17:00',
+        'Vendredi': '08:00 - 17:00',
+        'Samedi': '08:00 - 17:00'
       }
-      setDoctors([...doctors, newDoctor])
-      setFormData({ name: '', specialty: 'Cardiologue', phone: '', email: '', location: '', experience: '', patients: '' })
-      setShowModal(false)
-    }
+    }))
+  }, [])
+
+  const ouvrirProfilMedecin = (medecin) => {
+    setMedecinSelectionne(medecin)
   }
 
-  const closeModal = () => {
-    setShowModal(false)
-    setFormData({ name: '', specialty: 'Cardiologue', phone: '', email: '', location: '', experience: '', patients: '' })
+  const fermerProfilMedecin = () => {
+    setMedecinSelectionne(null)
   }
 
   return (
     <Layout>
-      <div className="p-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+      <div className="p-8 bg-linear-to-br from-indigo-50 via-purple-50 to-pink-50 min-h-screen space-y-8">
+        <div className="flex flex-col gap-4 md:items-start md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Gestion des Médecins</h1>
-            <p className="text-gray-600 mt-2">Gérez les médecins et attribuez-leur des patients</p>
+            <h1 className="text-4xl font-bold bg-linear-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+              Médecins de la Clinique
+            </h1>
+            <p className="text-slate-600 mt-2">Découvrez notre équipe de cardiologues et leurs horaires de consultation</p>
           </div>
-          <button 
-            onClick={() => setShowModal(true)}
-            className="bg-linear-to-r from-teal-600 to-green-600 text-white font-semibold py-3 px-6 rounded-lg hover:shadow-lg transition flex items-center gap-2">
-            <Plus className="w-5 h-5" />
-            Ajouter un Médecin
-          </button>
+          <div className="rounded-2xl bg-linear-to-r from-emerald-50 to-teal-50 p-4 border border-emerald-200">
+            <p className="text-sm text-emerald-900 font-medium">
+              <strong>🏥 CEMECO - Excellence en Cardiologie</strong>
+            </p>
+            <p className="text-sm text-emerald-700 mt-1">
+              {CLINIC_INFO.hours} • {CLINIC_INFO.location}
+            </p>
+          </div>
         </div>
 
-        {/* Doctors Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {doctors.map((doctor) => (
-            <div
-              key={doctor.id}
-              className={`rounded-xl shadow-md overflow-hidden transition cursor-pointer ${
-                selectedDoctor?.id === doctor.id ? 'ring-2 ring-teal-600' : ''
-              } ${doctor.status === 'active' ? 'bg-white' : 'bg-gray-50'}`}
-              onClick={() => setSelectedDoctor(doctor)}
-            >
-              <div className="p-4">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="bg-linear-to-br from-teal-500 to-green-500 w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg">
-                    {doctor.name[4]}
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 xl:grid-cols-3">
+          {medecinsAvecHoraires.map((medecin, index) => (
+            <div key={medecin.id} className="group">
+              <div className="rounded-3xl bg-white shadow-xl border border-slate-200 overflow-hidden hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer" onClick={() => ouvrirProfilMedecin(medecin)}>
+                <div className={`bg-linear-to-r ${medecin.couleur} p-6 text-white relative overflow-hidden`}>
+                  <div className="absolute inset-0 bg-black/10"></div>
+                  <div className="relative z-10">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Award className="w-5 h-5" />
+                          <span className="text-sm font-medium opacity-90">Cardiologue</span>
+                        </div>
+                        <h2 className="text-2xl font-bold mb-1">{medecin.name}</h2>
+                        <p className="opacity-90 text-sm">Cardiologue</p>
+                      </div>
+                      <div className="text-4xl opacity-80">
+                        {medecin.id === 1 ? '👨‍⚕️' : '👩‍⚕️'}
+                      </div>
+                    </div>
                   </div>
-                  <span
-                    className={`px-2 py-1 rounded text-xs font-semibold ${
-                      doctor.status === 'active'
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-gray-300 text-gray-700'
-                    }`}
+                  <div className="absolute -bottom-2 -right-2 w-20 h-20 bg-white/10 rounded-full"></div>
+                </div>
+
+                <div className="p-6 space-y-4">
+                  <div className="flex flex-col gap-3">
+                    {medecin.phone && (
+                      <div className="flex items-center gap-3 text-slate-700">
+                        <Phone className="w-5 h-5 text-indigo-600" />
+                        <a href={`tel:${medecin.phone}`} className="hover:text-indigo-600 transition font-medium">
+                          {medecin.phone}
+                        </a>
+                      </div>
+                    )}
+                    {medecin.email && (
+                      <div className="flex items-center gap-3 text-slate-700">
+                        <Mail className="w-5 h-5 text-indigo-600" />
+                        <a href={`mailto:${medecin.email}`} className="hover:text-indigo-600 transition font-medium truncate">
+                          {medecin.email}
+                        </a>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-3 text-slate-700">
+                      <MapPin className="w-5 h-5 text-indigo-600" />
+                      <span className="font-medium">Cabinet {medecin.name.split(' ').pop()}</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-slate-200">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Clock className="w-5 h-5 text-indigo-600" />
+                      <span className="font-semibold text-slate-900">Disponibilités</span>
+                    </div>
+                    <div className="space-y-2">
+                      {medecin.id === 1 ? (
+                        <div className="text-sm space-y-1">
+                          <div className="flex justify-between">
+                            <span className="text-slate-600">Lun-Ven:</span>
+                            <span className="font-semibold text-emerald-600">12h-17h</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-600">Samedi:</span>
+                            <span className="font-semibold text-emerald-600">8h-17h</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-slate-600">Lun-Sam:</span>
+                            <span className="font-semibold text-emerald-600">8h-17h</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      // attribuerRendezVous(medecin)
+                    }}
+                    className="w-full rounded-xl bg-linear-to-r from-emerald-500 to-teal-500 px-4 py-3 text-white font-semibold hover:from-emerald-600 hover:to-teal-600 transition shadow-md"
                   >
-                    {doctor.status === 'active' ? 'Actif' : 'Inactif'}
-                  </span>
+                    <Calendar className="w-5 h-5 inline mr-2" />
+                    Attribuer un rendez-vous
+                  </button>
                 </div>
-
-                <h3 className="font-bold text-gray-900 text-sm">{doctor.name}</h3>
-                <p className="text-xs text-gray-600 mb-3">{doctor.specialty}</p>
-
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4 text-gray-500" />
-                    <span className="text-xs text-gray-700">{doctor.patients} patients</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Award className="w-4 h-4 text-gray-500" />
-                    <span className="text-xs text-gray-700">{doctor.rating}/5 étoiles</span>
-                  </div>
-                </div>
-
-                <button className="w-full text-teal-600 hover:text-teal-700 font-semibold text-xs py-2 border-t">
-                  Voir détails
-                </button>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Doctor Details and Patient Assignment */}
-        {selectedDoctor && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Doctor Details */}
-            <div className="lg:col-span-2 bg-white rounded-xl shadow-md p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Informations du Médecin</h2>
-
-              <div className="space-y-6">
-                {/* Basic Info */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Données Personnelles</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-gray-600 text-sm mb-1">Nom</p>
-                      <p className="font-semibold text-gray-900">{selectedDoctor.name}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600 text-sm mb-1">Spécialité</p>
-                      <p className="font-semibold text-gray-900">{selectedDoctor.specialty}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600 text-sm mb-1">Expérience</p>
-                      <p className="font-semibold text-gray-900">{selectedDoctor.experience}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-600 text-sm mb-1">Bureau</p>
-                      <p className="font-semibold text-gray-900">{selectedDoctor.location}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Contact Info */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Contact</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <Phone className="w-5 h-5 text-teal-600" />
-                      <span className="text-gray-700">{selectedDoctor.phone}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Mail className="w-5 h-5 text-teal-600" />
-                      <span className="text-gray-700">{selectedDoctor.email}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <MapPin className="w-5 h-5 text-teal-600" />
-                      <span className="text-gray-700">Salle: {selectedDoctor.location}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Stats */}
-                <div className="grid grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
-                  <div className="text-center">
-                    <p className="text-3xl font-bold text-teal-600">{selectedDoctor.patients}</p>
-                    <p className="text-xs text-gray-600 mt-1">Patients</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-3xl font-bold text-green-600">{selectedDoctor.rating}</p>
-                    <p className="text-xs text-gray-600 mt-1">Note</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-3xl font-bold text-blue-600">{selectedDoctor.experience}</p>
-                    <p className="text-xs text-gray-600 mt-1">Expérience</p>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex gap-3 pt-4 border-t">
-                  <button className="flex-1 bg-teal-100 text-teal-700 font-semibold py-2 rounded-lg hover:bg-teal-200 transition flex items-center justify-center gap-2">
-                    <Edit className="w-5 h-5" />
-                    Modifier
-                  </button>
-                  <button className="flex-1 bg-red-100 text-red-700 font-semibold py-2 rounded-lg hover:bg-red-200 transition flex items-center justify-center gap-2">
-                    <Trash2 className="w-5 h-5" />
-                    Supprimer
-                  </button>
-                </div>
+        <div className="rounded-3xl bg-white p-8 shadow-xl border border-slate-200">
+          <h2 className="text-3xl font-bold bg-linear-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-6">
+            Informations importantes
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="flex gap-4 p-6 rounded-2xl bg-linear-to-r from-emerald-50 to-teal-50 border border-emerald-200">
+              <div className="text-3xl">🏥</div>
+              <div>
+                <p className="font-bold text-slate-900">Clinique ouverte</p>
+                <p className="text-slate-700 text-sm mt-1">Du lundi au samedi, de 8h00 à 17h00. Fermée le dimanche.</p>
               </div>
             </div>
 
-            {/* Patient Assignment */}
-            <div className="bg-white rounded-xl shadow-md p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Patients Actuels</h2>
+            <div className="flex gap-4 p-6 rounded-2xl bg-linear-to-r from-blue-50 to-indigo-50 border border-blue-200">
+              <div className="text-3xl">👨‍⚕️</div>
+              <div>
+                <p className="font-bold text-slate-900">Prof. Elhadj Yaya Baldé</p>
+                <p className="text-slate-700 text-sm mt-1">Lundi-vendredi: 12h00 à 17h00 • Samedi: 08h00 à 17h00</p>
+              </div>
+            </div>
 
-              <p className="text-sm text-gray-600 mb-4">
-                Total: <span className="font-semibold">{selectedDoctor.patients}</span>
-              </p>
+            <div className="flex gap-4 p-6 rounded-2xl bg-linear-to-r from-purple-50 to-pink-50 border border-purple-200">
+              <div className="text-3xl">👨‍⚕️👩‍⚕️</div>
+              <div>
+                <p className="font-bold text-slate-900">Autres cardiologues</p>
+                <p className="text-slate-700 text-sm mt-1">Lundi-samedi: 08h00 à 17h00</p>
+              </div>
+            </div>
+          </div>
+        </div>
 
-              <div className="space-y-2 mb-4 max-h-48 overflow-y-auto">
-                {patients.slice(0, 3).map((patient) => (
-                  <div key={patient.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-semibold text-gray-900 text-sm">{patient.name}</p>
-                      <p className="text-xs text-gray-600">{patient.age} ans</p>
+        {medecinSelectionne && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <div className={`bg-linear-to-r ${medecinSelectionne.couleur} p-8 text-white relative`}>
+                <div className="absolute inset-0 bg-black/20"></div>
+                <div className="relative z-10">
+                  <div className="flex items-start justify-between gap-6">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-4">
+                        <Award className="w-8 h-8" />
+                        <span className="text-lg font-medium">Cardiologue Spécialiste</span>
+                      </div>
+                      <h2 className="text-4xl font-bold mb-2">{medecinSelectionne.name}</h2>
+                      <p className="text-xl opacity-90">Cardiologue</p>
                     </div>
-                    <button className="text-red-600 hover:text-red-700">
-                      <Trash2 className="w-4 h-4" />
+                    <button onClick={fermerProfilMedecin} className="text-white/80 hover:text-white transition">
+                      <X className="w-8 h-8" />
                     </button>
                   </div>
-                ))}
+                </div>
               </div>
 
-              <button className="w-full border-2 border-dashed border-gray-300 py-3 rounded-lg text-gray-600 hover:border-gray-400 transition font-semibold">
-                + Ajouter un Patient
-              </button>
-            </div>
-          </div>
-        )}
+              <div className="p-8 space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-6">
+                    <h3 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
+                      <User className="w-6 h-6 text-indigo-600" />
+                      Informations de contact
+                    </h3>
+                    <div className="space-y-4">
+                      {medecinSelectionne.phone && (
+                        <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50">
+                          <Phone className="w-6 h-6 text-indigo-600" />
+                          <div>
+                            <p className="font-semibold text-slate-900">Téléphone</p>
+                            <a href={`tel:${medecinSelectionne.phone}`} className="text-indigo-600 hover:text-indigo-700 font-medium">
+                              {medecinSelectionne.phone}
+                            </a>
+                          </div>
+                        </div>
+                      )}
+                      {medecinSelectionne.email && (
+                        <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50">
+                          <Mail className="w-6 h-6 text-indigo-600" />
+                          <div>
+                            <p className="font-semibold text-slate-900">Email</p>
+                            <a href={`mailto:${medecinSelectionne.email}`} className="text-indigo-600 hover:text-indigo-700 font-medium">
+                              {medecinSelectionne.email}
+                            </a>
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50">
+                        <MapPin className="w-6 h-6 text-indigo-600" />
+                        <div>
+                          <p className="font-semibold text-slate-900">Cabinet</p>
+                          <p className="text-slate-700">Cabinet {medecinSelectionne.name.split(' ').pop()}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
-        {/* Unassigned Patients */}
-        {!selectedDoctor && (
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Patients Non Attribués</h2>
-            <p className="text-gray-600">Sélectionnez un médecin pour lui attribuer des patients</p>
-          </div>
-        )}
-
-        {/* Modal Ajouter Médecin */}
-        {showModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Nouveau Médecin</h2>
-                <button
-                  onClick={closeModal}
-                  className="p-1 hover:bg-gray-100 rounded-lg transition"
-                >
-                  <X className="w-6 h-6 text-gray-600" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Nom</label>
-                  <input
-                    type="text"
-                    name="name"
-                    placeholder="Dr. Nom Prénom"
-                    value={formData.name}
-                    onChange={handleFormChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none"
-                  />
+                  <div className="space-y-6">
+                    <h3 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
+                      <Clock className="w-6 h-6 text-purple-600" />
+                      Horaires de travail détaillés
+                    </h3>
+                    <div className="space-y-3">
+                      {JOURS_SEMAINE.map((jour) => (
+                        <div key={jour} className="flex items-center justify-between p-4 rounded-2xl bg-linear-to-r from-slate-50 to-slate-100">
+                          <span className="font-semibold text-slate-900 min-w-32">{jour}</span>
+                          <span className={`font-bold text-lg ${
+                            medecinSelectionne.horaires[jour] === 'Fermé' ? 'text-slate-500 line-through' : 'text-emerald-600'
+                          }`}>
+                            {medecinSelectionne.horaires[jour]}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Téléphone</label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    placeholder="01 45 67 89 00"
-                    value={formData.phone}
-                    onChange={handleFormChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none"
-                  />
-                </div>
+                {medecinSelectionne.id === 1 && (
+                  <div className="rounded-2xl bg-linear-to-r from-blue-50 to-indigo-50 p-6 border border-blue-200">
+                    <div className="flex items-center gap-3 mb-3">
+                      <Star className="w-6 h-6 text-blue-600" />
+                      <h4 className="text-xl font-bold text-blue-900">Note spéciale</h4>
+                    </div>
+                    <p className="text-blue-800">
+                      Le Professeur Elhadj Yaya Baldé suit un horaire particulier adapté à ses nombreuses responsabilités académiques et hospitalières.
+                      Il consulte du lundi au vendredi de 12h00 à 17h00 et le samedi de 08h00 à 17h00.
+                    </p>
+                  </div>
+                )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                  <input
-                    type="email"
-                    name="email"
-                    placeholder="doctor@clinic.com"
-                    value={formData.email}
-                    onChange={handleFormChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Bureau</label>
-                  <input
-                    type="text"
-                    name="location"
-                    placeholder="Bureau 301"
-                    value={formData.location}
-                    onChange={handleFormChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Expérience</label>
-                  <input
-                    type="text"
-                    name="experience"
-                    placeholder="10 ans"
-                    value={formData.experience}
-                    onChange={handleFormChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Nombre de patients</label>
-                  <input
-                    type="number"
-                    name="patients"
-                    placeholder="0"
-                    value={formData.patients}
-                    onChange={handleFormChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none"
-                  />
-                </div>
-
-                <div className="flex gap-3 pt-4">
-                  <button
-                    onClick={closeModal}
-                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-semibold transition"
-                  >
-                    Annuler
+                <div className="flex gap-4 pt-6 border-t border-slate-200">
+                  <button className="flex-1 rounded-2xl bg-linear-to-r from-emerald-500 to-teal-500 px-8 py-4 text-white font-bold text-lg hover:from-emerald-600 hover:to-teal-600 transition shadow-lg">
+                    <Calendar className="w-6 h-6 inline mr-2" />
+                    Attribuer un rendez-vous
                   </button>
-                  <button
-                    onClick={handleAddDoctor}
-                    className="flex-1 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 font-semibold transition"
-                  >
-                    Ajouter
+                  <button onClick={fermerProfilMedecin} className="rounded-2xl bg-slate-200 px-8 py-4 text-slate-700 font-bold text-lg hover:bg-slate-300 transition">
+                    Fermer
                   </button>
                 </div>
               </div>

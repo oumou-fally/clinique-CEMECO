@@ -58,7 +58,12 @@ export default function Sidebar() {
             <div className="bg-white p-2 rounded-lg">
               <Users className="w-6 h-6 text-blue-600" />
             </div>
-            {isOpen && <span className="font-bold text-lg whitespace-nowrap">MedCare</span>}
+            {isOpen && (
+              <div>
+                <span className="font-bold text-lg whitespace-nowrap">CEMECO</span>
+                <p className="text-xs text-white text-opacity-70 whitespace-normal">Cardiologie</p>
+              </div>
+            )}
           </div>
         </div>
 

@@ -1,8 +1,18 @@
 import Layout from '../layouts/Layout'
 import { Bell, X, Calendar, AlertCircle, CheckCircle, Info } from 'lucide-react'
+import { CLINIC_INFO } from '../data/clinicData'
 
 export default function Notifications() {
   const allNotifications = [
+    {
+      id: 0,
+      type: 'info',
+      title: 'Horaires de la clinique CEMECO',
+      message: `${CLINIC_INFO.fullName} - Lundi à Samedi: ${CLINIC_INFO.hours.weekday}, ${CLINIC_INFO.hours.weekend}`,
+      time: 'Info permanente',
+      read: true,
+      icon: Info
+    },
     {
       id: 1,
       type: 'appointment',

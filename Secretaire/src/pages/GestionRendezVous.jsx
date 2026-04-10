@@ -1,556 +1,391 @@
-import { useState } from 'react'
-import { Calendar, Clock, User, Phone, Edit, Trash2, CheckCircle, XCircle, Pause, X, AlertCircle } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { CheckCircle, Plus, Trash2, XCircle, ArrowRightCircle, Clock, MapPin } from 'lucide-react'
 import Layout from '../layouts/Layout'
+import { DOCTORS, getDoctorById, getAvailableDoctors, getTimeSlots } from '../data/clinicData'
 
-// Fonction principale renommée en français pour faciliter la compréhension
+const STATUTS = {
+  pending: 'En attente',
+  confirmed: 'Confirmé',
+  cancelled: 'Annulé'
+}
+
+const COULEURS_STATUTS = {
+  pending: 'bg-amber-100 text-amber-800 border-l-4 border-amber-500',
+  confirmed: 'bg-emerald-100 text-emerald-800 border-l-4 border-emerald-500',
+  cancelled: 'bg-rose-100 text-rose-800 border-l-4 border-rose-500'
+}
+
+const RDV_INITIAUX = [
+  {
+    id: 1,
+    patient: 'Fatoumata Bah',
+    phone: '624 56 78 90',
+    doctorId: 1,
+    date: '2026-04-11',
+    time: '14:30',
+    reason: 'Contrôle cardiaque',
+    status: 'pending',
+    room: 'Salle 301'
+  },
+  {
+    id: 2,
+    patient: 'Sekou Cissé',
+    phone: '624 12 34 56',
+    doctorId: 2,
+    date: '2026-04-11',
+    time: '09:00',
+    reason: 'Électrocardiogramme',
+    status: 'confirmed',
+    room: 'Salle 302'
+  }
+]
+
+const MOTIFS_CONSULTATION = [
+  'Contrôle cardiaque',
+  'Traitement de l\'hypertension',
+  'Électrocardiogramme',
+  'Échocardiogramme',
+  'Consultation préventive',
+  'Suivi post-opératoire'
+]
+
+const INITIAL_FORM = {
+  patient: '',
+  phone: '',
+  doctorId: '',
+  date: '',
+  time: '',
+  reason: ''
+}
+
 export default function GestionRendezVous() {
+  const [rendezVous, setRendezVous] = useState(RDV_INITIAUX)
+  const [filtre, setFiltre] = useState('tous')
+  const [modalOuvert, setModalOuvert] = useState(false)
+  const [modalType, setModalType] = useState('ajouter')
+  const [selectedRdv, setSelectedRdv] = useState(null)
+  const [formData, setFormData] = useState(INITIAL_FORM)
+  const [messageErreur, setMessageErreur] = useState('')
+  const [dateReport, setDateReport] = useState('')
+  const [heureReport, setHeureReport] = useState('')
 
-  // =========================
-  // PLANNING DES MÉDECINS
-  // =========================
-  // Structure contenant les horaires de chaque médecin par jour
-  const doctorsSchedule = {
-    'Professeur Elhadj Yaya Baldé': {
-      Lundi: { morning: null, afternoon: { start: '13:00', end: '17:00' } },
-      Mardi: { morning: null, afternoon: { start: '13:00', end: '17:00' } },
-      Mercredi: { morning: null, afternoon: { start: '13:00', end: '17:00' } },
-      Jeudi: { morning: null, afternoon: { start: '13:00', end: '17:00' } },
-      Vendredi: { morning: null, afternoon: { start: '13:00', end: '17:00' } },
-      Samedi: { morning: { start: '08:00', end: '12:00' }, afternoon: { start: '13:00', end: '17:00' } },
-      Dimanche: null
-    },
-    'Dr. Mamadou Diallo': {
-      Lundi: { morning: { start: '08:00', end: '12:00' }, afternoon: { start: '14:00', end: '18:00' } },
-      Mardi: { morning: { start: '08:00', end: '12:00' }, afternoon: { start: '14:00', end: '18:00' } },
-      Mercredi: { morning: { start: '08:00', end: '12:00' }, afternoon: null },
-      Jeudi: { morning: { start: '08:00', end: '12:00' }, afternoon: { start: '14:00', end: '18:00' } },
-      Vendredi: { morning: { start: '08:00', end: '12:00' }, afternoon: { start: '14:00', end: '18:00' } },
-      Samedi: null,
-      Dimanche: null
-    },
-    'Dr. Thierno Siradjo Baldé': {
-      Lundi: { morning: { start: '09:00', end: '13:00' }, afternoon: null },
-      Mardi: { morning: { start: '09:00', end: '13:00' }, afternoon: null },
-      Mercredi: { morning: { start: '09:00', end: '13:00' }, afternoon: null },
-      Jeudi: { morning: { start: '09:00', end: '13:00' }, afternoon: null },
-      Vendredi: { morning: { start: '09:00', end: '13:00' }, afternoon: null },
-      Samedi: { morning: { start: '08:00', end: '12:00' }, afternoon: null },
-      Dimanche: null
-    },
-    'Dr. Thierno Boubacar Barry': {
-      Lundi: { morning: null, afternoon: { start: '14:00', end: '18:00' } },
-      Mardi: { morning: null, afternoon: { start: '14:00', end: '18:00' } },
-      Mercredi: { morning: null, afternoon: { start: '14:00', end: '18:00' } },
-      Jeudi: { morning: null, afternoon: { start: '14:00', end: '18:00' } },
-      Vendredi: { morning: null, afternoon: { start: '14:00', end: '18:00' } },
-      Samedi: { morning: { start: '09:00', end: '13:00' }, afternoon: null },
-      Dimanche: null
-    },
-    'Dr. Mamadou Bassirou Bah': {
-      Lundi: { morning: { start: '08:30', end: '12:30' }, afternoon: null },
-      Mardi: { morning: { start: '08:30', end: '12:30' }, afternoon: null },
-      Mercredi: { morning: { start: '08:30', end: '12:30' }, afternoon: null },
-      Jeudi: { morning: { start: '08:30', end: '12:30' }, afternoon: null },
-      Vendredi: { morning: { start: '08:30', end: '12:30' }, afternoon: null },
-      Samedi: null,
-      Dimanche: null
-    },
-    'Dr. Sophie Martin': {
-      Lundi: { morning: { start: '09:00', end: '13:00' }, afternoon: { start: '14:30', end: '17:30' } },
-      Mardi: { morning: { start: '09:00', end: '13:00' }, afternoon: { start: '14:30', end: '17:30' } },
-      Mercredi: { morning: { start: '09:00', end: '13:00' }, afternoon: null },
-      Jeudi: { morning: { start: '09:00', end: '13:00' }, afternoon: { start: '14:30', end: '17:30' } },
-      Vendredi: { morning: { start: '09:00', end: '13:00' }, afternoon: { start: '14:30', end: '17:30' } },
-      Samedi: null,
-      Dimanche: null
-    },
-    'Dr. Aminata Cissé': {
-      Lundi: { morning: { start: '08:00', end: '12:00' }, afternoon: { start: '13:30', end: '17:30' } },
-      Mardi: { morning: { start: '08:00', end: '12:00' }, afternoon: { start: '13:30', end: '17:30' } },
-      Mercredi: { morning: { start: '08:00', end: '12:00' }, afternoon: { start: '13:30', end: '17:30' } },
-      Jeudi: { morning: { start: '08:00', end: '12:00' }, afternoon: { start: '13:30', end: '17:30' } },
-      Vendredi: { morning: { start: '08:00', end: '12:00' }, afternoon: { start: '13:30', end: '17:30' } },
-      Samedi: { morning: { start: '08:00', end: '12:00' }, afternoon: null },
-      Dimanche: null
+  const rendezVousFiltres = useMemo(
+    () =>
+      rendezVous.filter((rdv) => filtre === 'tous' || rdv.status === filtre),
+    [rendezVous, filtre]
+  )
+
+  const medecinsDisponibles = useMemo(
+    () => (formData.date ? getAvailableDoctors(formData.date) : DOCTORS),
+    [formData.date]
+  )
+
+  const creneauxDisponibles = useMemo(
+    () => (formData.doctorId && formData.date ? getTimeSlots(Number(formData.doctorId), formData.date) : []),
+    [formData.doctorId, formData.date]
+  )
+
+  const ouvrirModal = (type, rdv = null) => {
+    setModalType(type)
+    setSelectedRdv(rdv)
+    setMessageErreur('')
+    setModalOuvert(true)
+
+    if (type === 'reporter' && rdv) {
+      setDateReport(rdv.date)
+      setHeureReport(rdv.time)
+    } else {
+      setFormData(INITIAL_FORM)
+      setDateReport('')
+      setHeureReport('')
     }
   }
 
-  // Liste des jours pour convertir une date en jour de la semaine
-  const longDays = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
-
-  // =========================
-  // FONCTION DE VÉRIFICATION DES DISPONIBILITÉS
-  // =========================
-  // Vérifie si un médecin est disponible à une date et heure donnée
-  const isTimeAvailable = (doctorName, dateStr, timeStr) => {
-    if (!doctorName || !dateStr || !timeStr) return false
-
-    const date = new Date(dateStr)
-    const dayName = longDays[date.getDay()]
-    const schedule = doctorsSchedule[doctorName]?.[dayName]
-
-    if (!schedule) return false
-
-    const [hours, mins] = timeStr.split(':').map(Number)
-    const timeInMinutes = hours * 60 + mins
-
-    // Vérification créneau matin
-    if (schedule.morning) {
-      const [mStart, mEnd] = schedule.morning.start.split(':').map(Number)
-      const morningStart = mStart * 60
-      const morningEnd = mEnd * 60
-      if (timeInMinutes >= morningStart && timeInMinutes < morningEnd) {
-        return true
-      }
-    }
-
-    // Vérification créneau après-midi
-    if (schedule.afternoon) {
-      const [aStart, aEnd] = schedule.afternoon.start.split(':').map(Number)
-      const afternoonStart = aStart * 60
-      const afternoonEnd = aEnd * 60
-      if (timeInMinutes >= afternoonStart && timeInMinutes < afternoonEnd) {
-        return true
-      }
-    }
-
-    return false
+  const fermerModal = () => {
+    setModalOuvert(false)
+    setSelectedRdv(null)
+    setFormData(INITIAL_FORM)
+    setMessageErreur('')
+    setDateReport('')
+    setHeureReport('')
   }
 
-  // =========================
-  // ÉTATS (STATE)
-  // =========================
-  // Liste des rendez-vous
-  const [appointments, setAppointments] = useState([])
-
-  // Filtre actif
-  const [filter, setFilter] = useState('all')
-
-  // Gestion des modales
-  const [showModal, setShowModal] = useState(false)
-  const [modalType, setModalType] = useState(null)
-
-  // Rendez-vous sélectionné
-  const [selectedAppt, setSelectedAppt] = useState(null)
-
-  // Champs pour reprogrammation
-  const [newDate, setNewDate] = useState('')
-  const [newTime, setNewTime] = useState('')
-
-  // Message d'erreur
-  const [errorMessage, setErrorMessage] = useState('')
-
-  // Formulaire d'ajout
-  const [formData, setFormData] = useState({
-    patient: '',
-    phone: '',
-    doctor: '',
-    date: '',
-    time: '',
-    reason: ''
-  })
-
-  // =========================
-  // GESTION DES CHANGEMENTS DE FORMULAIRE
-  // =========================
-  const handleFormChange = (e) => {
+  const gererChangement = (e) => {
     const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
+    setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  // =========================
-  // AJOUT D'UN RENDEZ-VOUS
-  // =========================
-  const handleAddAppointment = () => {
-    setErrorMessage('')
-
-    // Vérification des champs obligatoires
-    if (!formData.patient || !formData.phone || !formData.doctor || !formData.date || !formData.time || !formData.reason) {
-      setErrorMessage('⚠️ Veuillez remplir tous les champs requis.')
+  const ajouterRendezVous = () => {
+    if (Object.values(formData).some((value) => !value)) {
+      setMessageErreur('Veuillez remplir tous les champs du formulaire')
       return
     }
 
-    // Vérification disponibilité du médecin
-    if (!isTimeAvailable(formData.doctor, formData.date, formData.time)) {
-      setErrorMessage('❌ Créneau non disponible')
+    if (!creneauxDisponibles.includes(formData.time)) {
+      setMessageErreur('Le créneau sélectionné n\'est pas disponible')
       return
     }
 
-    // Création du nouveau rendez-vous
-    const newAppt = {
+    const nouveauRdv = {
       id: Date.now(),
       ...formData,
-      status: 'pending'
+      doctorId: Number(formData.doctorId),
+      status: 'pending',
+      room: `Salle ${300 + Math.floor(Math.random() * 20)}`
     }
 
-    setAppointments([...appointments, newAppt])
-    setShowModal(false)
-    setFormData({ patient: '', phone: '', doctor: '', date: '', time: '', reason: '' })
+    setRendezVous((prev) => [nouveauRdv, ...prev])
+    fermerModal()
   }
 
-  // =========================
-  // MODIFICATION STATUT
-  // =========================
-  const handleStatusChange = (id, newStatus) => {
-    setAppointments(
-      appointments.map((appt) =>
-        appt.id === id ? { ...appt, status: newStatus } : appt
-      )
-    )
-  }
-
-  // =========================
-  // SUPPRESSION RENDEZ-VOUS
-  // =========================
-  const handleDeleteAppointment = (id) => {
-    setAppointments(appointments.filter((appt) => appt.id !== id))
-  }
-
-  // =========================
-  // REPROGRAMMATION
-  // =========================
-  const handleReschedule = (id) => {
-    const appt = appointments.find((a) => a.id === id)
-    if (!appt) return
-
-    if (!newDate || !newTime) {
-      setErrorMessage('Veuillez sélectionner une nouvelle date et heure')
+  const reporterRendezVous = () => {
+    if (!selectedRdv || !dateReport || !heureReport) {
+      setMessageErreur('Veuillez indiquer la nouvelle date et heure')
       return
     }
 
-    if (!isTimeAvailable(appt.doctor, newDate, newTime)) {
-      setErrorMessage('Créneau non disponible')
+    const creneaux = getTimeSlots(selectedRdv.doctorId, dateReport)
+    if (!creneaux.includes(heureReport)) {
+      setMessageErreur('Le créneau choisi n\'est pas disponible')
       return
     }
 
-    setAppointments(
-      appointments.map((a) =>
-        a.id === id ? { ...a, date: newDate, time: newTime } : a
+    setRendezVous((prev) =>
+      prev.map((rdv) =>
+        rdv.id === selectedRdv.id
+          ? { ...rdv, date: dateReport, time: heureReport, status: 'pending' }
+          : rdv
       )
     )
-    setSelectedAppt(null)
-    setNewDate('')
-    setNewTime('')
-    setErrorMessage('')
+    fermerModal()
   }
 
-  // Liste des médecins disponibles
-  const availableDoctors = Object.keys(doctorsSchedule)
+  const confirmerRendezVous = (id) => {
+    setRendezVous((prev) => prev.map((rdv) => (rdv.id === id ? { ...rdv, status: 'confirmed' } : rdv)))
+  }
 
-  // Filtrage des rendez-vous
-  const filteredAppointments = appointments.filter((appt) => {
-    if (filter === 'all') return true
-    return appt.status === filter
-  })
+  const annulerRendezVous = (id) => {
+    setRendezVous((prev) => prev.map((rdv) => (rdv.id === id ? { ...rdv, status: 'cancelled' } : rdv)))
+  }
+
+  const supprimerRendezVous = (id) => {
+    setRendezVous((prev) => prev.filter((rdv) => rdv.id !== id))
+  }
+
+  const obtenirNomMedecin = (id) => getDoctorById(id)?.name || 'Médecin inconnu'
 
   return (
     <Layout>
-      <div className="p-6 space-y-6">
-        {/* En-tête */}
-        <div className="flex items-center justify-between">
+      <div className="p-8 space-y-8 bg-gradient-to-br from-blue-50 via-emerald-50 to-teal-50 min-h-screen">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              Gestion des Rendez-vous
-            </h1>
-            <p className="text-gray-600 mt-2">
-              Organisez et gérez les consultations médicales
-            </p>
+            <h1 className="text-4xl font-bold text-slate-900">Gestion des rendez-vous</h1>
+            <p className="text-slate-600 mt-2">Organisez et gérez les rendez-vous des patients</p>
           </div>
           <button
-            onClick={() => {
-              setModalType('add')
-              setShowModal(true)
-            }}
-            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
+            onClick={() => ouvrirModal('ajouter')}
+            className="inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-3 text-white font-semibold shadow-lg hover:shadow-xl transition"
           >
-            <Plus className="w-5 h-5" />
-            Nouveau RDV
+            <Plus className="w-5 h-5" /> Nouveau RDV
           </button>
         </div>
 
-        {/* Filtres */}
-        <div className="bg-white rounded-xl shadow-md p-4">
-          <div className="flex flex-wrap gap-2">
-            {[
-              { key: 'all', label: 'Tous', count: appointments.length },
-              { key: 'pending', label: 'En attente', count: appointments.filter(a => a.status === 'pending').length },
-              { key: 'confirmed', label: 'Confirmé', count: appointments.filter(a => a.status === 'confirmed').length },
-              { key: 'completed', label: 'Terminé', count: appointments.filter(a => a.status === 'completed').length },
-              { key: 'cancelled', label: 'Annulé', count: appointments.filter(a => a.status === 'cancelled').length }
-            ].map(({ key, label, count }) => (
-              <button
-                key={key}
-                onClick={() => setFilter(key)}
-                className={`px-4 py-2 rounded-lg font-medium transition ${
-                  filter === key
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {label} ({count})
-              </button>
-            ))}
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          <div className="card bg-white p-6 border-l-4 border-slate-400 shadow-md">
+            <p className="text-sm font-semibold text-slate-600">Total</p>
+            <p className="mt-3 text-3xl font-bold text-slate-900">{rendezVous.length}</p>
+          </div>
+          <div className="card bg-white p-6 border-l-4 border-emerald-500 shadow-md">
+            <p className="text-sm font-semibold text-emerald-700">Confirmés</p>
+            <p className="mt-3 text-3xl font-bold text-emerald-600">{rendezVous.filter((rdv) => rdv.status === 'confirmed').length}</p>
+          </div>
+          <div className="card bg-white p-6 border-l-4 border-amber-500 shadow-md">
+            <p className="text-sm font-semibold text-amber-700">Attente</p>
+            <p className="mt-3 text-3xl font-bold text-amber-600">{rendezVous.filter((rdv) => rdv.status === 'pending').length}</p>
+          </div>
+          <div className="card bg-white p-6 border-l-4 border-rose-500 shadow-md">
+            <p className="text-sm font-semibold text-rose-700">Annulés</p>
+            <p className="mt-3 text-3xl font-bold text-rose-600">{rendezVous.filter((rdv) => rdv.status === 'cancelled').length}</p>
           </div>
         </div>
 
-        {/* Liste des rendez-vous */}
-        <div className="bg-white rounded-xl shadow-md overflow-hidden">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900">
-              Rendez-vous ({filteredAppointments.length})
-            </h2>
-          </div>
+        <div className="flex flex-wrap gap-2 rounded-2xl bg-white p-4 shadow-md border border-slate-200">
+          {['tous', 'pending', 'confirmed', 'cancelled'].map((option) => (
+            <button
+              key={option}
+              onClick={() => setFiltre(option)}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${filtre === option ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+            >
+              {option === 'tous' ? 'Tous' : STATUTS[option]}
+            </button>
+          ))}
+        </div>
 
-          <div className="divide-y divide-gray-200">
-            {filteredAppointments.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
-                Aucun rendez-vous trouvé
-              </div>
-            ) : (
-              filteredAppointments.map((appt) => (
-                <div key={appt.id} className="p-6 hover:bg-gray-50 transition">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-4">
-                        <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-                          {appt.time}
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-gray-900">{appt.patient}</h3>
-                          <p className="text-gray-600">{appt.doctor}</p>
-                          <p className="text-sm text-gray-500">{appt.reason}</p>
-                        </div>
-                      </div>
+        <div className="space-y-4">
+          {rendezVousFiltres.length === 0 ? (
+            <div className="card p-12 text-center bg-white">
+              <Clock className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+              <p className="text-slate-500 text-lg">Aucun rendez-vous trouvé</p>
+            </div>
+          ) : (
+            rendezVousFiltres.map((rdv) => (
+              <div key={rdv.id} className={`card p-6 rounded-2xl border-2 bg-white ${COULEURS_STATUTS[rdv.status]}`}>
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <div className="flex-1">
+                    <p className="text-2xl font-bold text-slate-900">{rdv.patient}</p>
+                    <p className="text-sm text-slate-600 mt-1">👨‍⚕️ {obtenirNomMedecin(rdv.doctorId)}</p>
+                    <p className="text-sm text-slate-500 mt-1">📋 {rdv.reason}</p>
+                  </div>
+
+                  <div className="grid gap-2 md:grid-cols-2 text-sm">
+                    <div className="flex items-center gap-2 text-slate-700">
+                      <Clock className="w-4 h-4" />
+                      <span className="font-semibold">{rdv.date} {rdv.time}</span>
                     </div>
-
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <p className="text-sm text-gray-500">{appt.date}</p>
-                        <p className="text-sm text-gray-500">{appt.phone}</p>
-                      </div>
-
-                      <select
-                        value={appt.status}
-                        onChange={(e) => handleStatusChange(appt.id, e.target.value)}
-                        className={`px-3 py-1 rounded-full text-xs font-medium border-0 ${
-                          appt.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                          appt.status === 'confirmed' ? 'bg-green-100 text-green-800' :
-                          appt.status === 'completed' ? 'bg-blue-100 text-blue-800' :
-                          'bg-red-100 text-red-800'
-                        }`}
-                      >
-                        <option value="pending">En attente</option>
-                        <option value="confirmed">Confirmé</option>
-                        <option value="completed">Terminé</option>
-                        <option value="cancelled">Annulé</option>
-                      </select>
-
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => {
-                            setSelectedAppt(appt)
-                            setModalType('reschedule')
-                            setShowModal(true)
-                          }}
-                          className="text-blue-600 hover:text-blue-800 p-1"
-                          title="Reprogrammer"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteAppointment(appt.id)}
-                          className="text-red-600 hover:text-red-800 p-1"
-                          title="Supprimer"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+                    <div className="flex items-center gap-2 text-slate-700">
+                      <MapPin className="w-4 h-4" />
+                      <span className="font-semibold">{rdv.room}</span>
                     </div>
                   </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
 
-        {/* Modal */}
-        {showModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-bold text-gray-900">
-                    {modalType === 'add' ? 'Nouveau Rendez-vous' : 'Reprogrammer Rendez-vous'}
-                  </h3>
-                  <button
-                    onClick={() => setShowModal(false)}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    <X className="w-6 h-6" />
+                  <span className={`badge px-4 py-2 rounded-full font-semibold`}>{STATUTS[rdv.status]}</span>
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {rdv.status === 'pending' && (
+                    <button onClick={() => confirmerRendezVous(rdv.id)} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-white text-sm font-semibold hover:bg-emerald-700 transition">
+                      <CheckCircle className="w-4 h-4" /> Confirmer
+                    </button>
+                  )}
+                  <button onClick={() => ouvrirModal('reporter', rdv)} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-white text-sm font-semibold hover:bg-blue-700 transition">
+                    <ArrowRightCircle className="w-4 h-4" /> Reporter
+                  </button>
+                  {rdv.status !== 'cancelled' && (
+                    <button onClick={() => annulerRendezVous(rdv.id)} className="inline-flex items-center gap-2 rounded-xl bg-rose-500 px-4 py-2 text-white text-sm font-semibold hover:bg-rose-600 transition">
+                      <XCircle className="w-4 h-4" /> Annuler
+                    </button>
+                  )}
+                  <button onClick={() => supprimerRendezVous(rdv.id)} className="inline-flex items-center gap-2 rounded-xl bg-slate-200 px-4 py-2 text-slate-700 text-sm font-semibold hover:bg-slate-300 transition ml-auto">
+                    <Trash2 className="w-4 h-4" /> Supprimer
                   </button>
                 </div>
+              </div>
+            ))
+          )}
+        </div>
 
-                {errorMessage && (
-                  <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
-                    {errorMessage}
-                  </div>
-                )}
+        {modalOuvert && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between gap-4 p-6 border-b border-slate-200 bg-gradient-to-r from-emerald-50 to-teal-50">
+                <div>
+                  <h2 className="text-2xl font-bold text-slate-900">
+                    {modalType === 'ajouter' ? 'Nouveau rendez-vous' : 'Reporter'}
+                  </h2>
+                  <p className="text-sm text-slate-600 mt-1">
+                    {modalType === 'ajouter' ? 'Créez un nouveau rendez-vous' : 'Choisissez une nouvelle date'}
+                  </p>
+                </div>
+                <button onClick={fermerModal} className="text-slate-400 hover:text-slate-600">
+                  <XCircle className="w-6 h-6" />
+                </button>
+              </div>
 
-                {modalType === 'add' ? (
-                  <form onSubmit={(e) => { e.preventDefault(); handleAddAppointment(); }} className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Patient
-                      </label>
-                      <input
-                        type="text"
-                        name="patient"
-                        value={formData.patient}
-                        onChange={handleFormChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        required
-                      />
+              {messageErreur && <div className="m-6 rounded-2xl bg-rose-50 p-4 text-sm text-rose-700 border border-rose-200">⚠️ {messageErreur}</div>}
+
+              <div className="p-6 space-y-5">
+                {modalType === 'ajouter' ? (
+                  <>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <label className="text-sm font-semibold text-slate-700">Patient *</label>
+                        <input name="patient" value={formData.patient} onChange={gererChangement} placeholder="Nom complet" className="mt-2 rounded-xl" />
+                      </div>
+                      <div>
+                        <label className="text-sm font-semibold text-slate-700">Téléphone *</label>
+                        <input name="phone" value={formData.phone} onChange={gererChangement} placeholder="+224 6XX XX XX XX" className="mt-2 rounded-xl" />
+                      </div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Téléphone
-                      </label>
-                      <input
-                        type="tel"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleFormChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        required
-                      />
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <label className="text-sm font-semibold text-slate-700">Date *</label>
+                        <input type="date" name="date" value={formData.date} onChange={gererChangement} className="mt-2 rounded-xl" />
+                      </div>
+                      <div>
+                        <label className="text-sm font-semibold text-slate-700">Médecin *</label>
+                        <select name="doctorId" value={formData.doctorId} onChange={gererChangement} className="mt-2 rounded-xl">
+                          <option value="">Sélectionner</option>
+                          {medecinsDisponibles.map((doctor) => (
+                            <option key={doctor.id} value={doctor.id}>
+                              {doctor.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Médecin
-                      </label>
-                      <select
-                        name="doctor"
-                        value={formData.doctor}
-                        onChange={handleFormChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        required
-                      >
-                        <option value="">Sélectionner un médecin</option>
-                        {availableDoctors.map((doctor) => (
-                          <option key={doctor} value={doctor}>
-                            {doctor}
-                          </option>
-                        ))}
-                      </select>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <label className="text-sm font-semibold text-slate-700">Heure *</label>
+                        <select name="time" value={formData.time} onChange={gererChangement} className="mt-2 rounded-xl">
+                          <option value="">Sélectionner</option>
+                          {creneauxDisponibles.map((creneau) => (
+                            <option key={creneau} value={creneau}>
+                              {creneau}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-sm font-semibold text-slate-700">Motif *</label>
+                        <select name="reason" value={formData.reason} onChange={gererChangement} className="mt-2 rounded-xl">
+                          <option value="">Sélectionner</option>
+                          {MOTIFS_CONSULTATION.map((motif) => (
+                            <option key={motif} value={motif}>
+                              {motif}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Date
-                      </label>
-                      <input
-                        type="date"
-                        name="date"
-                        value={formData.date}
-                        onChange={handleFormChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Heure
-                      </label>
-                      <input
-                        type="time"
-                        name="time"
-                        value={formData.time}
-                        onChange={handleFormChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Motif
-                      </label>
-                      <textarea
-                        name="reason"
-                        value={formData.reason}
-                        onChange={handleFormChange}
-                        rows={3}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        required
-                      />
-                    </div>
-
-                    <div className="flex gap-3 pt-4">
-                      <button
-                        type="button"
-                        onClick={() => setShowModal(false)}
-                        className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
-                      >
+                    <div className="flex justify-end gap-3 pt-4">
+                      <button onClick={fermerModal} className="rounded-xl border-2 border-slate-300 px-5 py-2 text-slate-700 font-semibold hover:bg-slate-50 transition">
                         Annuler
                       </button>
-                      <button
-                        type="submit"
-                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                      >
-                        Créer RDV
+                      <button onClick={ajouterRendezVous} className="rounded-xl bg-emerald-600 px-5 py-2 text-white font-semibold hover:bg-emerald-700 transition">
+                        Créer
                       </button>
                     </div>
-                  </form>
+                  </>
                 ) : (
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-sm text-gray-600 mb-2">
-                        Rendez-vous actuel: {selectedAppt?.patient} - {selectedAppt?.date} à {selectedAppt?.time}
-                      </p>
+                  <>
+                    <div className="rounded-2xl bg-slate-100 p-4 border border-slate-300">
+                      <p className="text-sm text-slate-600 font-medium">Patient : {selectedRdv?.patient}</p>
+                      <p className="text-sm text-slate-600 font-medium mt-1">Médecin : {obtenirNomMedecin(selectedRdv?.doctorId)}</p>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Nouvelle Date
-                      </label>
-                      <input
-                        type="date"
-                        value={newDate}
-                        onChange={(e) => setNewDate(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <label className="text-sm font-semibold text-slate-700">Nouvelle date *</label>
+                        <input type="date" value={dateReport} onChange={(e) => setDateReport(e.target.value)} className="mt-2 rounded-xl" />
+                      </div>
+                      <div>
+                        <label className="text-sm font-semibold text-slate-700">Nouvelle heure *</label>
+                        <input type="time" value={heureReport} onChange={(e) => setHeureReport(e.target.value)} className="mt-2 rounded-xl" />
+                      </div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Nouvelle Heure
-                      </label>
-                      <input
-                        type="time"
-                        value={newTime}
-                        onChange={(e) => setNewTime(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                    </div>
-
-                    <div className="flex gap-3 pt-4">
-                      <button
-                        onClick={() => setShowModal(false)}
-                        className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
-                      >
+                    <div className="flex justify-end gap-3 pt-4">
+                      <button onClick={fermerModal} className="rounded-xl border-2 border-slate-300 px-5 py-2 text-slate-700 font-semibold hover:bg-slate-50 transition">
                         Annuler
                       </button>
-                      <button
-                        onClick={() => handleReschedule(selectedAppt.id)}
-                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                      >
-                        Reprogrammer
+                      <button onClick={reporterRendezVous} className="rounded-xl bg-blue-600 px-5 py-2 text-white font-semibold hover:bg-blue-700 transition">
+                        Reporter
                       </button>
                     </div>
-                  </div>
+                  </>
                 )}
               </div>
             </div>

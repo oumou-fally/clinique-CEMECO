@@ -11,7 +11,7 @@ export default function Consultations() {
   const [consultations, setConsultations] = useState([
     {
       id: 1,
-      patient: 'Baldé Oumou',
+      patient: 'Baldé Oumou Fally',
       phone: '06 12 34 56 78',
       date: '2026-04-15',
       time: '14:30',
@@ -22,7 +22,7 @@ export default function Consultations() {
     },
     {
       id: 2,
-      patient: 'Barry Yaya',
+      patient: 'Camara Aissatou',
       phone: '06 98 76 54 32',
       date: '2026-04-15',
       time: '15:30',
@@ -33,7 +33,7 @@ export default function Consultations() {
     },
     {
       id: 3,
-      patient: 'Bah Kenda',
+      patient: 'Touré Mariama',
       phone: '06 45 67 89 01',
       date: '2026-04-15',
       time: '16:00',
@@ -44,7 +44,7 @@ export default function Consultations() {
     },
     {
       id: 4,
-      patient: 'Diakité Kadiatou',
+      patient: 'Diallo Mamadou',
       phone: '06 23 45 67 89',
       date: '2026-04-20',
       time: '10:00',
