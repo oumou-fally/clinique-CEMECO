@@ -2,7 +2,7 @@ import { Calendar, FileText, Stethoscope, Phone, MapPin, Clock, ArrowRight, Hear
 import { Link } from 'react-router-dom'
 import Layout from '../layouts/Layout'
 import { useAuth } from '../context/AuthContext'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import AppointmentForm from '../components/AppointmentForm'
 import AskDoctorForm from '../components/AskDoctorForm'
 
@@ -12,7 +12,23 @@ export default function TableauDeBordPatient() {
 
   // ===================== AUTH =====================
   // Récupération des informations de l'utilisateur connecté
-  const { user } = useAuth()
+  const { user, patientId, isAuthenticated } = useAuth()
+
+  // ===================== LOGS =====================
+  useEffect(() => {
+    console.log('📊 TableauDeBordPatient chargé')
+    console.log('✅ Authentifié:', isAuthenticated)
+    console.log('👤 Données du patient:', user)
+    console.log('🆔 ID du patient:', patientId)
+    console.log('📂 localStorage.patient:', JSON.parse(localStorage.getItem('patient') || 'null'))
+    console.log('📍 localStorage.patientId:', localStorage.getItem('patientId'))
+    
+    if (isAuthenticated && user) {
+      console.log('✓ Nom du patient:', user.nomComplet)
+      console.log('✓ Email:', user.email)
+      console.log('✓ ID complet:', user.id)
+    }
+  }, [user, patientId, isAuthenticated])
 
   // ===================== ETATS =====================
   // Contrôle l'affichage du formulaire de rendez-vous
@@ -65,8 +81,11 @@ export default function TableauDeBordPatient() {
 
       {/* ===================== EN-TÊTE ===================== */}
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-gray-900">Bienvenue, {user?.name}! 👋</h1>
-        <p className="text-gray-600 mt-2">Vue d’ensemble de votre état de santé</p>
+       <h1 className="text-4xl font-bold text-gray-900">
+  Bienvenue, {user?.prenom} {user?.nom}! 👋
+</h1>
+        <p className="text-gray-600 mt-2">ID Patient: {patientId} — Email: {user?.email || 'N/A'}</p>
+        <p className="text-gray-600 mt-1">Vue d'ensemble de votre état de santé</p>
       </div>
 
       {/* ===================== ALERTE ===================== */}

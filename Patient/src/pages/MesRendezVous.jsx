@@ -1,207 +1,276 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Layout from '../layouts/Layout'
-import { Calendar, Clock, MapPin, User, X, Plus, ChevronLeft, ChevronRight, AlertCircle, CheckCircle } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
+import { Calendar, Clock, MapPin, Plus, X, CheckCircle, XCircle, RotateCcw, Stethoscope, Hourglass } from 'lucide-react'
 import AppointmentForm from '../components/AppointmentForm'
 
-// ===================== COMPOSANT PRINCIPAL =====================
-// Page de gestion des rendez-vous du patient
 export default function MesRendezVous() {
-
-  // ===================== ETAT =====================
-  // Onglet actif : 'upcoming', 'past', 'cancelled'
+  const { patientId } = useAuth()
   const [activeTab, setActiveTab] = useState('upcoming')
-
-  // Contrôle l'affichage du formulaire de prise de rendez-vous
+  const [appointments, setAppointments] = useState([])
+  const [loading, setLoading] = useState(true)
   const [showAppointmentForm, setShowAppointmentForm] = useState(false)
 
-  // ===================== DONNÉES SIMULÉES =====================
-  // Rendez-vous à venir
-  const upcomingAppointments = [
-    {
-      id: 1,
-      doctor: 'Professeur Elhadj Yaya Baldé',
-      specialty: 'Cardiologue',
-      date: '2026-04-15',
-      time: '14:30',
-      location: 'Cabinet de Cardiologie - Bureau 101',
-      type: 'Consultation Cardiaque',
-      status: 'Confirmé'
-    }
-  ]
+  const API_URL = 'http://localhost:3000'
 
-  // Rendez-vous passés
-  const pastAppointments = [
-    {
-      id: 1,
-      doctor: 'Professeur Elhadj Yaya Baldé',
-      specialty: 'Cardiologue',
-      date: '2026-03-15',
-      time: '14:30',
-      location: 'Cabinet de Cardiologie - Bureau 101',
-      type: 'Consultation Cardiaque',
-      status: 'Complété'
-    }
-  ]
-
-  // Rendez-vous annulés
-  const cancelledAppointments = [
-    {
-      id: 1,
-      doctor: 'Docteur Mamadou Diallo',
-      specialty: 'Cardiologue',
-      date: '2026-02-20',
-      time: '09:00',
-      location: 'CEMECO Cabinet de Cardiologie - Kipé',
-      type: 'Électrocardiogramme',
-      status: 'Annulé',
-      reason: 'Annulé par le patient'
-    }
-  ]
-
-  // ===================== SOUMISSION NOUVEAU RENDEZ-VOUS =====================
-  // Fonction appelée lors de la création d’un rendez-vous
-  const handleAppointmentSubmit = (formData) => {
-    const newAppointment = {
-      id: Math.max(...upcomingAppointments.map(a => a.id), 0) + 1,
-      doctor: formData.doctor,
-      specialty: 'Consultation',
-      date: formData.date,
-      time: formData.time,
-      location: 'CEMECO Cabinet de Cardiologie - Kipé',
-      type: formData.reason,
-      status: 'En attente',
-      consultationType: formData.consultationType,
-      notes: formData.notes
-    }
-
-    // Simulation d’envoi vers un backend
-    console.log('Nouveau rendez-vous:', newAppointment)
-
-    alert('Rendez-vous demandé avec succès! Vous recevrez une confirmation par email.')
-  }
-
-  // ===================== COULEUR SELON STATUT =====================
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'Confirmé':
-        return 'bg-green-100 text-green-800'
-      case 'En attente':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'Complété':
-        return 'bg-blue-100 text-blue-800'
-      case 'Annulé':
-        return 'bg-red-100 text-red-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
+  // ======================================================
+  // 🔄 CHARGER DEPUIS LA BASE DE DONNÉES
+  // ======================================================
+  const fetchAppointments = async () => {
+    if (!patientId) return
+    try {
+      setLoading(true)
+      const res = await fetch(`${API_URL}/api/reservations/patient/${patientId}`)
+      const data = await res.json()
+      if (data.success) {
+        setAppointments(data.reservations || [])
+      }
+    } catch (error) {
+      console.error('Erreur chargement rendez-vous:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
-  // ===================== COMPOSANT CARTE RENDEZ-VOUS =====================
-  // Affichage d’un rendez-vous individuel
-  const AppointmentCard = ({ appointment, isPast = false }) => (
-    <div className="bg-white rounded-lg shadow p-6 border-l-4 border-teal-500">
+  useEffect(() => {
+    fetchAppointments()
+  }, [patientId])
 
-      {/* Informations principales */}
-      <div className="flex justify-between mb-4">
-        <div>
-          <h3 className="text-lg font-bold">{appointment.doctor}</h3>
-          <p className="text-sm text-gray-600">{appointment.specialty}</p>
-          <p className="text-sm text-teal-600 font-medium">{appointment.type}</p>
-        </div>
+  // ======================================================
+  // 📊 COMPTEURS PAR STATUT
+  // ======================================================
+  const count = (statuts) =>
+    appointments.filter(a => {
+      const s = (a.statut || '').toLowerCase().replace('_', '')
+      return statuts.some(st => st.replace('_','') === s)
+    }).length
 
-        {/* Statut */}
-        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(appointment.status)}`}>
-          {appointment.status}
-        </span>
-      </div>
+  const countUpcoming  = count(['attente', 'en_attente', 'confirme', 'attribue']) 
+  const countPast      = count(['termine'])
+  const countCancelled = count(['annule', 'reporte'])
 
-      {/* Détails (date, heure, lieu) */}
-      <div className="space-y-2 mb-6">
-        <div className="flex items-center gap-2 text-sm">
-          <Calendar className="w-4 h-4" />
-          {appointment.date}
-        </div>
-        <div className="flex items-center gap-2 text-sm">
-          <Clock className="w-4 h-4" />
-          {appointment.time}
-        </div>
-        <div className="flex items-center gap-2 text-sm">
-          <MapPin className="w-4 h-4" />
-          {appointment.location}
-        </div>
-      </div>
+  // ======================================================
+  // 🔥 FILTRAGE
+  // ======================================================
+  const filtered = appointments.filter(a => {
+    const s = (a.statut || '').toLowerCase().replace('_', '')
+    if (activeTab === 'upcoming')  return ['attente', 'enattente', 'confirme', 'attribue', ''].includes(s)
+    if (activeTab === 'past')      return s === 'termine'
+    if (activeTab === 'cancelled') return ['annule', 'reporte'].includes(s)
+    return true
+  })
 
-      {/* Actions */}
-      <div className="flex gap-2">
-        {!isPast && appointment.status !== 'Annulé' && (
-          <>
-            <button className="flex-1 bg-teal-600 text-white py-2 rounded-lg">
-              Reprogrammer
-            </button>
-            <button className="flex-1 border py-2 rounded-lg">
-              Annuler
-            </button>
-          </>
-        )}
+  // ======================================================
+  // ✉️ ENVOYER DEMANDE RDV
+  // ======================================================
+  const handleAppointmentSubmit = async (formData) => {
+    try {
+      const response = await fetch(`${API_URL}/api/reservations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patient_id: patientId,
+          id_secretaire: 1,
+          date_rendez_vous: formData.date,
+          heure_rendez_vous: formData.time,
+          motif: formData.reason
+        })
+      })
+      const data = await response.json()
+      if (data.success) {
+        alert('Votre demande a été envoyée à la secrétaire. En attente de validation.')
+        setShowAppointmentForm(false)
+        fetchAppointments()
+      } else {
+        alert('Erreur lors de la création du rendez-vous')
+      }
+    } catch (error) {
+      console.error(error)
+      alert('Erreur serveur')
+    }
+  }
 
-        {isPast && appointment.status === 'Complété' && (
-          <>
-            <button className="flex-1 bg-teal-600 text-white py-2 rounded-lg">
-              Voir dossier
-            </button>
-            <button className="flex-1 border py-2 rounded-lg">
-              Avis
-            </button>
-          </>
-        )}
-      </div>
-    </div>
-  )
+  // ======================================================
+  // 🎨 CONFIG STATUT
+  // ======================================================
+  const getStatutConfig = (statut) => {
+    const s = (statut || '').toLowerCase().replace('_', '')
+    if (s === 'confirme')  return { label: 'Confirmé',   icon: <CheckCircle className="w-4 h-4" />, cls: 'bg-emerald-100 text-emerald-700 border-emerald-200', accent: 'border-l-emerald-400' }
+    if (s === 'attribue')  return { label: 'Attribué',   icon: <Stethoscope className="w-4 h-4" />, cls: 'bg-indigo-100 text-indigo-700 border-indigo-200',   accent: 'border-l-indigo-400' }
+    if (s === 'attente' || s === 'enattente' || s === '') return { label: 'En attente', icon: <Hourglass className="w-4 h-4" />, cls: 'bg-amber-100 text-amber-700 border-amber-200', accent: 'border-l-amber-400' }
+    if (s === 'annule')    return { label: 'Annulé',     icon: <XCircle className="w-4 h-4" />,     cls: 'bg-rose-100 text-rose-700 border-rose-200',          accent: 'border-l-rose-400' }
+    if (s === 'reporte')   return { label: 'Reporté',    icon: <RotateCcw className="w-4 h-4" />,   cls: 'bg-orange-100 text-orange-700 border-orange-200',    accent: 'border-l-orange-400' }
+    if (s === 'termine')   return { label: 'Terminé',    icon: <CheckCircle className="w-4 h-4" />, cls: 'bg-gray-100 text-gray-600 border-gray-200',          accent: 'border-l-gray-300' }
+    return { label: 'En attente', icon: <Hourglass className="w-4 h-4" />, cls: 'bg-amber-100 text-amber-700 border-amber-200', accent: 'border-l-amber-400' }
+  }
+
+  // ======================================================
+  // 📑 ONGLETS
+  // ======================================================
+  const tabs = [
+    { key: 'upcoming',  label: 'À venir',         count: countUpcoming,  activeColor: 'border-b-teal-500 text-teal-600' },
+    { key: 'past',      label: 'Passés',           count: countPast,      activeColor: 'border-b-gray-500 text-gray-600' },
+    { key: 'cancelled', label: 'Annulés/Reportés', count: countCancelled, activeColor: 'border-b-rose-500 text-rose-600' },
+  ]
 
   return (
     <Layout>
+      <div className="space-y-8">
 
-      {/* ===================== EN-TÊTE ===================== */}
-      <div className="mb-8 flex justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Mes Rendez-vous</h1>
-          <p className="text-gray-600">Gestion de vos consultations</p>
+        {/* HEADER */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-extrabold text-gray-900">Mes Rendez-vous</h1>
+            <p className="text-gray-500 mt-1 font-medium">Suivez vos consultations à la Clinique CEMECO</p>
+          </div>
+          <button
+            onClick={() => setShowAppointmentForm(true)}
+            className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-6 py-3 rounded-2xl font-semibold shadow-lg shadow-teal-100 transition-all active:scale-95"
+          >
+            <Plus className="w-5 h-5" /> Nouveau RDV
+          </button>
         </div>
 
-        {/* Bouton nouveau rendez-vous */}
-        <button onClick={() => setShowAppointmentForm(true)} className="bg-teal-600 text-white px-6 py-3 rounded-lg flex items-center gap-2">
-          <Plus className="w-5 h-5" />
-          Nouveau RDV
-        </button>
+        {/* STAT CARDS */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="bg-white rounded-2xl p-5 border-2 border-teal-100 shadow-sm flex items-center gap-4">
+            <div className="p-3 bg-teal-50 rounded-2xl">
+              <Calendar className="w-6 h-6 text-teal-500" />
+            </div>
+            <div>
+              <p className="text-3xl font-black text-gray-900">{countUpcoming}</p>
+              <p className="text-sm text-gray-500 font-medium">À venir / En attente</p>
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl p-5 border-2 border-gray-100 shadow-sm flex items-center gap-4">
+            <div className="p-3 bg-gray-50 rounded-2xl">
+              <CheckCircle className="w-6 h-6 text-gray-400" />
+            </div>
+            <div>
+              <p className="text-3xl font-black text-gray-900">{countPast}</p>
+              <p className="text-sm text-gray-500 font-medium">Passés / Terminés</p>
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl p-5 border-2 border-rose-100 shadow-sm flex items-center gap-4">
+            <div className="p-3 bg-rose-50 rounded-2xl">
+              <XCircle className="w-6 h-6 text-rose-400" />
+            </div>
+            <div>
+              <p className="text-3xl font-black text-gray-900">{countCancelled}</p>
+              <p className="text-sm text-gray-500 font-medium">Annulés / Reportés</p>
+            </div>
+          </div>
+        </div>
+
+        {/* ONGLETS */}
+        <div className="flex gap-1 border-b border-gray-200">
+          {tabs.map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`flex items-center gap-2 px-5 py-3.5 font-bold text-sm border-b-2 transition-all ${
+                activeTab === tab.key
+                  ? `${tab.activeColor} border-b-2`
+                  : 'border-b-transparent text-gray-400 hover:text-gray-600'
+              }`}
+            >
+              {tab.label}
+              <span className={`px-2 py-0.5 rounded-full text-xs font-black ${
+                activeTab === tab.key ? '' : 'bg-gray-100 text-gray-500'
+              }`}>
+                {tab.count}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* LISTE */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center h-48 space-y-3">
+            <div className="w-10 h-10 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin" />
+            <p className="text-gray-400 font-medium animate-pulse">Chargement de vos rendez-vous...</p>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="bg-white rounded-[2rem] p-16 text-center border-2 border-dashed border-gray-200">
+            <Calendar className="w-14 h-14 text-gray-200 mx-auto mb-4" />
+            <p className="text-gray-400 text-lg font-semibold">Aucun rendez-vous dans cette catégorie</p>
+            {activeTab === 'upcoming' && (
+              <button
+                onClick={() => setShowAppointmentForm(true)}
+                className="mt-4 inline-flex items-center gap-2 text-teal-600 font-semibold hover:text-teal-700"
+              >
+                <Plus className="w-4 h-4" /> Prendre un rendez-vous
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filtered.map(app => {
+              const config = getStatutConfig(app.statut)
+              const nomMedecin = app.medecin_nom
+                ? `Dr. ${app.medecin_nom} ${app.medecin_prenom || ''}`
+                : 'Médecin non encore attribué'
+
+              return (
+                <div
+                  key={app.id}
+                  className={`bg-white rounded-[1.75rem] p-6 border border-gray-100 border-l-4 ${config.accent} shadow-sm hover:shadow-md transition-all`}
+                >
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex-1 space-y-2">
+
+                      {/* Badge statut */}
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider border ${config.cls}`}>
+                        {config.icon}
+                        {config.label}
+                      </span>
+
+                      {/* Médecin */}
+                      <p className="font-bold text-gray-900 flex items-center gap-2 text-lg">
+                        <Stethoscope className="w-4 h-4 text-gray-400 shrink-0" />
+                        {nomMedecin}
+                      </p>
+
+                      {/* Motif */}
+                      {app.motif && (
+                        <p className="text-gray-500 text-sm italic">"{app.motif}"</p>
+                      )}
+
+                      {/* Date & heure */}
+                      <div className="flex flex-wrap gap-4 pt-1">
+                        <span className="flex items-center gap-1.5 text-sm text-gray-500 font-medium">
+                          <Calendar className="w-4 h-4 text-teal-400" />
+                          {app.date_rendez_vous
+                            ? new Date(app.date_rendez_vous).toLocaleDateString('fr-FR', {
+                                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+                              })
+                            : '—'}
+                        </span>
+                        <span className="flex items-center gap-1.5 text-sm text-gray-500 font-medium">
+                          <Clock className="w-4 h-4 text-teal-400" />
+                          {app.heure_rendez_vous?.substring(0, 5) || '—'}
+                        </span>
+                        <span className="flex items-center gap-1.5 text-sm text-gray-500 font-medium">
+                          <MapPin className="w-4 h-4 text-teal-400" />
+                          Clinique CEMECO
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* FORMULAIRE */}
+        <AppointmentForm
+          isOpen={showAppointmentForm}
+          onClose={() => setShowAppointmentForm(false)}
+          onSubmit={handleAppointmentSubmit}
+        />
+
       </div>
-
-      {/* ===================== CONTENU ===================== */}
-      <div className="space-y-4">
-
-        {/* Liste des rendez-vous à venir */}
-        {activeTab === 'upcoming' && upcomingAppointments.map(a => (
-          <AppointmentCard key={a.id} appointment={a} />
-        ))}
-
-        {/* Liste des rendez-vous passés */}
-        {activeTab === 'past' && pastAppointments.map(a => (
-          <AppointmentCard key={a.id} appointment={a} isPast={true} />
-        ))}
-
-        {/* Liste des rendez-vous annulés */}
-        {activeTab === 'cancelled' && cancelledAppointments.map(a => (
-          <AppointmentCard key={a.id} appointment={a} />
-        ))}
-
-      </div>
-
-      {/* ===================== FORMULAIRE MODAL ===================== */}
-      <AppointmentForm
-        isOpen={showAppointmentForm}
-        onClose={() => setShowAppointmentForm(false)}
-        onSubmit={handleAppointmentSubmit}
-      />
-
     </Layout>
   )
 }

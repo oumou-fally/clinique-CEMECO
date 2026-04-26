@@ -1,75 +1,119 @@
 import { Link } from 'react-router-dom'
-import { BarChart3, Calendar, Users, CreditCard, Clock, AlertCircle } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Calendar, Users, Clock, AlertCircle } from 'lucide-react'
 import Layout from '../layouts/Layout'
-
-const STATISTICS = [
-  {
-    title: "Rendez-vous aujourd'hui",
-    value: '12',
-    icon: Calendar,
-    label: '8 confirmés, 4 en attente'
-  },
-  {
-    title: 'Médecins disponibles',
-    value: '5',
-    icon: Users,
-    label: '3 en consultation, 2 en pause'
-  },
-  {
-    title: 'Factures en attente',
-    value: '5',
-    icon: CreditCard,
-    label: 'Total: 2 450 GNF'
-  },
-  {
-    title: 'Alertes importantes',
-    value: '3',
-    icon: AlertCircle,
-    label: '2 retards, 1 annulation'
-  }
-]
-
-const RDV_A_VENIR = [
-  {
-    id: 1,
-    patient: 'Jean Dupont',
-    doctor: 'Professeur Elhadj Yaya Baldé',
-    time: '10:30',
-    status: 'confirmed',
-    room: 'Salle 301'
-  },
-  {
-    id: 2,
-    patient: 'Marie Lefèvre',
-    doctor: 'Docteur Mamadou Bassirou Bah',
-    time: '11:00',
-    status: 'pending',
-    room: 'Salle 105'
-  }
-]
 
 const getStatusColor = (status) => {
   switch (status) {
-    case 'confirmed':
+    case 'confirme':
       return 'bg-emerald-100 text-emerald-800'
-    case 'pending':
+    case 'attente':
       return 'bg-orange-100 text-orange-800'
-    case 'cancelled':
+    case 'annule':
       return 'bg-rose-100 text-rose-800'
+    case 'reporte':
+      return 'bg-blue-100 text-blue-800'
     default:
       return 'bg-slate-100 text-slate-700'
   }
 }
 
 export default function TableauDeBordSecretaire() {
+
+  const API_URL = 'http://localhost:3000'
+
+  const [stats, setStats] = useState({
+    total: 0,
+    attente: 0,
+    confirme: 0,
+    annule: 0,
+    reporte: 0
+  })
+
+  const [appointments, setAppointments] = useState([])
+
+  // ======================================================
+  // 🔄 CHARGER DONNÉES
+  // ======================================================
+  const fetchDashboard = async () => {
+    try {
+
+      const [resStats, resRdv] = await Promise.all([
+        fetch(`${API_URL}/api/reservations/stats/dashboard`),
+        fetch(`${API_URL}/api/reservations`)
+      ])
+
+      const statsData = await resStats.json()
+      const rdvData = await resRdv.json()
+
+      if (statsData.success) {
+        setStats(statsData.stats || {
+          total: 0,
+          attente: 0,
+          confirme: 0,
+          annule: 0,
+          reporte: 0
+        })
+      }
+
+      if (rdvData.success) {
+        setAppointments((rdvData.reservations || []).slice(0, 3))
+      }
+
+    } catch (error) {
+      console.error(error)
+    }
+  }
+
+  useEffect(() => {
+    fetchDashboard()
+  }, [])
+
+  // ======================================================
+  // 📊 STATS (SAFE VERSION)
+  // ======================================================
+  const STATISTICS = [
+    {
+      title: "Total rendez-vous",
+      value: stats?.total ?? 0,
+      icon: Calendar,
+      label: "Tous les rendez-vous"
+    },
+    {
+      title: "En attente",
+      value: stats?.attente ?? 0,
+      icon: Clock,
+      label: "À traiter"
+    },
+    {
+      title: "Confirmés",
+      value: stats?.confirme ?? 0,
+      icon: Users,
+      label: "Validés"
+    },
+    {
+      title: "Annulés",
+      value: stats?.annule ?? 0,
+      icon: AlertCircle,
+      label: "Refusés"
+    }
+  ]
+
   return (
     <Layout>
       <div className="p-6 space-y-6">
+
+        {/* HEADER */}
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Tableau de bord secrétaire</h1>
-          <p className="text-slate-600 mt-2">Organisez les rendez-vous, suivez la facturation et gérez la planification médicale.</p>
+          <h1 className="text-3xl font-bold text-slate-900">
+            Tableau de bord secrétaire
+          </h1>
+          <p className="text-slate-600 mt-2">
+            Gestion centralisée des rendez-vous et du planning médical
+          </p>
         </div>
 
+        {/* STATS */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {STATISTICS.map((stat, index) => {
             const Icon = stat.icon
@@ -90,51 +134,80 @@ export default function TableauDeBordSecretaire() {
           })}
         </div>
 
+        {/* CONTENT */}
         <div className="grid gap-6 xl:grid-cols-[1.4fr_0.6fr]">
+
+          {/* RDV */}
           <div className="card p-6">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h2 className="text-2xl font-semibold text-slate-900">Rendez-vous à venir</h2>
-                <p className="text-sm text-slate-500 mt-1">Suivez les prochains passages des patients.</p>
-              </div>
-              <span className="rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">2 prévus</span>
-            </div>
+
+            <h2 className="text-2xl font-semibold text-slate-900">
+              Rendez-vous récents
+            </h2>
 
             <div className="mt-6 space-y-4">
-              {RDV_A_VENIR.map((appt) => (
+
+              {appointments.length === 0 && (
+                <p className="text-slate-500 text-sm">
+                  Aucun rendez-vous
+                </p>
+              )}
+
+              {appointments.map((appt) => (
                 <div key={appt.id} className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="flex items-center justify-between gap-4">
+
+                  <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-semibold text-slate-900">{appt.patient}</p>
-                      <p className="text-sm text-slate-600">{appt.doctor}</p>
+                      <p className="font-semibold text-slate-900">
+                        {appt.patient_nom} {appt.patient_prenom}
+                      </p>
+                      <p className="text-sm text-slate-600">
+                        Dr {appt.medecin_nom || 'Non assigné'}
+                      </p>
                     </div>
-                    <span className={`badge ${getStatusColor(appt.status)}`}>{appt.status === 'confirmed' ? 'Confirmé' : 'En attente'}</span>
+
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(appt.statut)}`}>
+                      {appt.statut}
+                    </span>
                   </div>
-                  <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-500">
-                    <span>{appt.time}</span>
-                    <span>{appt.room}</span>
+
+                  <div className="mt-3 text-sm text-slate-500 flex gap-3">
+                    <span>{appt.date_rendez_vous}</span>
+                    <span>{appt.heure_rendez_vous}</span>
                   </div>
+
                 </div>
               ))}
+
             </div>
           </div>
 
+          {/* ACTIONS */}
           <div className="card p-6 space-y-4">
-            <h2 className="text-2xl font-semibold text-slate-900">Actions rapides</h2>
+
+            <h2 className="text-2xl font-semibold text-slate-900">
+              Actions rapides
+            </h2>
+
             <Link to="/dashboard/rendez-vous" className="inline-flex w-full items-center justify-center rounded-2xl bg-teal-600 px-4 py-3 text-white">
               + Nouveau rendez-vous
             </Link>
+
             <Link to="/dashboard/emploi-du-temps" className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-100 px-4 py-3 text-slate-800">
-              Emploi du temps
+              Planning médecins
             </Link>
-            <Link to="/dashboard/facturation" className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-100 px-4 py-3 text-slate-800">
-              Facturation
+
+            <Link to="/dashboard/notifications" className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-100 px-4 py-3 text-slate-800">
+              Notifications
             </Link>
+
             <Link to="/dashboard/doctors" className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-100 px-4 py-3 text-slate-800">
-              Liste des médecins
+              Médecins
             </Link>
+
           </div>
+
         </div>
+
       </div>
     </Layout>
   )

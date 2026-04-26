@@ -1,298 +1,358 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Users,
-  Phone,
-  Mail,
-  MapPin,
   Clock,
-  Award,
-  Star,
   Calendar,
-  User,
-  CheckCircle,
-  XCircle
+  Search,
+  Plus,
+  Trash2,
+  Edit,
+  AlertTriangle,
+  X,
+  Save,
+  ChevronRight,
+  Filter,
+  Stethoscope,
+  AlertCircle,
+  Briefcase
 } from 'lucide-react'
 import Layout from '../layouts/Layout'
-import { DOCTORS, CLINIC_INFO } from '../data/clinicData'
-
-const JOURS_SEMAINE = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi']
-
-const COULEURS_MEDECINS = [
-  'from-purple-500 to-pink-500',
-  'from-blue-500 to-cyan-500',
-  'from-emerald-500 to-teal-500',
-  'from-orange-500 to-red-500',
-  'from-indigo-500 to-purple-500'
-]
 
 export default function EmploiDuTempsMedecins() {
-  const [medecinSelectionne, setMedecinSelectionne] = useState(null)
+  const [planningGlobal, setPlanningGlobal] = useState([])
+  const [absences, setAbsences] = useState([])
+  const [medecins, setMedecins] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editingSlot, setEditingSlot] = useState(null)
+  const [error, setError] = useState('')
 
-  const medecinsAvecHoraires = useMemo(() => {
-    return DOCTORS.map((medecin, index) => ({
-      ...medecin,
-      couleur: COULEURS_MEDECINS[index % COULEURS_MEDECINS.length],
-      horaires: medecin.id === 1 ? {
-        // Prof. Elhadj Yaya Baldé
-        'Lundi': '12:00 - 17:00',
-        'Mardi': '12:00 - 17:00',
-        'Mercredi': '12:00 - 17:00',
-        'Jeudi': '12:00 - 17:00',
-        'Vendredi': '12:00 - 17:00',
-        'Samedi': '08:00 - 17:00'
-      } : {
-        // Autres médecins
-        'Lundi': '08:00 - 17:00',
-        'Mardi': '08:00 - 17:00',
-        'Mercredi': '08:00 - 17:00',
-        'Jeudi': '08:00 - 17:00',
-        'Vendredi': '08:00 - 17:00',
-        'Samedi': '08:00 - 17:00'
-      }
-    }))
+  useEffect(() => {
+    fetchData()
   }, [])
 
-  const ouvrirProfilMedecin = (medecin) => {
-    setMedecinSelectionne(medecin)
+  const fetchData = async () => {
+    try {
+      setLoading(true)
+      const [planRes, absRes, medRes] = await Promise.all([
+        fetch('/api/planning/all/global'),
+        fetch('/api/disponibilites'),
+        fetch('/api/personnel?role=medecin')
+      ])
+      
+      const planData = await planRes.json()
+      const absData = await absRes.json()
+      const medData = await medRes.json()
+
+      if (planData.success) setPlanningGlobal(planData.planning)
+      setAbsences(absData || [])
+      setMedecins(medData.personnel || [])
+    } catch (error) {
+      console.error('Erreur fetchData:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const fermerProfilMedecin = () => {
-    setMedecinSelectionne(null)
+  const handleSaveSlot = async (e) => {
+    e.preventDefault()
+    setError('')
+    try {
+      const res = await fetch('/api/planning', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editingSlot)
+      })
+      const data = await res.json()
+      if (data.success) {
+        setShowEditModal(false)
+        fetchData()
+      } else {
+        setError(data.message)
+      }
+    } catch (error) {
+      setError('Erreur lors de la sauvegarde')
+    }
   }
 
-  const attribuerRendezVous = (medecin) => {
-    // Logique pour attribuer un rendez-vous
-    alert(`Rendez-vous attribué avec le Dr. ${medecin.name}`)
+  const handleDeleteSlot = async (id) => {
+    if (!window.confirm('Voulez-vous vraiment supprimer ce créneau ?')) return
+    try {
+      const res = await fetch(`/api/planning/${id}`, { method: 'DELETE' })
+      const data = await res.json()
+      if (data.success) {
+        fetchData()
+      }
+    } catch (error) {
+      console.error('Erreur suppression:', error)
+    }
+  }
+
+  const filteredPlanning = planningGlobal.filter(p => 
+    `${p.medecin_prenom} ${p.medecin_nom}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.specialite.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  const getStatutBadge = (statut) => {
+    switch(statut) {
+      case 'disponible': return 'bg-green-100 text-green-700 border-green-200'
+      case 'indisponible': return 'bg-red-100 text-red-700 border-red-200'
+      case 'urgence': return 'bg-orange-100 text-orange-700 border-orange-200'
+      default: return 'bg-gray-100 text-gray-700 border-gray-200'
+    }
   }
 
   return (
     <Layout>
-      <div className="p-8 space-y-8">
-        {/* ========================= */}
-        {/* EN-TÊTE */}
-        {/* ========================= */}
-        <div className="text-center space-y-4">
-          <h1 className="text-4xl font-bold bg-linear-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-            <Users className="w-10 h-10 inline mr-4" />
-            Équipe Médicale - CEMECO
-          </h1>
-          <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-            Découvrez nos cardiologues experts et leurs disponibilités pour vous offrir les meilleurs soins
-          </p>
+      <div className="p-8 space-y-8 bg-gray-50 min-h-screen">
+        {/* Header Section */}
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center bg-white p-8 rounded-[40px] shadow-sm border border-gray-100 gap-6">
+          <div className="flex items-center gap-6">
+            <div className="p-4 bg-indigo-600 rounded-3xl shadow-xl shadow-indigo-100 text-white">
+              <Calendar className="w-10 h-10" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-black text-gray-900">Centre de Planning Global</h1>
+              <p className="text-gray-500 mt-1 font-medium">Gérez les horaires et disponibilités de tous les médecins</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-4 w-full lg:w-auto">
+            <div className="relative flex-1 md:w-64">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input 
+                type="text" 
+                placeholder="Rechercher un médecin..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-12 pr-4 py-4 bg-gray-50 border-transparent focus:bg-white focus:border-indigo-500 rounded-2xl transition-all font-medium text-sm"
+              />
+            </div>
+            <button 
+              onClick={() => {
+                setEditingSlot({
+                  id_medecin: '',
+                  date_planning: new Date().toISOString().split('T')[0],
+                  heure_debut: '08:00',
+                  heure_fin: '12:00',
+                  statut: 'disponible',
+                  commentaire: ''
+                })
+                setShowEditModal(true)
+              }}
+              className="flex items-center gap-3 px-6 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-indigo-100"
+            >
+              <Plus className="w-5 h-5" />
+              Nouvel Horaire
+            </button>
+          </div>
         </div>
 
-        {/* ========================= */}
-        {/* GRILLE DES MÉDECINS */}
-        {/* ========================= */}
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 xl:grid-cols-3">
-          {medecinsAvecHoraires.map((medecin, index) => (
-            <div key={medecin.id} className="group">
-              <div className="rounded-3xl bg-white shadow-xl border border-slate-200 overflow-hidden hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer" onClick={() => ouvrirProfilMedecin(medecin)}>
-                <div className={`bg-linear-to-r ${medecin.couleur} p-6 text-white relative overflow-hidden`}>
-                  <div className="absolute inset-0 bg-black/10"></div>
-                  <div className="relative z-10">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Award className="w-5 h-5" />
-                          <span className="text-sm font-medium opacity-90">Cardiologue</span>
-                        </div>
-                        <h2 className="text-2xl font-bold mb-1">{medecin.name}</h2>
-                        <p className="opacity-90 text-sm">{medecin.specialty}</p>
-                      </div>
-                      <div className="text-4xl opacity-80">
-                        {medecin.id === 1 ? '👨‍⚕️' : '👩‍⚕️'}
-                      </div>
+        {/* Section Absences Récentes */}
+        {absences.length > 0 && (
+          <div className="bg-orange-50 border border-orange-100 p-6 rounded-[35px] flex flex-col md:flex-row items-center justify-between gap-4">
+             <div className="flex items-center gap-4">
+               <div className="p-3 bg-orange-100 text-orange-600 rounded-2xl">
+                 <AlertCircle className="w-6 h-6" />
+               </div>
+               <div>
+                 <p className="font-black text-orange-900">Alertes Absences</p>
+                 <p className="text-sm text-orange-700 font-medium">{absences.length} médecin(s) ont des absences signalées actuellement.</p>
+               </div>
+             </div>
+             <button 
+               onClick={() => window.location.href = '/dashboard/disponibilites'}
+               className="px-6 py-3 bg-white text-orange-600 rounded-xl font-bold text-sm shadow-sm hover:bg-orange-100 transition-all flex items-center gap-2"
+             >
+               <Briefcase className="w-4 h-4" />
+               Gérer les Absences
+             </button>
+          </div>
+        )}
+
+        {/* Loading State */}
+        {loading ? (
+          <div className="p-20 text-center flex flex-col items-center gap-4">
+            <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-gray-500 font-bold text-lg">Synchronisation du planning global...</p>
+          </div>
+        ) : filteredPlanning.length === 0 ? (
+          <div className="bg-white p-20 rounded-[40px] text-center border border-gray-100">
+            <Calendar className="w-20 h-20 text-gray-100 mx-auto mb-4" />
+            <p className="text-gray-400 font-bold text-xl">Aucun horaire de travail défini</p>
+            <p className="text-gray-300">Utilisez le bouton "Nouvel Horaire" pour commencer.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredPlanning.map((slot) => (
+              <div 
+                key={slot.id}
+                className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-100 hover:border-indigo-200 hover:shadow-xl hover:shadow-indigo-500/5 transition-all group relative overflow-hidden"
+              >
+                <div className="flex justify-between items-start mb-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center font-black text-indigo-600 text-xl group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-sm">
+                      {slot.medecin_nom.charAt(0)}
                     </div>
-                    <div className="mt-4 flex items-center gap-4">
-                      <div className="flex items-center gap-1">
-                        <Star className="w-4 h-4 fill-current" />
-                        <span className="text-sm font-semibold">{medecin.rating}</span>
-                      </div>
-                      <span className="text-sm opacity-90">({medecin.reviews} avis)</span>
+                    <div>
+                      <h3 className="text-lg font-black text-gray-900 capitalize leading-tight">Dr. {slot.medecin_prenom} {slot.medecin_nom}</h3>
+                      <p className="text-[10px] text-indigo-600 font-black uppercase tracking-widest mt-1">{slot.specialite}</p>
                     </div>
                   </div>
+                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter border ${getStatutBadge(slot.statut)}`}>
+                    {slot.statut}
+                  </span>
                 </div>
 
-                <div className="p-6 space-y-4">
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50">
-                    <Phone className="w-5 h-5 text-emerald-600" />
-                    <span className="text-slate-700">{medecin.phone}</span>
-                  </div>
-
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50">
-                    <Mail className="w-5 h-5 text-blue-600" />
-                    <span className="text-slate-700 text-sm">{medecin.email}</span>
-                  </div>
-
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50">
-                    <MapPin className="w-5 h-5 text-purple-600" />
-                    <span className="text-slate-700">{medecin.location}</span>
-                  </div>
-
-                  <div className="pt-4 border-t border-slate-200">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Clock className="w-5 h-5 text-indigo-600" />
-                      <span className="font-semibold text-slate-900">Disponibilités</span>
+                <div className="space-y-4 mb-8">
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between px-1">
+                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Date & Horaires</p>
+                       <Clock className="w-3 h-3 text-gray-300" />
                     </div>
-                    <div className="space-y-2">
-                      {medecin.id === 1 ? (
-                        <div className="text-sm space-y-1">
-                          <div className="flex justify-between">
-                            <span className="text-slate-600">Lun-Ven:</span>
-                            <span className="font-semibold text-emerald-600">12h-17h</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-slate-600">Samedi:</span>
-                            <span className="font-semibold text-emerald-600">8h-17h</span>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-slate-600">Lun-Sam:</span>
-                            <span className="font-semibold text-emerald-600">8h-17h</span>
-                          </div>
-                        </div>
-                      )}
+                    <div className="flex items-center gap-4 p-5 bg-gray-50 rounded-[2rem] border border-gray-50 group-hover:bg-white group-hover:border-indigo-100 transition-all">
+                      <div className="flex flex-col">
+                        <span className="font-black text-gray-800 text-lg leading-none mb-1">
+                          {new Date(slot.date_planning).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short' })}
+                        </span>
+                        <span className="text-sm font-black text-indigo-600">
+                          {slot.heure_debut.substring(0, 5)} — {slot.heure_fin.substring(0, 5)}
+                        </span>
+                      </div>
                     </div>
                   </div>
+                  
+                  {slot.commentaire && (
+                    <div className="bg-white p-4 rounded-2xl border border-dashed border-gray-200">
+                      <p className="text-xs text-gray-500 font-bold italic text-center">"{slot.commentaire}"</p>
+                    </div>
+                  )}
+                </div>
 
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      attribuerRendezVous(medecin)
+                <div className="flex items-center gap-3">
+                  <button 
+                    onClick={() => {
+                      setEditingSlot({
+                        ...slot,
+                        date_planning: new Date(slot.date_planning).toISOString().split('T')[0]
+                      })
+                      setShowEditModal(true)
                     }}
-                    className="w-full rounded-xl bg-linear-to-r from-emerald-500 to-teal-500 px-4 py-3 text-white font-semibold hover:from-emerald-600 hover:to-teal-600 transition shadow-md"
+                    className="flex-1 py-4 bg-gray-900 hover:bg-indigo-600 text-white rounded-2xl font-bold transition-all text-sm flex items-center justify-center gap-2 shadow-lg shadow-gray-200 group-hover:shadow-indigo-100"
                   >
-                    <Calendar className="w-5 h-5 inline mr-2" />
-                    Attribuer un rendez-vous
+                    <Edit className="w-4 h-4" />
+                    Ajuster
+                  </button>
+                  <button 
+                    onClick={() => handleDeleteSlot(slot.id)}
+                    className="p-4 bg-red-50 hover:bg-red-500 hover:text-white text-red-500 rounded-2xl transition-all border border-red-50"
+                  >
+                    <Trash2 className="w-5 h-5" />
                   </button>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
-        {/* ========================= */}
-        {/* MODAL PROFIL DÉTAILLÉ */}
-        {/* ========================= */}
-        {medecinSelectionne && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="relative">
-                <div className={`bg-linear-to-r ${medecinSelectionne.couleur} p-8 text-white relative overflow-hidden`}>
-                  <button
-                    onClick={fermerProfilMedecin}
-                    className="absolute top-4 right-4 p-2 bg-white/20 rounded-full hover:bg-white/30 transition"
-                  >
-                    <XCircle className="w-6 h-6" />
-                  </button>
-                  <div className="absolute inset-0 bg-black/20"></div>
-                  <div className="relative z-10 flex items-start gap-6">
-                    <div className="text-6xl opacity-90">
-                      {medecinSelectionne.id === 1 ? '👨‍⚕️' : '👩‍⚕️'}
-                    </div>
-                    <div className="flex-1">
-                      <h2 className="text-3xl font-bold mb-2">{medecinSelectionne.name}</h2>
-                      <p className="text-xl opacity-90 mb-4">{medecinSelectionne.specialty}</p>
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-1">
-                          <Star className="w-5 h-5 fill-current" />
-                          <span className="font-semibold">{medecinSelectionne.rating}</span>
-                        </div>
-                        <span className="opacity-90">({medecinSelectionne.reviews} avis)</span>
-                      </div>
-                    </div>
-                  </div>
+        {/* Modal Edition / Ajout */}
+        {showEditModal && (
+          <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200 border border-white/20">
+              <div className="p-10 bg-indigo-600 text-white flex justify-between items-center">
+                <div>
+                  <h2 className="text-3xl font-black">{editingSlot.id ? 'Ajuster l\'horaire' : 'Nouvel Horaire'}</h2>
+                  {editingSlot.id && (
+                    <p className="text-sm opacity-80 font-bold">Dr. {editingSlot.medecin_prenom} {editingSlot.medecin_nom}</p>
+                  )}
                 </div>
+                <button onClick={() => setShowEditModal(false)} className="p-3 hover:bg-white/20 rounded-full transition">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
 
-                <div className="p-8 space-y-8">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <div className="space-y-6">
-                      <h3 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
-                        <User className="w-6 h-6 text-indigo-600" />
-                        Informations de contact
-                      </h3>
-
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50">
-                          <Phone className="w-6 h-6 text-emerald-600" />
-                          <div>
-                            <p className="font-semibold text-slate-900">Téléphone</p>
-                            <a href={`tel:${medecinSelectionne.phone}`} className="text-slate-700 hover:text-emerald-600 transition">
-                              {medecinSelectionne.phone}
-                            </a>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50">
-                          <Mail className="w-6 h-6 text-blue-600" />
-                          <div>
-                            <p className="font-semibold text-slate-900">Email</p>
-                            <a href={`mailto:${medecinSelectionne.email}`} className="text-slate-700 hover:text-blue-600 transition">
-                              {medecinSelectionne.email}
-                            </a>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50">
-                          <MapPin className="w-6 h-6 text-purple-600" />
-                          <div>
-                            <p className="font-semibold text-slate-900">Cabinet</p>
-                            <p className="text-slate-700">{medecinSelectionne.location}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-6">
-                      <h3 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
-                        <Clock className="w-6 h-6 text-purple-600" />
-                        Horaires de travail détaillés
-                      </h3>
-                      <div className="space-y-3">
-                        {JOURS_SEMAINE.map((jour) => (
-                          <div key={jour} className="flex items-center justify-between p-4 rounded-2xl bg-linear-to-r from-slate-50 to-slate-100">
-                            <span className="font-semibold text-slate-900 min-w-32">{jour}</span>
-                            <span className={`font-bold text-lg ${
-                              medecinSelectionne.horaires[jour] === 'Fermé' ? 'text-slate-500 line-through' : 'text-emerald-600'
-                            }`}>
-                              {medecinSelectionne.horaires[jour]}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+              <form onSubmit={handleSaveSlot} className="p-10 space-y-6">
+                {error && (
+                  <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3 text-red-600 text-sm font-bold">
+                    <AlertTriangle className="w-5 h-5" />
+                    {error}
                   </div>
+                )}
 
-                  {medecinSelectionne.id === 1 && (
-                    <div className="rounded-2xl bg-linear-to-r from-blue-50 to-indigo-50 p-6 border border-blue-200">
-                      <div className="flex items-center gap-3 mb-3">
-                        <Star className="w-6 h-6 text-blue-600" />
-                        <h4 className="text-xl font-bold text-blue-900">Note spéciale</h4>
-                      </div>
-                      <p className="text-blue-800">
-                        Le Professeur Elhadj Yaya Baldé suit un horaire particulier adapté à ses nombreuses responsabilités académiques et hospitalières.
-                        Il consulte du lundi au vendredi de 12h00 à 17h00 et le samedi de 08h00 à 17h00.
-                      </p>
+                <div className="space-y-5">
+                  {!editingSlot.id && (
+                    <div>
+                      <label className="text-[10px] font-black text-gray-400 uppercase ml-3 mb-1 block tracking-widest">Choisir un Médecin</label>
+                      <select 
+                        required
+                        value={editingSlot.id_medecin}
+                        onChange={(e) => setEditingSlot({...editingSlot, id_medecin: e.target.value})}
+                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold appearance-none"
+                      >
+                        <option value="">Sélectionner un médecin</option>
+                        {medecins.map(m => (
+                          <option key={m.id} value={m.id}>Dr. {m.prenom} {m.nom}</option>
+                        ))}
+                      </select>
                     </div>
                   )}
 
-                  <div className="flex gap-4 pt-6 border-t border-slate-200">
-                    <button
-                      onClick={() => attribuerRendezVous(medecinSelectionne)}
-                      className="flex-1 rounded-2xl bg-linear-to-r from-emerald-500 to-teal-500 px-8 py-4 text-white font-bold text-lg hover:from-emerald-600 hover:to-teal-600 transition shadow-lg"
+                  <div>
+                    <label className="text-[10px] font-black text-gray-400 uppercase ml-3 mb-1 block tracking-widest">Date</label>
+                    <input 
+                      type="date"
+                      required
+                      value={editingSlot.date_planning}
+                      onChange={(e) => setEditingSlot({...editingSlot, date_planning: e.target.value})}
+                      className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] font-black text-gray-400 uppercase ml-3 mb-1 block tracking-widest">Début</label>
+                      <input 
+                        type="time"
+                        required
+                        value={editingSlot.heure_debut}
+                        onChange={(e) => setEditingSlot({...editingSlot, heure_debut: e.target.value})}
+                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-gray-400 uppercase ml-3 mb-1 block tracking-widest">Fin</label>
+                      <input 
+                        type="time"
+                        required
+                        value={editingSlot.heure_fin}
+                        onChange={(e) => setEditingSlot({...editingSlot, heure_fin: e.target.value})}
+                        className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-black text-gray-400 uppercase ml-3 mb-1 block tracking-widest">Statut</label>
+                    <select 
+                      value={editingSlot.statut}
+                      onChange={(e) => setEditingSlot({...editingSlot, statut: e.target.value})}
+                      className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 font-bold appearance-none"
                     >
-                      <Calendar className="w-6 h-6 inline mr-2" />
-                      Attribuer un rendez-vous
-                    </button>
-                    <button onClick={fermerProfilMedecin} className="rounded-2xl bg-slate-200 px-8 py-4 text-slate-700 font-bold text-lg hover:bg-slate-300 transition">
-                      Fermer
-                    </button>
+                      <option value="disponible">✅ Disponible</option>
+                      <option value="indisponible">❌ Indisponible</option>
+                      <option value="urgence">⚠️ Urgence uniquement</option>
+                    </select>
                   </div>
                 </div>
-              </div>
+
+                <button 
+                  type="submit"
+                  className="w-full py-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black shadow-xl shadow-indigo-100 transition-all flex items-center justify-center gap-3 mt-4"
+                >
+                  <Save className="w-6 h-6" />
+                  Enregistrer les modifications
+                </button>
+              </form>
             </div>
           </div>
         )}

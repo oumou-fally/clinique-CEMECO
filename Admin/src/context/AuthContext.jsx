@@ -1,26 +1,6 @@
-import { createContext, useState, useContext } from 'react'
+import { createContext, useState, useContext, useEffect } from 'react'
 
 const AuthContext = createContext(null)
-
-// Administrateurs autorisés de la clinique
-const ADMINS = [
-  {
-    id: 1,
-    name: 'Professeur Elhadj Yaya Baldé',
-    email: 'elhadj.balde@clinic.com',
-    password: 'Admin@123',
-    role: 'admin',
-    clinic: 'Clinique Santé Plus'
-  },
-  {
-    id: 2,
-    name: 'Docteur Mamadou Bassirou Bah',
-    email: 'mamadou.bah@clinic.com',
-    password: 'Admin@123',
-    role: 'admin',
-    clinic: 'Clinique Santé Plus'
-  }
-]
 
 export function AuthProvider({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -28,38 +8,84 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
-  const login = (email, password) => {
+  // Vérifier la session au chargement
+  useEffect(() => {
+    const storedUser = localStorage.getItem('admin_user')
+    const storedToken = localStorage.getItem('admin_token')
+
+    if (storedUser && storedToken) {
+      try {
+        const userData = JSON.parse(storedUser)
+        setUser(userData)
+        setIsAuthenticated(true)
+      } catch (error) {
+        console.error('Erreur lors de la récupération des données utilisateur:', error)
+        localStorage.removeItem('admin_user')
+        localStorage.removeItem('admin_token')
+      }
+    }
+  }, [])
+
+  const login = async (email, password) => {
     setLoading(true)
     setError(null)
-    
-    // Simulation d'une requête API
-    setTimeout(() => {
-      const admin = ADMINS.find(a => a.email === email && a.password === password)
-      
-      if (admin) {
+
+    try {
+      const response = await fetch('http://localhost:3000/api/admin/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        const userData = data.admin
+
+        // Stocker dans localStorage
+        localStorage.setItem('admin_user', JSON.stringify(userData))
+        localStorage.setItem('admin_token', 'admin_logged_in') // Token simple pour cet exemple
+
+        setUser(userData)
         setIsAuthenticated(true)
-        setUser({
-          id: admin.id,
-          name: admin.name,
-          email: admin.email,
-          role: admin.role,
-          clinic: admin.clinic
-        })
       } else {
-        setError('Email ou mot de passe incorrect')
+        setError(data.message || 'Erreur de connexion')
       }
+    } catch (error) {
+      console.error('Erreur lors de la connexion:', error)
+      setError('Erreur de réseau. Vérifiez votre connexion.')
+    } finally {
       setLoading(false)
-    }, 500)
+    }
   }
 
   const logout = () => {
+    // Supprimer du localStorage
+    localStorage.removeItem('admin_user')
+    localStorage.removeItem('admin_token')
+
     setIsAuthenticated(false)
     setUser(null)
     setError(null)
   }
 
+  // Fonction pour récupérer l'ID de l'administrateur connecté
+  const getAdminId = () => {
+    return user?.id || null
+  }
+
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, loading, error, login, logout }}>
+    <AuthContext.Provider value={{
+      isAuthenticated,
+      user,
+      loading,
+      error,
+      login,
+      logout,
+      getAdminId
+    }}>
       {children}
     </AuthContext.Provider>
   )

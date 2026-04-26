@@ -1,407 +1,440 @@
 import Layout from '../layouts/Layout'
-import { Search, Filter, Plus, Eye, Phone, Calendar, FileText, Edit, Trash2, X } from 'lucide-react'
-import { useState } from 'react'
+import { Search, Filter, Plus, Eye, Phone, Calendar, FileText, Edit, Trash2, X, Stethoscope, Pill } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useAuth } from '../context/AuthContext'
+import OrdonnanceModal from '../components/OrdonnanceModal'
 
 export default function Patients() {
+  const { medecinId, user } = useAuth()
   const [searchTerm, setSearchTerm] = useState('')
-  const [showModal, setShowModal] = useState(false)
-  const [patients, setPatients] = useState([
-    { 
-      id: 1, 
-      name: 'Baldé Oumou Fally', 
-      email: 'baldeoumoufally14@gmail.com', 
-      phone: '627634812', 
-      status: 'Actif',
-      lastVisit: '15/03/2026'
-    },
-    { 
-      id: 2, 
-      name: 'Camara Aissatou', 
-      email: 'camara.aissatou@gmail.com', 
-      phone: '628456312', 
-      status: 'Actif',
-      lastVisit: '01/03/2026'
-    },
-    { 
-      id: 3, 
-      name: 'Touré Mariama', 
-      email: 'toure.mariama@gmail.com', 
-      phone: '627121314', 
-      status: 'Inactif',
-      lastVisit: '18/02/2026'
+  const [dateFilter, setDateFilter] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [reservations, setReservations] = useState([])
+  const [selectedRdvDetail, setSelectedRdvDetail] = useState(null)
+  const [consultationData, setConsultationData] = useState(null)
+  const [showOrdonnanceModal, setShowOrdonnanceModal] = useState(false)
+
+  useEffect(() => {
+    if (medecinId) {
+      fetchReservations()
     }
-  ])
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    status: 'Actif',
-    lastVisit: ''
-  })
-  const [selectedPatient, setSelectedPatient] = useState(null)
-  const [selectedPatientDetail, setSelectedPatientDetail] = useState(null)
+  }, [medecinId])
 
-  const filteredPatients = patients.filter(patient =>
-    patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    patient.email.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
-  }
-
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    if (selectedPatient) {
-      setPatients(prev => prev.map(p => 
-        p.id === selectedPatient.id 
-          ? { ...selectedPatient, ...formData }
-          : p
-      ))
-    } else {
-      const newPatient = {
-        id: Math.max(...patients.map(p => p.id), 0) + 1,
-        ...formData,
-        lastVisit: new Date().toLocaleDateString('fr-FR')
+  const fetchReservations = async () => {
+    try {
+      setLoading(true)
+      const res = await fetch(`/api/consultations/reservations/${medecinId}`)
+      const data = await res.json()
+      if (data.success) {
+        setReservations(data.reservations)
       }
-      setPatients([...patients, newPatient])
-    }
-    resetForm()
-    setShowModal(false)
-  }
-
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      dateOfBirth: '',
-      status: 'Actif',
-      nextAppointment: '',
-      bloodType: 'O+',
-      allergies: ''
-    })
-    setSelectedPatient(null)
-  }
-
-  const handleEdit = (patient) => {
-    setSelectedPatient(patient)
-    setFormData({
-      name: patient.name,
-      email: patient.email,
-      phone: patient.phone,
-      dateOfBirth: patient.dateOfBirth,
-      status: patient.status,
-      nextAppointment: patient.nextAppointment,
-      bloodType: patient.bloodType,
-      allergies: patient.allergies
-    })
-    setShowModal(true)
-  }
-
-  const handleDeletePatient = (id) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer ce patient?')) {
-      setPatients(prev => prev.filter(p => p.id !== id))
+    } catch (error) {
+      console.error('Erreur fetch reservations:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
-  const handleViewDetail = (patient) => {
-    setSelectedPatientDetail(patient)
+  const filteredReservations = reservations.filter(rdv => {
+    const fullName = `${rdv.prenom} ${rdv.nom}`.toLowerCase()
+    const matchesSearch = fullName.includes(searchTerm.toLowerCase()) || rdv.telephone.includes(searchTerm)
+    const matchesDate = !dateFilter || rdv.date_rendez_vous.split('T')[0] === dateFilter
+    
+    return matchesSearch && matchesDate
+  })
+
+  const handleViewDetail = async (rdv) => {
+    setSelectedRdvDetail(rdv)
+    setConsultationData(null)
+    
+    if (rdv.statut === 'termine') {
+      try {
+        const res = await fetch(`/api/consultations/detail/${rdv.id}`)
+        const data = await res.json()
+        if (data.success) {
+          setConsultationData(data.consultation)
+        }
+      } catch (error) {
+        console.error('Erreur fetch detail consultation:', error)
+      }
+    }
   }
 
+  const getStatusColor = (status) => {
+    switch(status) {
+      case 'confirme': return 'bg-green-100 text-green-800'
+      case 'attente': return 'bg-yellow-100 text-yellow-800'
+      case 'annule': return 'bg-red-100 text-red-800'
+      case 'termine': return 'bg-blue-100 text-blue-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
+  }
   return (
     <Layout>
       <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Mes Patients</h1>
-            <p className="text-gray-600 mt-2">Gestion de vos patients et consultations</p>
-          </div>
-          <button 
-            onClick={() => {
-              resetForm()
-              setShowModal(true)
-            }}
-            className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition"
-          >
-            <Plus className="w-5 h-5" />
-            Ajouter un Patient
-          </button>
-        </div>
+        <h1 className="text-3xl font-bold text-gray-900">Mes Patients Assignés</h1>
+        <p className="text-gray-600 mt-2">Liste des patients ayant un rendez-vous confirmé avec vous</p>
       </div>
 
-      {/* Search and Filter */}
-      <div className="mb-6 flex gap-4 flex-wrap">
-        <div className="flex-1 min-w-64 relative">
+      <div className="mb-6 flex flex-col md:flex-row gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+        <div className="flex-1 relative">
           <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
           <input
             type="text"
-            placeholder="Rechercher par nom ou email..."
+            placeholder="Rechercher par nom ou téléphone..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
           />
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700 font-medium transition">
-          <Filter className="w-5 h-5" />
-          Filtrer
-        </button>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-blue-600">
-          <p className="text-gray-600 text-sm font-medium">Total de Patients</p>
-          <p className="text-3xl font-bold text-blue-600 mt-2">{patients.length}</p>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-green-600">
-          <p className="text-gray-600 text-sm font-medium">Patients Actifs</p>
-          <p className="text-3xl font-bold text-green-600 mt-2">{patients.filter(p => p.status === 'Actif').length}</p>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-orange-600">
-          <p className="text-gray-600 text-sm font-medium">Patients Inactifs</p>
-          <p className="text-3xl font-bold text-orange-600 mt-2">{patients.filter(p => p.status === 'Inactif').length}</p>
+        <div className="flex items-center gap-3">
+          <Calendar className="w-5 h-5 text-gray-400" />
+          <input 
+            type="date"
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+          />
+          {dateFilter && (
+            <button 
+              onClick={() => setDateFilter('')}
+              className="text-sm text-red-600 font-bold hover:underline"
+            >
+              Effacer
+            </button>
+          )}
         </div>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b-2 border-gray-200 bg-gray-50">
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Nom</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Email</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Téléphone</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Dernier RDV</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Statut</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredPatients.map((patient) => (
-                <tr key={patient.id} className="border-b border-gray-200 hover:bg-gray-50 transition">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center font-semibold text-blue-600">
-                        {patient.name.charAt(0)}
-                      </div>
-                      <span className="font-medium text-gray-900">{patient.name}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{patient.email}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{patient.phone}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{patient.lastVisit}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                      patient.status === 'Actif'
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {patient.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <button 
-                        onClick={() => handleViewDetail(patient)}
-                        className="p-2 hover:bg-blue-100 rounded-lg text-blue-600 transition" 
-                        title="Voir profil"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => handleEdit(patient)}
-                        className="p-2 hover:bg-green-100 rounded-lg text-green-600 transition" 
-                        title="Modifier"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => handleDeletePatient(patient.id)}
-                        className="p-2 hover:bg-red-100 rounded-lg text-red-600 transition" 
-                        title="Supprimer"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
+      <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
+        {loading ? (
+          <div className="p-12 text-center text-gray-500 font-bold">Chargement des données...</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50/50">
+                  <th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-widest">Patient</th>
+                  <th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-widest">Date & Heure</th>
+                  <th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-widest">Téléphone</th>
+                  <th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-widest">Statut</th>
+                  <th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-widest">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {filteredReservations.map((rdv) => (
+                  <tr key={rdv.id} className="hover:bg-blue-50/30 transition-all group">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center font-bold text-blue-600 group-hover:scale-110 transition">
+                          {rdv.nom.charAt(0)}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-bold text-gray-900 capitalize">{rdv.prenom} {rdv.nom}</p>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-black border ${rdv.sexe === 'Masculin' ? 'border-blue-200 text-blue-500' : 'border-pink-200 text-pink-500'}`}>
+                              {rdv.sexe === 'Masculin' ? 'M' : 'F'}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
+                            {rdv.date_naissance ? Math.floor((new Date() - new Date(rdv.date_naissance)) / 31557600000) + ' ans' : 'Âge inconnu'}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="text-sm font-bold text-gray-700">{new Date(rdv.date_rendez_vous).toLocaleDateString()}</p>
+                      <p className="text-xs text-gray-400 font-medium">{rdv.heure_rendez_vous.substring(0, 5)}</p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <a 
+                        href={`tel:${rdv.telephone}`}
+                        className="text-sm font-medium text-blue-600 hover:underline flex items-center gap-2"
+                      >
+                        <Phone className="w-3 h-3" />
+                        {rdv.telephone}
+                      </a>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ${getStatusColor(rdv.statut)}`}>
+                        {rdv.statut}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => handleViewDetail(rdv)}
+                          className="p-2 hover:bg-white hover:shadow-sm rounded-xl text-gray-400 hover:text-blue-600 transition-all" 
+                          title="Voir Détails"
+                        >
+                          <Eye className="w-5 h-5" />
+                        </button>
+                        {rdv.statut === 'confirme' && (
+                          <button 
+                            onClick={() => window.location.href = `/consultations?rdv=${rdv.id}`}
+                            className="p-2 bg-blue-600 text-white rounded-xl shadow-md shadow-blue-200 hover:bg-blue-700 transition-all" 
+                            title="Lancer Consultation"
+                          >
+                            <Stethoscope className="w-5 h-5" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
-        {filteredPatients.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-500">Aucun patient trouvé</p>
+        {!loading && filteredReservations.length === 0 && (
+          <div className="text-center py-20 bg-gray-50/50">
+            <Calendar className="w-16 h-16 text-gray-200 mx-auto mb-4" />
+            <p className="text-gray-400 font-bold">Aucun patient trouvé pour ces critères.</p>
           </div>
         )}
       </div>
 
-      {/* Modal Ajouter/Modifier Patient */}
-      {showModal && (
-        <div className="fixed inset-0 bg-linear-to-br from-blue-50/60 via-indigo-50/60 to-purple-50/60 backdrop-blur-[2px] flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto border border-blue-100">
-            <div className="p-6 border-b border-gray-200 sticky top-0 bg-white rounded-t-2xl flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">
-                {selectedPatient ? 'Modifier Patient' : 'Ajouter un Nouveau Patient'}
-              </h2>
-              <button
-                onClick={() => {
-                  setShowModal(false)
-                  resetForm()
-                }}
-                className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Nom Complet</label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    placeholder="Jean Dupont"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    required
-                  />
+      {/* Modal Détail Réservation (Patient) */}
+      {selectedRdvDetail && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className={`bg-white rounded-3xl shadow-2xl ${consultationData ? 'max-w-3xl' : 'max-w-lg'} w-full overflow-hidden border border-gray-100 animate-in fade-in zoom-in duration-200 transition-all`}>
+            <div className="p-8 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-100">
+                  <User className="w-8 h-8" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    placeholder="jean@email.com"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Téléphone</label>
-                  <input
-                    type="text"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    placeholder="06 12 34 56 78"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Statut</label>
-                  <select
-                    name="status"
-                    value={formData.status}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                  >
-                    <option value="Actif">Actif</option>
-                    <option value="Inactif">Inactif</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-4 border-t border-gray-200">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowModal(false)
-                    resetForm()
-                  }}
-                  className="flex-1 px-4 py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg font-medium transition-colors"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 px-4 py-2 bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-medium transition-colors"
-                >
-                  {selectedPatient ? 'Modifier' : 'Ajouter'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Détail Patient */}
-      {selectedPatientDetail && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full">
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">Détails du Patient</h2>
-              <button 
-                onClick={() => setSelectedPatientDetail(null)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs font-semibold text-gray-600 uppercase">Nom</p>
-                  <p className="text-gray-900 font-medium">{selectedPatientDetail.name}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-gray-600 uppercase">Email</p>
-                  <p className="text-gray-900 font-medium">{selectedPatientDetail.email}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs font-semibold text-gray-600 uppercase">Email</p>
-                  <p className="text-gray-900 font-medium">{selectedPatientDetail.email}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-gray-600 uppercase">Téléphone</p>
-                  <p className="text-gray-900 font-medium">{selectedPatientDetail.phone}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs font-semibold text-gray-600 uppercase">Statut</p>
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold inline-block ${
-                    selectedPatientDetail.status === 'Actif'
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {selectedPatientDetail.status}
+                  <h2 className="text-2xl font-black text-gray-900 capitalize">{selectedRdvDetail.prenom} {selectedRdvDetail.nom}</h2>
+                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ${getStatusColor(selectedRdvDetail.statut)}`}>
+                    {selectedRdvDetail.statut}
                   </span>
                 </div>
+              </div>
+              <button 
+                onClick={() => setSelectedRdvDetail(null)}
+                className="text-gray-400 hover:text-gray-600 p-2 hover:bg-white rounded-full transition-all"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="p-8 space-y-6 max-h-[70vh] overflow-y-auto">
+              {/* Informations de base */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                 <div>
-                  <p className="text-xs font-semibold text-gray-600 uppercase">Dernier RDV</p>
-                  <p className="text-gray-900 font-medium">{selectedPatientDetail.lastVisit}</p>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Téléphone</p>
+                  <p className="text-gray-900 font-bold flex items-center gap-2">
+                    <Phone className="w-4 h-4 text-blue-500" />
+                    {selectedRdvDetail.telephone}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Genre</p>
+                  <p className="text-gray-900 font-bold capitalize">{selectedRdvDetail.sexe || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Âge</p>
+                  <p className="text-gray-900 font-bold">
+                    {selectedRdvDetail.date_naissance ? Math.floor((new Date() - new Date(selectedRdvDetail.date_naissance)) / 31557600000) : '--'} ans
+                  </p>
                 </div>
               </div>
-              <div className="flex gap-2 pt-4 border-t border-gray-200">
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Email</p>
+                  <p className="text-gray-700 font-medium">{selectedRdvDetail.email || 'Non renseigné'}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Adresse</p>
+                  <p className="text-gray-700 font-medium">{selectedRdvDetail.adresse || 'Non renseignée'}</p>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Motif Initial de Consultation</p>
+                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                  <p className="text-gray-700 font-medium italic">"{selectedRdvDetail.motif}"</p>
+                </div>
+              </div>
+
+              {/* Rapport Médical si terminé */}
+              {consultationData && (
+                <div className="pt-6 border-t border-gray-100 space-y-6">
+                  <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
+                    <Stethoscope className="w-5 h-5 text-blue-600" />
+                    Rapport de Consultation
+                  </h3>
+                  
+                  {/* Constantes */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 text-center">
+                      <p className="text-[10px] font-black text-blue-400 uppercase mb-1">Tension (PA)</p>
+                      <p className="text-blue-900 font-black">{consultationData.pa || '--'}</p>
+                    </div>
+                    <div className="p-4 bg-red-50 rounded-2xl border border-red-100 text-center">
+                      <p className="text-[10px] font-black text-red-400 uppercase mb-1">Fréq. Cardiaque</p>
+                      <p className="text-red-900 font-black">{consultationData.fc || '--'} bpm</p>
+                    </div>
+                    <div className="p-4 bg-orange-50 rounded-2xl border border-orange-100 text-center">
+                      <p className="text-[10px] font-black text-orange-400 uppercase mb-1">Température</p>
+                      <p className="text-orange-900 font-black">{consultationData.temperature || '--'} °C</p>
+                    </div>
+                    <div className="p-4 bg-green-50 rounded-2xl border border-green-100 text-center">
+                      <p className="text-[10px] font-black text-green-400 uppercase mb-1">Saturation</p>
+                      <p className="text-green-900 font-black">{consultationData.saturation || '--'} %</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 text-center">
+                      <p className="text-[10px] font-black text-gray-400 uppercase mb-1">Poids</p>
+                      <p className="text-gray-900 font-black">{consultationData.poids || '--'} kg</p>
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 text-center">
+                      <p className="text-[10px] font-black text-gray-400 uppercase mb-1">Taille</p>
+                      <p className="text-gray-900 font-black">{consultationData.taille || '--'} cm</p>
+                    </div>
+                    <div className="p-4 bg-purple-50 rounded-2xl border border-purple-100 text-center">
+                      <p className="text-[10px] font-black text-purple-400 uppercase mb-1">IMC</p>
+                      <p className="text-purple-900 font-black">{consultationData.imc || '--'}</p>
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 text-center">
+                      <p className="text-[10px] font-black text-gray-400 uppercase mb-1">Fréq. Resp.</p>
+                      <p className="text-gray-900 font-black">{consultationData.fr || '--'} c/min</p>
+                    </div>
+                  </div>
+
+                  {/* Examens */}
+                  {(consultationData.biologie || consultationData.ecg || consultationData.rx_pulmonaire || consultationData.ett) && (
+                    <div className="space-y-4">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b pb-1">Examens Complémentaires</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {consultationData.biologie && (
+                          <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                            <p className="text-[10px] font-black text-gray-400 uppercase mb-1">Biologie</p>
+                            <p className="text-gray-700 text-xs">{consultationData.biologie}</p>
+                          </div>
+                        )}
+                        {consultationData.ecg && (
+                          <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                            <p className="text-[10px] font-black text-gray-400 uppercase mb-1">ECG</p>
+                            <p className="text-gray-700 text-xs">{consultationData.ecg}</p>
+                          </div>
+                        )}
+                        {consultationData.rx_pulmonaire && (
+                          <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                            <p className="text-[10px] font-black text-gray-400 uppercase mb-1">RX Pulmonaire</p>
+                            <p className="text-gray-700 text-xs">{consultationData.rx_pulmonaire}</p>
+                          </div>
+                        )}
+                        {consultationData.ett && (
+                          <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                            <p className="text-[10px] font-black text-gray-400 uppercase mb-1">ETT</p>
+                            <p className="text-gray-700 text-xs">{consultationData.ett}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Diagnostic & Traitement */}
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Diagnostic Posé</p>
+                      <p className="text-gray-900 font-bold bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                        {consultationData.diagnostic || 'Non spécifié'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Traitement / Ordonnance</p>
+                      <p className="text-blue-900 font-bold bg-blue-50/50 p-4 rounded-2xl border border-blue-100 whitespace-pre-wrap">
+                        {consultationData.traitement || 'Aucun traitement noté'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Notes Cliniques */}
+                  {consultationData.notes && (
+                    <div>
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Observations Cliniques</p>
+                      <p className="text-gray-600 text-sm italic p-4 bg-gray-50 rounded-2xl border border-gray-100 whitespace-pre-wrap">
+                        {consultationData.notes}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Rendez-vous le</p>
+                  <p className="text-gray-900 font-bold">{new Date(selectedRdvDetail.date_rendez_vous).toLocaleDateString()}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">À</p>
+                  <p className="text-gray-900 font-bold">{selectedRdvDetail.heure_rendez_vous.substring(0, 5)}</p>
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-gray-50 flex flex-wrap gap-4 sticky bottom-0 bg-white pb-2">
                 <button
-                  onClick={() => setSelectedPatientDetail(null)}
-                  className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-medium transition"
+                  onClick={() => setSelectedRdvDetail(null)}
+                  className="px-6 py-4 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-2xl font-bold transition-all"
                 >
                   Fermer
                 </button>
+                
+                <button
+                  onClick={() => setShowOrdonnanceModal(true)}
+                  className="px-6 py-4 bg-orange-100 hover:bg-orange-200 text-orange-600 rounded-2xl font-bold transition-all flex items-center justify-center gap-2"
+                >
+                  <Pill className="w-5 h-5" />
+                  Ordonnance
+                </button>
+
+                {consultationData && (
+                  <button
+                    onClick={() => window.location.href = `/consultations?rdv=${selectedRdvDetail.id}`}
+                    className="px-6 py-4 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-2xl font-bold transition-all flex items-center justify-center gap-2"
+                  >
+                    <Edit className="w-5 h-5" />
+                    Modifier
+                  </button>
+                )}
+                {consultationData && (
+                  <button
+                    onClick={() => window.print()}
+                    className="px-6 py-4 bg-gray-900 hover:bg-black text-white rounded-2xl font-bold shadow-xl transition-all flex items-center justify-center gap-3"
+                  >
+                    <FileText className="w-5 h-5" />
+                    Imprimer
+                  </button>
+                )}
+                {selectedRdvDetail.statut === 'confirme' && (
+                  <button
+                    onClick={() => window.location.href = `/consultations?rdv=${selectedRdvDetail.id}`}
+                    className="flex-1 px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold shadow-xl shadow-blue-100 transition-all flex items-center justify-center gap-3"
+                  >
+                    <Stethoscope className="w-5 h-5" />
+                    Démarrer Consultation
+                  </button>
+                )}
               </div>
             </div>
           </div>
         </div>
       )}
+
+      <OrdonnanceModal 
+        isOpen={showOrdonnanceModal}
+        onClose={() => setShowOrdonnanceModal(false)}
+        reservation={selectedRdvDetail}
+        medecinId={medecinId}
+        doctorName={user?.nomComplet}
+      />
     </Layout>
   )
 }
-

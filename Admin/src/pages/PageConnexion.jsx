@@ -19,22 +19,21 @@ export default function PageConnexion() {
   }, [isAuthenticated, navigate]);
 
   /** Gestion de la soumission du formulaire */
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setErreurLocale('');
 
-    // Validation des champs
-    if (!email || !password) {
+    if (!email.trim() || !password) {
       setErreurLocale('Veuillez remplir tous les champs');
       return;
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       setErreurLocale('Veuillez entrer une adresse email valide');
       return;
     }
 
-    login(email, password);
+    await login(email.trim().toLowerCase(), password);
   };
 
   const erreurAffiche = erreurLocale || erreurAuth;
@@ -79,8 +78,11 @@ export default function PageConnexion() {
                 <Mail className="absolute left-4 top-4 w-5 h-5 text-gray-400" />
                 <input
                   id="email"
+                  name="email"
                   type="email"
+                  autoComplete="username"
                   value={email}
+                  disabled={loading}
                   onChange={(e) => {
                     setEmail(e.target.value);
                     setErreurLocale('');
@@ -100,8 +102,11 @@ export default function PageConnexion() {
                 <Lock className="absolute left-4 top-4 w-5 h-5 text-gray-400" />
                 <input
                   id="password"
+                  name="password"
                   type="password"
+                  autoComplete="current-password"
                   value={password}
+                  disabled={loading}
                   onChange={(e) => {
                     setPassword(e.target.value);
                     setErreurLocale('');

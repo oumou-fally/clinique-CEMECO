@@ -1,44 +1,21 @@
-import { useMemo, useState } from 'react'
-import { CheckCircle, Plus, Trash2, XCircle, ArrowRightCircle, Clock, MapPin } from 'lucide-react'
+import { useMemo, useState, useEffect } from 'react'
+import { CheckCircle, Plus, Trash2, XCircle, ArrowRightCircle, Clock, MapPin, AlertCircle, Calendar, User, Search, Mail, Phone, X } from 'lucide-react'
 import Layout from '../layouts/Layout'
+import ModalRendezVous from '../components/ModalRendezVous'
+import { useAuth } from '../context/AuthContext'
 import { DOCTORS, getDoctorById, getAvailableDoctors, getTimeSlots } from '../data/clinicData'
 
 const STATUTS = {
-  pending: 'En attente',
-  confirmed: 'Confirmé',
-  cancelled: 'Annulé'
+  attente: 'En attente',
+  confirme: 'Confirmé',
+  annule: 'Annulé'
 }
 
 const COULEURS_STATUTS = {
-  pending: 'bg-amber-100 text-amber-800 border-l-4 border-amber-500',
-  confirmed: 'bg-emerald-100 text-emerald-800 border-l-4 border-emerald-500',
-  cancelled: 'bg-rose-100 text-rose-800 border-l-4 border-rose-500'
+  attente: 'border-orange-200 bg-orange-50',
+  confirme: 'border-emerald-200 bg-emerald-50',
+  annule: 'border-rose-200 bg-rose-50'
 }
-
-const RDV_INITIAUX = [
-  {
-    id: 1,
-    patient: 'Fatoumata Bah',
-    phone: '624 56 78 90',
-    doctorId: 1,
-    date: '2026-04-11',
-    time: '14:30',
-    reason: 'Contrôle cardiaque',
-    status: 'pending',
-    room: 'Salle 301'
-  },
-  {
-    id: 2,
-    patient: 'Sekou Cissé',
-    phone: '624 12 34 56',
-    doctorId: 2,
-    date: '2026-04-11',
-    time: '09:00',
-    reason: 'Électrocardiogramme',
-    status: 'confirmed',
-    room: 'Salle 302'
-  }
-]
 
 const MOTIFS_CONSULTATION = [
   'Contrôle cardiaque',
@@ -50,64 +27,109 @@ const MOTIFS_CONSULTATION = [
 ]
 
 const INITIAL_FORM = {
-  patient: '',
-  phone: '',
-  doctorId: '',
-  date: '',
-  time: '',
-  reason: ''
+  nom: '',
+  prenom: '',
+  date_naissance: '',
+  sexe: 'M',
+  telephone: '',
+  email: '',
+  adresse: '',
+  motif: '',
+  date_rendez_vous: '',
+  heure_rendez_vous: '',
+  id_medecin: ''
 }
 
 export default function GestionRendezVous() {
-  const [rendezVous, setRendezVous] = useState(RDV_INITIAUX)
+  const { user } = useAuth()
+  const [rendezVous, setRendezVous] = useState([])
   const [filtre, setFiltre] = useState('tous')
   const [modalOuvert, setModalOuvert] = useState(false)
   const [modalType, setModalType] = useState('ajouter')
   const [selectedRdv, setSelectedRdv] = useState(null)
   const [formData, setFormData] = useState(INITIAL_FORM)
   const [messageErreur, setMessageErreur] = useState('')
-  const [dateReport, setDateReport] = useState('')
-  const [heureReport, setHeureReport] = useState('')
+  const [absences, setAbsences] = useState([])
+  const [medecins, setMedecins] = useState([])
+
+  const API_URL = '' // Utilise le proxy Vite en développement
+
+  useEffect(() => {
+    fetchData()
+  }, [])
+
+  const fetchData = async () => {
+    try {
+      console.log('🔄 Tentative de récupération des données depuis:', API_URL);
+      const [resRes, absRes, medRes] = await Promise.all([
+        fetch(`${API_URL}/api/reservations`),
+        fetch(`${API_URL}/api/disponibilites`),
+        fetch(`${API_URL}/api/personnel?role=medecin`)
+      ])
+
+      if (!resRes.ok || !absRes.ok || !medRes.ok) {
+        throw new Error('Erreur lors de la récupération des données (HTTP Error)');
+      }
+
+      const resData = await resRes.json()
+      const absData = await absRes.json()
+      const medData = await medRes.json()
+
+      console.log('📦 Données reçues:', { res: resData, abs: absData, med: medData });
+
+      setRendezVous(Array.isArray(resData.reservations) ? resData.reservations : [])
+      setAbsences(Array.isArray(absData) ? absData : [])
+      setMedecins(Array.isArray(medData.personnel) ? medData.personnel : [])
+    } catch (error) {
+      console.error('❌ Erreur lors du chargement des données:', error)
+      setMessageErreur('Impossible de charger les données. Vérifiez la connexion au serveur.')
+    }
+  }
+
+  const handleRefresh = () => {
+    fetchData()
+  }
 
   const rendezVousFiltres = useMemo(
     () =>
-      rendezVous.filter((rdv) => filtre === 'tous' || rdv.status === filtre),
+      Array.isArray(rendezVous) ? rendezVous.filter((rdv) => filtre === 'tous' || rdv.statut === filtre) : [],
     [rendezVous, filtre]
   )
 
   const medecinsDisponibles = useMemo(
-    () => (formData.date ? getAvailableDoctors(formData.date) : DOCTORS),
-    [formData.date]
+    () => Array.isArray(medecins) ? medecins : [],
+    [medecins]
   )
 
   const creneauxDisponibles = useMemo(
-    () => (formData.doctorId && formData.date ? getTimeSlots(Number(formData.doctorId), formData.date) : []),
-    [formData.doctorId, formData.date]
+    () => {
+      return ['08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30']
+    },
+    []
   )
 
   const ouvrirModal = (type, rdv = null) => {
+    console.log('🔓 Ouverture du modal:', type, rdv);
     setModalType(type)
-    setSelectedRdv(rdv)
-    setMessageErreur('')
-    setModalOuvert(true)
-
     if (type === 'reporter' && rdv) {
-      setDateReport(rdv.date)
-      setHeureReport(rdv.time)
+      setSelectedRdv(rdv)
+      setFormData({
+        ...INITIAL_FORM,
+        id_medecin: rdv.id_medecin,
+        date_rendez_vous: rdv.date_rendez_vous.split('T')[0],
+        heure_rendez_vous: rdv.heure_rendez_vous
+      })
     } else {
+      setSelectedRdv(null)
       setFormData(INITIAL_FORM)
-      setDateReport('')
-      setHeureReport('')
     }
+    setModalOuvert(true)
   }
 
   const fermerModal = () => {
     setModalOuvert(false)
-    setSelectedRdv(null)
-    setFormData(INITIAL_FORM)
     setMessageErreur('')
-    setDateReport('')
-    setHeureReport('')
+    setFormData(INITIAL_FORM)
   }
 
   const gererChangement = (e) => {
@@ -115,64 +137,86 @@ export default function GestionRendezVous() {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const ajouterRendezVous = () => {
-    if (Object.values(formData).some((value) => !value)) {
-      setMessageErreur('Veuillez remplir tous les champs du formulaire')
-      return
-    }
-
-    if (!creneauxDisponibles.includes(formData.time)) {
-      setMessageErreur('Le créneau sélectionné n\'est pas disponible')
-      return
-    }
-
-    const nouveauRdv = {
-      id: Date.now(),
-      ...formData,
-      doctorId: Number(formData.doctorId),
-      status: 'pending',
-      room: `Salle ${300 + Math.floor(Math.random() * 20)}`
-    }
-
-    setRendezVous((prev) => [nouveauRdv, ...prev])
-    fermerModal()
+  const obtenirNomMedecin = (id) => {
+    const med = medecins.find(m => m.id === Number(id))
+    return med ? `${med.prenom} ${med.nom}` : 'Non assigné'
   }
 
-  const reporterRendezVous = () => {
-    if (!selectedRdv || !dateReport || !heureReport) {
-      setMessageErreur('Veuillez indiquer la nouvelle date et heure')
-      return
-    }
-
-    const creneaux = getTimeSlots(selectedRdv.doctorId, dateReport)
-    if (!creneaux.includes(heureReport)) {
-      setMessageErreur('Le créneau choisi n\'est pas disponible')
-      return
-    }
-
-    setRendezVous((prev) =>
-      prev.map((rdv) =>
-        rdv.id === selectedRdv.id
-          ? { ...rdv, date: dateReport, time: heureReport, status: 'pending' }
-          : rdv
-      )
+  const estDisponible = (medecinId, date) => {
+    if (!medecinId) return true
+    return !absences.some(abs =>
+      abs.medecin_id === Number(medecinId) &&
+      date >= abs.date_debut &&
+      date <= abs.date_fin
     )
-    fermerModal()
   }
 
-  const confirmerRendezVous = (id) => {
-    setRendezVous((prev) => prev.map((rdv) => (rdv.id === id ? { ...rdv, status: 'confirmed' } : rdv)))
+  const ajouterRendezVous = async () => {
+    const required = ['nom', 'prenom', 'date_naissance', 'sexe', 'telephone', 'motif', 'date_rendez_vous', 'heure_rendez_vous', 'id_medecin']
+    if (required.some(key => !formData[key])) {
+      setMessageErreur('Veuillez remplir tous les champs obligatoires (*)')
+      return
+    }
+
+    if (!estDisponible(formData.id_medecin, formData.date_rendez_vous)) {
+      setMessageErreur(`Le médecin sélectionné est absent à cette date.`)
+      return
+    }
+
+    const payload = {
+      ...formData,
+      id_secretaire: user?.id
+    }
+
+    console.log('📤 Envoi de la réservation:', payload);
+
+    if (!payload.id_secretaire) {
+      setMessageErreur('Erreur d\'authentification : ID secrétaire manquant. Veuillez vous reconnecter.')
+      return
+    }
+
+    try {
+      const res = await fetch(`${API_URL}/api/reservations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      const data = await res.json()
+      if (data.success) {
+        fetchData()
+        fermerModal()
+      } else {
+        setMessageErreur(data.message)
+      }
+    } catch (error) {
+      console.error('Erreur creation:', error)
+      setMessageErreur('Erreur de connexion au serveur')
+    }
   }
 
-  const annulerRendezVous = (id) => {
-    setRendezVous((prev) => prev.map((rdv) => (rdv.id === id ? { ...rdv, status: 'cancelled' } : rdv)))
+  const changerStatut = async (id, statut) => {
+    try {
+      const res = await fetch(`${API_URL}/api/reservations/${id}/statut`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ statut })
+      })
+      if (res.ok) fetchData()
+    } catch (error) {
+      console.error('Erreur changement statut:', error)
+    }
   }
 
-  const supprimerRendezVous = (id) => {
-    setRendezVous((prev) => prev.filter((rdv) => rdv.id !== id))
+  const supprimerRendezVous = async (id) => {
+    if (!confirm('Supprimer définitivement ce rendez-vous ?')) return
+    try {
+      const res = await fetch(`${API_URL}/api/reservations/${id}`, { method: 'DELETE' })
+      if (res.ok) fetchData()
+    } catch (error) {
+      console.error('Erreur suppression:', error)
+    }
   }
 
-  const obtenirNomMedecin = (id) => getDoctorById(id)?.name || 'Médecin inconnu'
 
   return (
     <Layout>
@@ -182,215 +226,180 @@ export default function GestionRendezVous() {
             <h1 className="text-4xl font-bold text-slate-900">Gestion des rendez-vous</h1>
             <p className="text-slate-600 mt-2">Organisez et gérez les rendez-vous des patients</p>
           </div>
-          <button
-            onClick={() => ouvrirModal('ajouter')}
-            className="inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-3 text-white font-semibold shadow-lg hover:shadow-xl transition"
-          >
-            <Plus className="w-5 h-5" /> Nouveau RDV
-          </button>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <div className="card bg-white p-6 border-l-4 border-slate-400 shadow-md">
-            <p className="text-sm font-semibold text-slate-600">Total</p>
-            <p className="mt-3 text-3xl font-bold text-slate-900">{rendezVous.length}</p>
-          </div>
-          <div className="card bg-white p-6 border-l-4 border-emerald-500 shadow-md">
-            <p className="text-sm font-semibold text-emerald-700">Confirmés</p>
-            <p className="mt-3 text-3xl font-bold text-emerald-600">{rendezVous.filter((rdv) => rdv.status === 'confirmed').length}</p>
-          </div>
-          <div className="card bg-white p-6 border-l-4 border-amber-500 shadow-md">
-            <p className="text-sm font-semibold text-amber-700">Attente</p>
-            <p className="mt-3 text-3xl font-bold text-amber-600">{rendezVous.filter((rdv) => rdv.status === 'pending').length}</p>
-          </div>
-          <div className="card bg-white p-6 border-l-4 border-rose-500 shadow-md">
-            <p className="text-sm font-semibold text-rose-700">Annulés</p>
-            <p className="mt-3 text-3xl font-bold text-rose-600">{rendezVous.filter((rdv) => rdv.status === 'cancelled').length}</p>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap gap-2 rounded-2xl bg-white p-4 shadow-md border border-slate-200">
-          {['tous', 'pending', 'confirmed', 'cancelled'].map((option) => (
+          <div className="flex gap-3 relative z-10">
             <button
-              key={option}
-              onClick={() => setFiltre(option)}
-              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${filtre === option ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+              onClick={handleRefresh}
+              className="inline-flex items-center gap-3 rounded-2xl bg-white px-6 py-3 text-slate-600 font-semibold shadow-sm border border-slate-200 hover:bg-slate-50 transition"
             >
-              {option === 'tous' ? 'Tous' : STATUTS[option]}
+              <Clock className="w-5 h-5" /> Rafraîchir
             </button>
-          ))}
+            <button
+              onClick={() => ouvrirModal('ajouter')}
+              className="inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-3 text-white font-semibold shadow-lg hover:shadow-xl transition"
+            >
+              <Plus className="w-5 h-5" /> Nouveau RDV
+            </button>
+          </div>
         </div>
 
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-4">
+              <div className="bg-blue-100 p-3 rounded-2xl">
+                <Calendar className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm font-black uppercase text-slate-400 tracking-wider">Total RDV</p>
+                <p className="mt-3 text-3xl font-bold text-slate-900">{rendezVous.length}</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-4">
+              <div className="bg-orange-100 p-3 rounded-2xl">
+                <Clock className="w-6 h-6 text-orange-600" />
+              </div>
+              <div>
+                <p className="text-sm font-black uppercase text-slate-400 tracking-wider">En attente</p>
+                <p className="mt-3 text-3xl font-bold text-slate-900">
+                  {rendezVous.filter((r) => r.statut === 'attente').length}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-4">
+              <div className="bg-emerald-100 p-3 rounded-2xl">
+                <CheckCircle className="w-6 h-6 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-sm font-black uppercase text-slate-400 tracking-wider">Confirmés</p>
+                <p className="mt-3 text-3xl font-bold text-slate-900">
+                  {rendezVous.filter((r) => r.statut === 'confirme').length}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-4">
+              <div className="bg-rose-100 p-3 rounded-2xl">
+                <XCircle className="w-6 h-6 text-rose-600" />
+              </div>
+              <div>
+                <p className="text-sm font-black uppercase text-slate-400 tracking-wider">Annulés</p>
+                <p className="mt-3 text-3xl font-bold text-slate-900">
+                  {rendezVous.filter((r) => r.statut === 'annule').length}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-4 rounded-[2rem] shadow-sm border border-slate-100">
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 px-2">
+            {['tous', 'attente', 'confirme', 'annule'].map((f) => (
+              <button
+                key={f}
+                onClick={() => setFiltre(f)}
+                className={`px-6 py-2.5 rounded-xl text-sm font-bold capitalize transition-all whitespace-nowrap ${filtre === f
+                  ? 'bg-slate-900 text-white shadow-lg'
+                  : 'text-slate-500 hover:bg-slate-50'
+                  }`}
+              >
+                {f === 'tous' ? 'Tous les RDV' : STATUTS[f]}
+              </button>
+            ))}
+          </div>
+          <div className="relative group px-2">
+            <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-teal-500 transition-colors" />
+            <input
+              type="text"
+              placeholder="Rechercher un patient..."
+              className="w-full md:w-64 pl-12 pr-6 py-3 bg-slate-50 border-2 border-slate-50 rounded-xl text-sm focus:bg-white focus:border-teal-500 outline-none transition-all font-medium"
+            />
+          </div>
+        </div>
+
+        <div className="grid gap-6">
           {rendezVousFiltres.length === 0 ? (
-            <div className="card p-12 text-center bg-white">
-              <Clock className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-500 text-lg">Aucun rendez-vous trouvé</p>
+            <div className="bg-white rounded-[2.5rem] p-16 text-center border-2 border-dashed border-slate-200">
+              <Calendar className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+              <p className="text-slate-500 font-medium text-lg">Aucun rendez-vous trouvé.</p>
             </div>
           ) : (
             rendezVousFiltres.map((rdv) => (
-              <div key={rdv.id} className={`card p-6 rounded-2xl border-2 bg-white ${COULEURS_STATUTS[rdv.status]}`}>
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                  <div className="flex-1">
-                    <p className="text-2xl font-bold text-slate-900">{rdv.patient}</p>
-                    <p className="text-sm text-slate-600 mt-1">👨‍⚕️ {obtenirNomMedecin(rdv.doctorId)}</p>
-                    <p className="text-sm text-slate-500 mt-1">📋 {rdv.reason}</p>
-                  </div>
-
-                  <div className="grid gap-2 md:grid-cols-2 text-sm">
-                    <div className="flex items-center gap-2 text-slate-700">
-                      <Clock className="w-4 h-4" />
-                      <span className="font-semibold">{rdv.date} {rdv.time}</span>
+              <div key={rdv.id} className={`group relative bg-white rounded-[2rem] p-6 shadow-sm border-2 transition-all hover:shadow-xl hover:-translate-y-1 ${COULEURS_STATUTS[rdv.statut]}`}>
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                  <div className="flex items-start gap-5">
+                    <div className="bg-white p-4 rounded-2xl shadow-sm group-hover:scale-110 transition-transform">
+                      <User className="w-8 h-8 text-teal-600" />
                     </div>
-                    <div className="flex items-center gap-2 text-slate-700">
-                      <MapPin className="w-4 h-4" />
-                      <span className="font-semibold">{rdv.room}</span>
+                    <div>
+                      <div className="flex items-center gap-3 mb-1">
+                        <h3 className="font-bold text-xl text-slate-900">{rdv.prenom} {rdv.nom}</h3>
+                        <span className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter border-2 ${rdv.statut === 'confirme' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                          rdv.statut === 'annule' ? 'bg-rose-100 text-rose-700 border-rose-200' :
+                            'bg-orange-100 text-orange-700 border-orange-200'
+                          }`}>
+                          {STATUTS[rdv.statut]}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-4 text-sm text-slate-500 font-medium">
+                        <div className="flex items-center gap-1.5"><Calendar className="w-4 h-4" /> {new Date(rdv.date_rendez_vous).toLocaleDateString()}</div>
+                        <div className="flex items-center gap-1.5"><Clock className="w-4 h-4" /> {rdv.heure_rendez_vous}</div>
+                        <div className="flex items-center gap-1.5"><Search className="w-4 h-4 text-teal-500" /> <span className="text-slate-700">Dr. {obtenirNomMedecin(rdv.id_medecin)}</span></div>
+                      </div>
                     </div>
                   </div>
-
-                  <span className={`badge px-4 py-2 rounded-full font-semibold`}>{STATUTS[rdv.status]}</span>
-                </div>
-
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {rdv.status === 'pending' && (
-                    <button onClick={() => confirmerRendezVous(rdv.id)} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-white text-sm font-semibold hover:bg-emerald-700 transition">
-                      <CheckCircle className="w-4 h-4" /> Confirmer
-                    </button>
-                  )}
-                  <button onClick={() => ouvrirModal('reporter', rdv)} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-white text-sm font-semibold hover:bg-blue-700 transition">
-                    <ArrowRightCircle className="w-4 h-4" /> Reporter
-                  </button>
-                  {rdv.status !== 'cancelled' && (
-                    <button onClick={() => annulerRendezVous(rdv.id)} className="inline-flex items-center gap-2 rounded-xl bg-rose-500 px-4 py-2 text-white text-sm font-semibold hover:bg-rose-600 transition">
-                      <XCircle className="w-4 h-4" /> Annuler
-                    </button>
-                  )}
-                  <button onClick={() => supprimerRendezVous(rdv.id)} className="inline-flex items-center gap-2 rounded-xl bg-slate-200 px-4 py-2 text-slate-700 text-sm font-semibold hover:bg-slate-300 transition ml-auto">
-                    <Trash2 className="w-4 h-4" /> Supprimer
-                  </button>
+                  <div className="flex items-center gap-3">
+                    {rdv.statut === 'attente' && (
+                      <>
+                        <button onClick={() => changerStatut(rdv.id, 'confirme')} className="p-3 bg-white text-emerald-600 hover:bg-emerald-600 hover:text-white border-2 border-emerald-100 rounded-2xl transition-all shadow-sm"><CheckCircle className="w-6 h-6" /></button>
+                        <button onClick={() => ouvrirModal('reporter', rdv)} className="p-3 bg-white text-blue-600 hover:bg-blue-600 hover:text-white border-2 border-blue-100 rounded-2xl transition-all shadow-sm"><ArrowRightCircle className="w-6 h-6" /></button>
+                      </>
+                    )}
+                    <button onClick={() => changerStatut(rdv.id, 'annule')} className="p-3 bg-white text-rose-600 hover:bg-rose-600 hover:text-white border-2 border-rose-100 rounded-2xl transition-all shadow-sm"><XCircle className="w-6 h-6" /></button>
+                    <button onClick={() => supprimerRendezVous(rdv.id)} className="p-3 bg-white text-slate-400 hover:bg-slate-600 hover:text-white border-2 border-slate-100 rounded-2xl transition-all shadow-sm"><Trash2 className="w-6 h-6" /></button>
+                  </div>
                 </div>
               </div>
             ))
           )}
         </div>
 
-        {modalOuvert && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between gap-4 p-6 border-b border-slate-200 bg-gradient-to-r from-emerald-50 to-teal-50">
-                <div>
-                  <h2 className="text-2xl font-bold text-slate-900">
-                    {modalType === 'ajouter' ? 'Nouveau rendez-vous' : 'Reporter'}
-                  </h2>
-                  <p className="text-sm text-slate-600 mt-1">
-                    {modalType === 'ajouter' ? 'Créez un nouveau rendez-vous' : 'Choisissez une nouvelle date'}
-                  </p>
-                </div>
-                <button onClick={fermerModal} className="text-slate-400 hover:text-slate-600">
-                  <XCircle className="w-6 h-6" />
-                </button>
-              </div>
-
-              {messageErreur && <div className="m-6 rounded-2xl bg-rose-50 p-4 text-sm text-rose-700 border border-rose-200">⚠️ {messageErreur}</div>}
-
-              <div className="p-6 space-y-5">
-                {modalType === 'ajouter' ? (
-                  <>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div>
-                        <label className="text-sm font-semibold text-slate-700">Patient *</label>
-                        <input name="patient" value={formData.patient} onChange={gererChangement} placeholder="Nom complet" className="mt-2 rounded-xl" />
-                      </div>
-                      <div>
-                        <label className="text-sm font-semibold text-slate-700">Téléphone *</label>
-                        <input name="phone" value={formData.phone} onChange={gererChangement} placeholder="+224 6XX XX XX XX" className="mt-2 rounded-xl" />
-                      </div>
-                    </div>
-
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div>
-                        <label className="text-sm font-semibold text-slate-700">Date *</label>
-                        <input type="date" name="date" value={formData.date} onChange={gererChangement} className="mt-2 rounded-xl" />
-                      </div>
-                      <div>
-                        <label className="text-sm font-semibold text-slate-700">Médecin *</label>
-                        <select name="doctorId" value={formData.doctorId} onChange={gererChangement} className="mt-2 rounded-xl">
-                          <option value="">Sélectionner</option>
-                          {medecinsDisponibles.map((doctor) => (
-                            <option key={doctor.id} value={doctor.id}>
-                              {doctor.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div>
-                        <label className="text-sm font-semibold text-slate-700">Heure *</label>
-                        <select name="time" value={formData.time} onChange={gererChangement} className="mt-2 rounded-xl">
-                          <option value="">Sélectionner</option>
-                          {creneauxDisponibles.map((creneau) => (
-                            <option key={creneau} value={creneau}>
-                              {creneau}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-sm font-semibold text-slate-700">Motif *</label>
-                        <select name="reason" value={formData.reason} onChange={gererChangement} className="mt-2 rounded-xl">
-                          <option value="">Sélectionner</option>
-                          {MOTIFS_CONSULTATION.map((motif) => (
-                            <option key={motif} value={motif}>
-                              {motif}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-end gap-3 pt-4">
-                      <button onClick={fermerModal} className="rounded-xl border-2 border-slate-300 px-5 py-2 text-slate-700 font-semibold hover:bg-slate-50 transition">
-                        Annuler
-                      </button>
-                      <button onClick={ajouterRendezVous} className="rounded-xl bg-emerald-600 px-5 py-2 text-white font-semibold hover:bg-emerald-700 transition">
-                        Créer
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="rounded-2xl bg-slate-100 p-4 border border-slate-300">
-                      <p className="text-sm text-slate-600 font-medium">Patient : {selectedRdv?.patient}</p>
-                      <p className="text-sm text-slate-600 font-medium mt-1">Médecin : {obtenirNomMedecin(selectedRdv?.doctorId)}</p>
-                    </div>
-
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div>
-                        <label className="text-sm font-semibold text-slate-700">Nouvelle date *</label>
-                        <input type="date" value={dateReport} onChange={(e) => setDateReport(e.target.value)} className="mt-2 rounded-xl" />
-                      </div>
-                      <div>
-                        <label className="text-sm font-semibold text-slate-700">Nouvelle heure *</label>
-                        <input type="time" value={heureReport} onChange={(e) => setHeureReport(e.target.value)} className="mt-2 rounded-xl" />
-                      </div>
-                    </div>
-
-                    <div className="flex justify-end gap-3 pt-4">
-                      <button onClick={fermerModal} className="rounded-xl border-2 border-slate-300 px-5 py-2 text-slate-700 font-semibold hover:bg-slate-50 transition">
-                        Annuler
-                      </button>
-                      <button onClick={reporterRendezVous} className="rounded-xl bg-blue-600 px-5 py-2 text-white font-semibold hover:bg-blue-700 transition">
-                        Reporter
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+        <ModalRendezVous
+          modalOuvert={modalOuvert}
+          modalType={modalType}
+          selectedRdv={selectedRdv}
+          formData={formData}
+          setFormData={setFormData}
+          gererChangement={gererChangement}
+          fermerModal={fermerModal}
+          ajouterRendezVous={ajouterRendezVous}
+          creneauxDisponibles={creneauxDisponibles}
+          medecins={medecins}
+          estDisponible={estDisponible}
+          messageErreur={messageErreur}
+          onReporter={async () => {
+            try {
+              const res = await fetch(`${API_URL}/api/reservations/${selectedRdv.id}/reporter`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  id_medecin: formData.id_medecin,
+                  date_rendez_vous: formData.date_rendez_vous,
+                  heure_rendez_vous: formData.heure_rendez_vous
+                })
+              })
+              if (res.ok) {
+                fetchData()
+                fermerModal()
+              }
+            } catch (error) {
+              console.error('Erreur report:', error)
+            }
+          }}
+        />
       </div>
     </Layout>
   )

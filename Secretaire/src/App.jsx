@@ -9,6 +9,8 @@ import ComposantFacturation from './pages/ComposantFacturation'
 import RenseignementMedecin from './pages/renseignement_medecin'
 import Notifications from './pages/Notifications'
 import Parametres from './pages/parametres'
+import DisponibilitesMedecins from './pages/DisponibilitesMedecins'
+import AttributionMedecin from './pages/AttributionMedecin'
 
 import './App.css'
 
@@ -76,6 +78,23 @@ function App() {
           element={
             <ProtectedRoute>
               <Parametres />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/disponibilites"
+          element={
+            <ProtectedRoute>
+              <DisponibilitesMedecins />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/dashboard/attribution"
+          element={
+            <ProtectedRoute>
+              <AttributionMedecin />
             </ProtectedRoute>
           }
         />

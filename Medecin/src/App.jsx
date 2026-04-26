@@ -10,6 +10,7 @@ import Prescriptions from './pages/Prescriptions'
 import Advice from './pages/GestionConseilsMedicaux'
 import Notifications from './pages/Notifications'
 import Settings from './pages/ParametresPage'
+import Planning from './pages/Planning'
 import './App.css'
 
 function App() {
@@ -84,6 +85,14 @@ function App() {
           element={
             <ProtectedRoute>
               <Settings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/planning"
+          element={
+            <ProtectedRoute>
+              <Planning />
             </ProtectedRoute>
           }
         />

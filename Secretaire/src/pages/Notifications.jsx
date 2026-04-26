@@ -1,149 +1,212 @@
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Layout from '../layouts/Layout'
-import { Bell, X, Calendar, AlertCircle, CheckCircle, Info } from 'lucide-react'
 
 export default function Notifications() {
-  const allNotifications = [
-    {
-      id: 1,
-      type: 'appointment',
-      title: 'Rappel de consultation',
-      message: 'Votre rendez-vous avec Professeur Elhadj Yaya Baldé est demain à 14h30',
-      time: 'Il y a 2 heures',
-      read: false,
-      icon: Calendar
-    },
-    {
-      id: 2,
-      type: 'result',
-      title: 'Résultat disponible',
-      message: 'Vos résultats de bilan sanguin sont maintenant disponibles',
-      time: 'Il y a 5 heures',
-      read: false,
-      icon: CheckCircle
-    },
-    {
-      id: 3,
-      type: 'warning',
-      title: 'Rappel important',
-      message: 'Pensez à renouveler votre ordonnance pour l\'aspirine',
-      time: 'Il y a 1 jour',
-      read: true,
-      icon: AlertCircle
-    },
-    {
-      id: 4,
-      type: 'info',
-      title: 'Mise à jour disponible',
-      message: 'Un nouveau médecin spécialiste a rejoint notre clinique : Docteur Mamadou Diallo',
-      time: 'Il y a 2 jours',
-      read: true,
-      icon: Info
-    },
-    {
-      id: 5,
-      type: 'appointment',
-      title: 'RDV confirmé',
-      message: 'Docteur Thierno Siradjo Baldé a confirmé votre rendez-vous pour le 22/04/2024',
-      time: 'Il y a 3 jours',
-      read: true,
-      icon: Calendar
-    },
-    {
-      id: 6,
-      type: 'result',
-      title: 'Résultat disponible',
-      message: 'Vos résultats de radiographie thorax sont maintenant disponibles',
-      time: 'Il y a 5 jours',
-      read: true,
-      icon: CheckCircle
-    }
-  ]
 
-  const getNotificationColor = (type) => {
-    switch (type) {
-      case 'appointment':
-        return 'bg-blue-50 border-blue-200'
-      case 'result':
-        return 'bg-green-50 border-green-200'
-      case 'warning':
-        return 'bg-red-50 border-red-200'
-      case 'info':
-        return 'bg-purple-50 border-purple-200'
-      default:
-        return 'bg-gray-50 border-gray-200'
+  const [notifications, setNotifications] = useState([])
+  const [systemNotifications, setSystemNotifications] = useState([])
+  const [loading, setLoading] = useState(true)
+  const navigate = useNavigate()
+
+  const API_URL = 'http://localhost:3000'
+
+  // ======================================================
+  // 🔄 CHARGER NOTIFICATIONS
+  // ======================================================
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true)
+
+      const res = await fetch(`${API_URL}/api/reservations/notifications/secretaire`)
+      const data = await res.json()
+
+      if (data.success) {
+        setNotifications(data.notifications.rendezvous || [])
+        setSystemNotifications(data.notifications.planning || [])
+      }
+
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setLoading(false)
     }
   }
 
-  const getIconColor = (type) => {
-    switch (type) {
-      case 'appointment':
-        return 'text-blue-600'
-      case 'result':
-        return 'text-green-600'
-      case 'warning':
-        return 'text-red-600'
-      case 'info':
-        return 'text-purple-600'
-      default:
-        return 'text-gray-600'
+  useEffect(() => {
+    fetchNotifications()
+  }, [])
+
+  // ======================================================
+  // ✅ CONFIRMER → PASSE À ATTRIBUTION MÉDECIN
+  // ======================================================
+  const handleConfirmer = async (notification) => {
+    try {
+      // 1. confirmation backend
+      await fetch(`${API_URL}/api/reservations/${notification.id}/confirm`, {
+        method: 'PUT'
+      })
+
+      // 2. stocker temporairement pour attribution
+      localStorage.setItem('rdv_selection', JSON.stringify(notification))
+
+      // 3. redirection vers disponibilités pour chercher le médecin du jour
+      navigate('/dashboard/disponibilites')
+
+    } catch (error) {
+      console.error(error)
     }
   }
 
+  // ======================================================
+  // ❌ ANNULER
+  // ======================================================
+  const handleAnnuler = async (id) => {
+    try {
+      await fetch(`${API_URL}/api/reservations/${id}/cancel`, {
+        method: 'PUT'
+      })
+
+      fetchNotifications()
+
+    } catch (error) {
+      console.error(error)
+    }
+  }
+
+  // ======================================================
+  // 🔁 REPORTER
+  // ======================================================
+  const handleReporter = async (id) => {
+    const date = prompt('Nouvelle date (YYYY-MM-DD)')
+    const heure = prompt('Nouvelle heure (HH:MM)')
+
+    if (!date || !heure) return
+
+    try {
+      await fetch(`${API_URL}/api/reservations/${id}/report`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date_rendez_vous: date, heure_rendez_vous: heure })
+      })
+
+      fetchNotifications()
+
+    } catch (error) {
+      console.error(error)
+    }
+  }
+
+  // ======================================================
+  // 🖥️ UI (INCHANGÉ)
+  // ======================================================
   return (
     <Layout>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Notifications</h1>
-        <p className="text-gray-600 mt-2">Restez informé de vos consultations et résultats</p>
+        <h1 className="text-3xl font-bold text-gray-900">
+          Notifications Secrétaire
+        </h1>
+        <p className="text-gray-600 mt-2">
+          Gestion des rendez-vous patients
+        </p>
       </div>
+
+      <button
+        onClick={fetchNotifications}
+        className="px-4 py-2 bg-gray-200 rounded-lg mb-6"
+      >
+        Actualiser
+      </button>
+
+      {loading && <p>Chargement...</p>}
 
       <div className="space-y-4">
-        {allNotifications.map((notification) => {
-          const Icon = notification.icon
-          return (
-            <div
-              key={notification.id}
-              className={`p-6 rounded-lg border-2 transition hover:shadow-md ${
-                getNotificationColor(notification.type)
-              } ${!notification.read ? 'opacity-100' : 'opacity-80'}`}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex items-start gap-4 flex-1">
-                  <div className={`p-3 rounded-full ${
-                    notification.type === 'appointment' ? 'bg-blue-100' :
-                    notification.type === 'result' ? 'bg-green-100' :
-                    notification.type === 'warning' ? 'bg-red-100' :
-                    'bg-purple-100'
-                  }`}>
-                    <Icon className={`w-6 h-6 ${getIconColor(notification.type)}`} />
-                  </div>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-bold text-gray-900">{notification.title}</h3>
-                      {!notification.read && (
-                        <span className="w-2 h-2 bg-teal-600 rounded-full"></span>
-                      )}
-                    </div>
-
-                    <p className="text-gray-700 mb-2">{notification.message}</p>
-                    <p className="text-sm text-gray-500">{notification.time}</p>
+        {/* NOTIFICATIONS SYSTEME (PLANNING MÉDECIN) */}
+        {systemNotifications.length > 0 && (
+          <div className="mb-4">
+            <h2 className="text-xl font-bold text-gray-800 mb-3 border-b pb-2">Mises à jour des plannings</h2>
+            <div className="space-y-3">
+              {systemNotifications.map(n => (
+                <div key={`sys-${n.id}`} className="p-4 border border-indigo-200 rounded-lg bg-indigo-50 flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
+                    <p className="font-medium text-indigo-900">{n.message}</p>
                   </div>
+                  <button 
+                    onClick={async () => {
+                      // Marquer comme lu
+                      try {
+                        await fetch(`${API_URL}/api/reservations/notifications/systeme/${n.id}/lu`, {
+                          method: 'PUT'
+                        })
+                        setSystemNotifications(prev => prev.filter(sys => sys.id !== n.id))
+                        navigate('/dashboard/disponibilites')
+                      } catch (error) {
+                        console.error('Erreur mark as read:', error)
+                        navigate('/dashboard/disponibilites')
+                      }
+                    }}
+                    className="text-sm text-indigo-600 hover:text-indigo-800 bg-white px-3 py-1.5 rounded-lg shadow-sm font-semibold border border-indigo-100 transition-colors"
+                  >
+                    Voir disponibilités
+                  </button>
                 </div>
+              ))}
+            </div>
+          </div>
+        )}
 
-                <button className="flex-shrink-0 p-2 hover:bg-gray-200 rounded-lg transition ml-4">
-                  <X className="w-5 h-5 text-gray-400" />
+        {/* NOTIFICATIONS DEMANDES DE RENDEZ-VOUS */}
+        <h2 className="text-xl font-bold text-gray-800 mb-3 border-b pb-2 mt-8">Demandes de rendez-vous patients</h2>
+        
+        {notifications.length === 0 && !loading && (
+          <p className="text-center text-gray-500 py-8">
+            Aucune demande de rendez-vous
+          </p>
+        )}
+
+        {notifications.map((n) => (
+          <div key={n.id} className="p-5 border rounded-lg bg-blue-50 shadow-sm transition-all hover:shadow-md">
+
+            <div className="flex flex-col sm:flex-row justify-between gap-4">
+
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="bg-blue-200 text-blue-800 px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider">Demande</span>
+                  <span className="text-gray-500 text-sm">{n.date_rendez_vous} à {n.heure_rendez_vous}</span>
+                </div>
+                <h3 className="font-bold text-lg text-gray-900">{n.prenom} {n.nom}</h3>
+                <p className="text-gray-600 mt-1 italic">"{n.motif}"</p>
+              </div>
+
+              <div className="flex flex-col gap-2 min-w-[120px]">
+                <button
+                  onClick={() => handleConfirmer(n)}
+                  className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-4 py-2 rounded shadow-sm transition-colors w-full"
+                >
+                  Confirmer
+                </button>
+                <button 
+                  onClick={() => handleReporter(n.id)}
+                  className="bg-amber-100 hover:bg-amber-200 text-amber-700 font-medium px-4 py-2 rounded transition-colors w-full"
+                >
+                  Reporter
+                </button>
+
+                <button 
+                  onClick={() => handleAnnuler(n.id)}
+                  className="bg-red-50 hover:bg-red-100 text-red-600 font-medium px-4 py-2 rounded transition-colors w-full"
+                >
+                  Annuler
                 </button>
               </div>
-            </div>
-          )
-        })}
-      </div>
 
-      <div className="mt-12 text-center py-8">
-        <p className="text-gray-500 mb-4">Vous êtes à jour avec vos notifications</p>
-        <button className="px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium transition">
-          Paramètres de notification
-        </button>
+            </div>
+
+          </div>
+        ))}
+
       </div>
     </Layout>
   )

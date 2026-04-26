@@ -41,12 +41,12 @@ export default function ConsultationForm({
     notes: ''
   }
 
-  const [formData, setFormData] = useState(initialData || defaultFormData)
+  const [formData, setFormData] = useState({ ...defaultFormData, ...initialData })
 
-  // Mise à jour lorsque initialData change (mode édition)
+  // Mise à jour lorsque initialData change (mode édition ou pré-remplissage)
   useEffect(() => {
     if (initialData) {
-      setFormData(initialData)
+      setFormData(prev => ({ ...prev, ...initialData }))
     } else {
       setFormData(defaultFormData)
     }

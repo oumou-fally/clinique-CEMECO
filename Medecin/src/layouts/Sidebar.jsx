@@ -28,6 +28,7 @@ export default function Sidebar() {
     { icon: Pill, label: 'Ordonnances', path: '/dashboard/prescriptions' },
     { icon: MessageSquare, label: 'Conseils Médicaux', path: '/dashboard/advice' },
     { icon: Bell, label: 'Notifications', path: '/dashboard/notifications' },
+    { icon: Calendar, label: 'Mon Planning', path: '/dashboard/planning' },
     { icon: Settings, label: 'Configuration', path: '/dashboard/settings' }
   ]
 

@@ -1,429 +1,288 @@
-﻿import Layout from '../layouts/Layout'
-import { Search, Plus, Download, Eye, Edit, Trash2, X } from 'lucide-react'
-import { useState } from 'react'
+import Layout from '../layouts/Layout';
+import { 
+  Search, 
+  Plus, 
+  Download, 
+  Eye, 
+  FileText, 
+  Calendar, 
+  User, 
+  Clock, 
+  CheckCircle, 
+  AlertCircle, 
+  X, 
+  Stethoscope,
+  Printer
+} from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 
-export default function MedicalReports() {
-  const [searchTerm, setSearchTerm] = useState('')
-  const [showModal, setShowModal] = useState(false)
-  const [showDetailModal, setShowDetailModal] = useState(false)
-  const [selectedReport, setSelectedReport] = useState(null)
-  const [editingReport, setEditingReport] = useState(null)
+export default function RapportsMedicaux() {
+  const { medecinId, user } = useAuth();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [reports, setReports] = useState([]);
+  const [selectedReport, setSelectedReport] = useState(null);
 
-  const [reports, setReports] = useState([
-    {
-      id: 1,
-      patient: 'Baldé Oumou Fally',
-      title: 'Suivi Cardiovasculaire',
-      date: '2026-04-01',
-      type: 'Consultation',
-      status: 'Complété',
-      diagnosis: 'Hypertension contrôlée',
-      treatment: 'Adaptation du traitement antihypertenseur',
-      notes: 'Suivi programmé dans un mois',
-      nextFollow: '2026-05-01'
-    },
-    {
-      id: 2,
-      patient: 'Camara Aissatou',
-      title: 'Bilan Biologique',
-      date: '2026-04-04',
-      type: 'Analyse',
-      status: 'En cours',
-      diagnosis: 'Résultats attendus de la formule sanguine',
-      treatment: 'Aucun traitement pour le moment',
-      notes: 'Relancer après réception du laboratoire',
-      nextFollow: ''
+  useEffect(() => {
+    if (medecinId) {
+      fetchReports();
     }
-  ])
+  }, [medecinId]);
 
-  const [formData, setFormData] = useState({
-    patient: '',
-    title: '',
-    type: 'Consultation',
-    status: 'En cours',
-    diagnosis: '',
-    treatment: '',
-    notes: '',
-    nextFollow: ''
-  })
-
-  const filteredReports = reports.filter((report) =>
-    report.patient.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    report.title.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-  }
-
-  const handleAddReport = () => {
-    setEditingReport(null)
-    setFormData({
-      patient: '',
-      title: '',
-      type: 'Consultation',
-      status: 'En cours',
-      diagnosis: '',
-      treatment: '',
-      notes: '',
-      nextFollow: ''
-    })
-    setShowModal(true)
-  }
-
-  const handleEditReport = (report) => {
-    setEditingReport(report)
-    setFormData({ ...report })
-    setShowModal(true)
-  }
-
-  const handleSaveReport = (asDraft = false) => {
-    if (!formData.patient.trim() || !formData.title.trim()) {
-      alert('Veuillez renseigner le patient et le titre du rapport.')
-      return
+  const fetchReports = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/consultations/historique/${medecinId}`);
+      const data = await res.json();
+      if (data.success) {
+        setReports(data.consultations);
+      }
+    } catch (error) {
+      console.error('Erreur fetch rapports:', error);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    const payload = {
-      ...formData,
-      status: asDraft ? 'Brouillon' : formData.status || 'En cours'
-    }
+  const filteredReports = reports.filter((report) => {
+    const searchString = `${report.patient_nom} ${report.patient_prenom} ${report.diagnostic}`.toLowerCase();
+    return searchString.includes(searchTerm.toLowerCase());
+  });
 
-    if (editingReport) {
-      setReports((current) =>
-        current.map((report) =>
-          report.id === editingReport.id ? { ...report, ...payload } : report
-        )
-      )
-    } else {
-      setReports((current) => [
-        ...current,
-        {
-          id: Date.now(),
-          date: new Date().toISOString().split('T')[0],
-          ...payload
-        }
-      ])
-    }
-
-    setShowModal(false)
-    setEditingReport(null)
-  }
-
-  const handleDeleteReport = (id) => {
-    if (confirm('Voulez-vous vraiment supprimer ce rapport médical ?')) {
-      setReports((current) => current.filter((report) => report.id !== id))
-    }
-  }
-
-  const handleDownloadReport = (report) => {
-    const content = `RAPPORT MÉDICAL\nPatient: ${report.patient}\nTitre: ${report.title}\nDate: ${report.date}\nType: ${report.type}\nStatut: ${report.status}\n\nDiagnostic:\n${report.diagnosis}\n\nTraitement:\n${report.treatment}\n\nNotes:\n${report.notes}`
-    const element = document.createElement('a')
-    element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(content))
-    element.setAttribute('download', `rapport-${report.id}.txt`)
-    element.click()
-  }
-
-  const handleViewDetail = (report) => {
-    setSelectedReport(report)
-    setShowDetailModal(true)
-  }
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'Complété':
-        return 'bg-green-100 text-green-800 border-green-200'
-      case 'En cours':
-        return 'bg-blue-100 text-blue-800 border-blue-200'
-      case 'Brouillon':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200'
-      case 'Annulé':
-        return 'bg-red-100 text-red-800 border-red-200'
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200'
-    }
-  }
+  const getStatusBadge = (status) => {
+    return (
+      <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-[10px] font-black uppercase tracking-tighter flex items-center gap-1">
+        <CheckCircle className="w-3 h-3" />
+        Complété
+      </span>
+    );
+  };
 
   return (
     <Layout>
-      <div className="mb-8">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="p-8 space-y-8 bg-gray-50 min-h-screen">
+        {/* Header */}
+        <div className="flex justify-between items-center bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Rapports Médicaux</h1>
-            <p className="text-gray-600 mt-2">Retrouvez et gérez facilement vos rapports médicaux.</p>
+            <h1 className="text-3xl font-black text-gray-900 flex items-center gap-3">
+              <FileText className="w-10 h-10 text-blue-600" />
+              Archives & Rapports Médicaux
+            </h1>
+            <p className="text-gray-500 mt-2 font-medium">
+              Consultation des dossiers historiques du <span className="text-blue-600 font-bold">Dr. {user?.nomComplet}</span>
+            </p>
           </div>
-          <button
-            onClick={handleAddReport}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition"
-          >
-            <Plus className="w-5 h-5" />
-            Nouveau rapport
-          </button>
+          <div className="flex gap-4">
+            <button 
+              onClick={fetchReports}
+              className="px-6 py-3 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-2xl font-bold transition-all border border-gray-100"
+            >
+              Actualiser
+            </button>
+          </div>
+        </div>
+
+        {/* Barre de recherche */}
+        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex gap-4 items-center">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input 
+              type="text" 
+              placeholder="Rechercher par patient ou diagnostic..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-12 pr-4 py-4 bg-gray-50 border-transparent focus:bg-white focus:border-blue-500 rounded-2xl transition-all font-medium"
+            />
+          </div>
+        </div>
+
+        {/* Liste des rapports */}
+        <div className="bg-white rounded-3xl shadow-sm overflow-hidden border border-gray-100">
+          {loading ? (
+            <div className="p-20 text-center text-gray-500 font-bold flex flex-col items-center gap-4">
+              <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+              Chargement des archives médicales...
+            </div>
+          ) : filteredReports.length === 0 ? (
+            <div className="p-20 text-center">
+              <FileText className="w-20 h-20 text-gray-100 mx-auto mb-4" />
+              <p className="text-gray-400 font-bold text-xl">Aucun rapport trouvé</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-gray-50/50 border-b border-gray-50">
+                    <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Patient & Date</th>
+                    <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Diagnostic Principal</th>
+                    <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">État</th>
+                    <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {filteredReports.map((report) => (
+                    <tr key={report.id} className="hover:bg-blue-50/20 transition-all group">
+                      <td className="px-8 py-6">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-white rounded-2xl shadow-sm border border-gray-100 flex items-center justify-center text-blue-600 font-black group-hover:scale-110 transition">
+                            {report.patient_nom.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="font-black text-gray-900 capitalize text-lg">{report.patient_prenom} {report.patient_nom}</p>
+                            <p className="text-xs text-gray-400 font-bold flex items-center gap-2 mt-1">
+                              <Calendar className="w-3 h-3" />
+                              {new Date(report.date_consultation).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-8 py-6">
+                        <p className="text-sm font-bold text-gray-700 max-w-xs truncate">{report.diagnostic || 'Non renseigné'}</p>
+                        <p className="text-[10px] text-gray-400 font-black uppercase mt-1">Rapport #{report.id}</p>
+                      </td>
+                      <td className="px-8 py-6">
+                        {getStatusBadge()}
+                      </td>
+                      <td className="px-8 py-6">
+                        <button 
+                          onClick={() => setSelectedReport(report)}
+                          className="p-3 bg-gray-50 hover:bg-blue-600 hover:text-white rounded-xl text-gray-400 transition-all shadow-sm"
+                        >
+                          <Eye className="w-5 h-5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="mb-6 grid gap-4 md:grid-cols-[1fr_auto]">
-        <div className="relative">
-          <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Rechercher un patient ou un titre..."
-            className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        {filteredReports.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-gray-300 bg-white p-10 text-center text-gray-500">
-            Aucun rapport médical trouvé. Créez un nouveau rapport pour commencer.
-          </div>
-        ) : (
-          filteredReports.map((report) => (
-            <div key={report.id} className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm transition hover:shadow-md">
-              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      {/* Modal Détail Rapport */}
+      {selectedReport && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-[40px] shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-gray-100 flex flex-col animate-in fade-in zoom-in duration-300">
+            {/* Header Modal */}
+            <div className="p-10 border-b border-gray-50 flex items-center justify-between bg-gray-50/30">
+              <div className="flex items-center gap-6">
+                <div className="w-20 h-20 bg-blue-600 rounded-[28px] flex items-center justify-center text-white shadow-2xl shadow-blue-200">
+                  <Stethoscope className="w-10 h-10" />
+                </div>
                 <div>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <h2 className="text-xl font-semibold text-gray-900">{report.title}</h2>
-                    <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${getStatusColor(report.status)}`}>
-                      {report.status}
+                  <h2 className="text-3xl font-black text-gray-900 capitalize">
+                    {selectedReport.patient_prenom} {selectedReport.patient_nom}
+                  </h2>
+                  <div className="flex items-center gap-4 mt-2">
+                    <span className="flex items-center gap-2 text-sm font-bold text-gray-400">
+                      <Calendar className="w-4 h-4" />
+                      {new Date(selectedReport.date_consultation).toLocaleDateString()}
+                    </span>
+                    <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-[10px] font-black uppercase tracking-tighter">
+                      Rapport Finalisé
                     </span>
                   </div>
-                  <p className="mt-2 text-gray-600">Patient : <span className="font-semibold text-gray-900">{report.patient}</span></p>
-                  <p className="text-sm text-gray-500">{report.type} · {report.date} · Suivi : {report.nextFollow || 'Non programmé'}</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => handleViewDetail(report)}
-                    className="inline-flex items-center gap-2 rounded-2xl border border-gray-200 px-4 py-2 text-gray-700 hover:bg-gray-50 transition"
-                  >
-                    <Eye className="w-4 h-4" /> Voir
-                  </button>
-                  <button
-                    onClick={() => handleEditReport(report)}
-                    className="inline-flex items-center gap-2 rounded-2xl bg-yellow-100 px-4 py-2 text-yellow-900 hover:bg-yellow-200 transition"
-                  >
-                    <Edit className="w-4 h-4" /> Modifier
-                  </button>
-                  <button
-                    onClick={() => handleDownloadReport(report)}
-                    className="inline-flex items-center gap-2 rounded-2xl bg-green-100 px-4 py-2 text-green-900 hover:bg-green-200 transition"
-                  >
-                    <Download className="w-4 h-4" /> Télécharger
-                  </button>
-                  <button
-                    onClick={() => handleDeleteReport(report.id)}
-                    className="inline-flex items-center gap-2 rounded-2xl bg-red-100 px-4 py-2 text-red-900 hover:bg-red-200 transition"
-                  >
-                    <Trash2 className="w-4 h-4" /> Supprimer
-                  </button>
                 </div>
               </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4 py-6">
-          <div className="w-full max-w-3xl rounded-3xl bg-white shadow-2xl max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-5 shrink-0">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">{editingReport ? 'Modifier le rapport médical' : 'Nouveau rapport médical'}</h2>
-                <p className="text-gray-600 mt-1">Remplissez les détails du rapport puis enregistrez.</p>
-              </div>
-              <button onClick={() => setShowModal(false)} className="text-gray-500 hover:text-gray-900">
+              <button 
+                onClick={() => setSelectedReport(null)}
+                className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-gray-400 hover:text-gray-900 hover:rotate-90 transition-all shadow-sm border border-gray-100"
+              >
                 <X className="w-6 h-6" />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto px-6 py-6">
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="block">
-                  <span className="text-sm font-medium text-gray-700">Patient</span>
-                  <input
-                    name="patient"
-                    value={formData.patient}
-                    onChange={handleInputChange}
-                    className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Nom du patient"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-sm font-medium text-gray-700">Titre</span>
-                  <input
-                    name="title"
-                    value={formData.title}
-                    onChange={handleInputChange}
-                    className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Titre du rapport"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-sm font-medium text-gray-700">Type</span>
-                  <select
-                    name="type"
-                    value={formData.type}
-                    onChange={handleInputChange}
-                    className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option>Consultation</option>
-                    <option>Analyse</option>
-                    <option>Bilan</option>
-                    <option>Urgence</option>
-                  </select>
-                </label>
-                <label className="block">
-                  <span className="text-sm font-medium text-gray-700">Statut</span>
-                  <select
-                    name="status"
-                    value={formData.status}
-                    onChange={handleInputChange}
-                    className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option>En cours</option>
-                    <option>Complété</option>
-                    <option>Brouillon</option>
-                    <option>Annulé</option>
-                  </select>
-                </label>
-                <label className="block md:col-span-2">
-                  <span className="text-sm font-medium text-gray-700">Diagnostic</span>
-                  <textarea
-                    name="diagnosis"
-                    value={formData.diagnosis}
-                    onChange={handleInputChange}
-                    className="mt-2 w-full min-h-24 rounded-2xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Résumé du diagnostic"
-                  />
-                </label>
-                <label className="block md:col-span-2">
-                  <span className="text-sm font-medium text-gray-700">Traitement</span>
-                  <textarea
-                    name="treatment"
-                    value={formData.treatment}
-                    onChange={handleInputChange}
-                    className="mt-2 w-full min-h-24 rounded-2xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Plan de traitement"
-                  />
-                </label>
-                <label className="block md:col-span-2">
-                  <span className="text-sm font-medium text-gray-700">Notes</span>
-                  <textarea
-                    name="notes"
-                    value={formData.notes}
-                    onChange={handleInputChange}
-                    className="mt-2 w-full min-h-24 rounded-2xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Notes complémentaires"
-                  />
-                </label>
-                <label className="block md:col-span-2">
-                  <span className="text-sm font-medium text-gray-700">Suivi prévu</span>
-                  <input
-                    type="date"
-                    name="nextFollow"
-                    value={formData.nextFollow}
-                    onChange={handleInputChange}
-                    className="mt-2 w-full rounded-2xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </label>
-              </div>
-            </div>
-            <div className="flex flex-col gap-3 border-t border-gray-200 px-6 py-5 shrink-0 sm:flex-row sm:justify-end">
-              <button
-                onClick={() => handleSaveReport(true)}
-                className="w-full rounded-2xl border border-gray-300 px-6 py-3 text-gray-700 hover:bg-gray-100 transition sm:w-auto"
-              >
-                Enregistrer comme brouillon
-              </button>
-              <button
-                onClick={() => handleSaveReport(false)}
-                className="w-full rounded-2xl bg-blue-600 px-6 py-3 text-white hover:bg-blue-700 transition sm:w-auto"
-              >
-                Enregistrer le rapport
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {showDetailModal && selectedReport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4 py-6">
-          <div className="w-full max-w-3xl overflow-hidden rounded-3xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-5">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">Détails du rapport</h2>
-                <p className="text-gray-600 mt-1">Visualisez toutes les informations du rapport médical.</p>
+            {/* Content Modal */}
+            <div className="p-10 space-y-10 overflow-y-auto">
+              {/* Signes Vitaux */}
+              <div className="space-y-4">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest border-l-4 border-blue-600 pl-3">Paramètres Vitaux</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {[
+                    { label: 'Tension (PA)', value: selectedReport.pa, unit: 'mmHg', bg: 'bg-blue-50', text: 'text-blue-700' },
+                    { label: 'Pouls (FC)', value: selectedReport.fc, unit: 'bpm', bg: 'bg-red-50', text: 'text-red-700' },
+                    { label: 'Saturation', value: selectedReport.saturation, unit: '%', bg: 'bg-green-50', text: 'text-green-700' },
+                    { label: 'Température', value: selectedReport.temperature, unit: '°C', bg: 'bg-orange-50', text: 'text-orange-700' },
+                    { label: 'Poids', value: selectedReport.poids, unit: 'kg', bg: 'bg-gray-50', text: 'text-gray-700' },
+                    { label: 'Taille', value: selectedReport.taille, unit: 'cm', bg: 'bg-gray-50', text: 'text-gray-700' },
+                    { label: 'IMC', value: selectedReport.imc, unit: '', bg: 'bg-purple-50', text: 'text-purple-700' },
+                    { label: 'Fréq. Resp.', value: selectedReport.fr, unit: 'c/min', bg: 'bg-gray-50', text: 'text-gray-700' }
+                  ].map((item, i) => (
+                    <div key={i} className={`${item.bg} p-5 rounded-3xl border border-white shadow-sm`}>
+                      <p className={`text-[10px] font-black ${item.text} opacity-50 uppercase mb-1`}>{item.label}</p>
+                      <p className={`text-xl font-black ${item.text}`}>{item.value || '--'} <span className="text-[10px]">{item.unit}</span></p>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <button onClick={() => setShowDetailModal(false)} className="text-gray-500 hover:text-gray-900">
-                <X className="w-6 h-6" />
-              </button>
+
+              {/* Diagnostic et Traitement */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-4">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest border-l-4 border-gray-900 pl-3">Diagnostic Posé</p>
+                  <div className="bg-gray-900 text-white p-6 rounded-[32px] shadow-xl min-h-[120px]">
+                    <p className="font-bold leading-relaxed">{selectedReport.diagnostic || 'Aucun diagnostic spécifié'}</p>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest border-l-4 border-blue-600 pl-3">Traitement / Ordonnance</p>
+                  <div className="bg-blue-50 p-6 rounded-[32px] border border-blue-100 min-h-[120px]">
+                    <p className="text-blue-900 font-bold leading-relaxed whitespace-pre-wrap">{selectedReport.traitement || 'Aucun traitement prescrit'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Examens & Notes */}
+              {(selectedReport.biologie || selectedReport.ecg || selectedReport.notes) && (
+                <div className="space-y-6">
+                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest border-l-4 border-gray-200 pl-3">Notes & Examens</p>
+                   <div className="grid grid-cols-1 gap-4">
+                     {selectedReport.notes && (
+                       <div className="p-6 bg-gray-50 rounded-3xl border border-gray-100">
+                         <p className="text-[10px] font-black text-gray-400 uppercase mb-2">Observations Cliniques</p>
+                         <p className="text-gray-600 font-medium italic whitespace-pre-wrap">"{selectedReport.notes}"</p>
+                       </div>
+                     )}
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                       {selectedReport.biologie && (
+                         <div className="p-5 bg-white border border-gray-100 rounded-3xl">
+                           <p className="text-[10px] font-black text-gray-400 uppercase mb-2">Biologie</p>
+                           <p className="text-xs font-bold text-gray-700">{selectedReport.biologie}</p>
+                         </div>
+                       )}
+                       {selectedReport.ecg && (
+                         <div className="p-5 bg-white border border-gray-100 rounded-3xl">
+                           <p className="text-[10px] font-black text-gray-400 uppercase mb-2">ECG</p>
+                           <p className="text-xs font-bold text-gray-700">{selectedReport.ecg}</p>
+                         </div>
+                       )}
+                     </div>
+                   </div>
+                </div>
+              )}
             </div>
-            <div className="space-y-6 p-6">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <p className="text-sm text-gray-500">Patient</p>
-                  <p className="text-lg font-semibold text-gray-900">{selectedReport.patient}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Titre</p>
-                  <p className="text-lg font-semibold text-gray-900">{selectedReport.title}</p>
-                </div>
-              </div>
-              <div className="grid gap-4 md:grid-cols-3">
-                <div>
-                  <p className="text-sm text-gray-500">Date</p>
-                  <p className="text-gray-900">{selectedReport.date}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Type</p>
-                  <p className="text-gray-900">{selectedReport.type}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Statut</p>
-                  <p className="text-gray-900">{selectedReport.status}</p>
-                </div>
-              </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <p className="text-sm text-gray-500">Diagnostic</p>
-                  <p className="text-gray-700 whitespace-pre-line">{selectedReport.diagnosis}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Traitement</p>
-                  <p className="text-gray-700 whitespace-pre-line">{selectedReport.treatment}</p>
-                </div>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Notes</p>
-                <p className="text-gray-700 whitespace-pre-line">{selectedReport.notes || 'Aucune note supplémentaire.'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Suivi prévu</p>
-                <p className="text-gray-700">{selectedReport.nextFollow || 'Aucun suivi planifié'}</p>
-              </div>
-              <div className="flex flex-wrap gap-3 pt-4">
-                <button
-                  onClick={() => {
-                    handleEditReport(selectedReport)
-                    setShowDetailModal(false)
-                  }}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-yellow-100 px-5 py-3 text-yellow-900 hover:bg-yellow-200 transition"
-                >
-                  <Edit className="w-4 h-4" /> Modifier
-                </button>
-                <button
-                  onClick={() => handleDownloadReport(selectedReport)}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-green-100 px-5 py-3 text-green-900 hover:bg-green-200 transition"
-                >
-                  <Download className="w-4 h-4" /> Télécharger
-                </button>
-              </div>
+
+            {/* Footer Modal */}
+            <div className="p-8 border-t border-gray-50 flex gap-4 bg-gray-50/30">
+              <button 
+                onClick={() => setSelectedReport(null)}
+                className="flex-1 px-8 py-4 bg-white hover:bg-gray-100 text-gray-500 rounded-2xl font-bold transition-all border border-gray-200 shadow-sm"
+              >
+                Fermer l'aperçu
+              </button>
+              <button 
+                onClick={() => window.print()}
+                className="flex-1 px-8 py-4 bg-gray-900 hover:bg-black text-white rounded-2xl font-bold transition-all shadow-2xl flex items-center justify-center gap-3"
+              >
+                <Printer className="w-5 h-5" />
+                Imprimer le Dossier
+              </button>
             </div>
           </div>
         </div>
       )}
     </Layout>
-  )
+  );
 }

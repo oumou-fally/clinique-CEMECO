@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Layout from '../layouts/Layout';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -15,134 +15,155 @@ import {
 } from 'lucide-react';
 
 export default function TableauDeBord() {
-  const { user } = useAuth();
+  const { user, medecinId, isAuthenticated } = useAuth();
 
-  const consultationsDuJour = [
-    {
-      id: 1,
-      patient: 'Baldé Oumou',
-      heure: '14:30',
-      date: '2026-04-15',
-      type: 'Consultation',
-      statut: 'Confirmé'
-    },
-    {
-      id: 2,
-      patient: 'Barry Yaya',
-      heure: '15:30',
-      date: '2026-04-15',
-      type: 'Suivi',
-      statut: 'Confirmé'
-    },
-    {
-      id: 3,
-      patient: 'Bah Kenda',
-      heure: '16:00',
-      date: '2026-04-15',
-      type: 'Première visite',
-      statut: 'En attente'
+  const [consultationsDuJour, setConsultationsDuJour] = useState([]);
+  const [stats, setStats] = useState({ today: 0, patients: 0, reports: 0 });
+  const [loading, setLoading] = useState(true);
+  const [rapportsRecents, setRapportsRecents] = useState([]);
+
+  useEffect(() => {
+    if (medecinId) {
+      fetchDashboardData();
+      fetchRecentReports();
     }
-  ];
+  }, [medecinId]);
 
-  const rapportsRecents = [
-    {
-      id: 1,
-      patient: 'Diakité Kadiatou',
-      date: '2026-04-10',
-      type: 'Rapport de consultation',
-      statut: 'Complété'
-    },
-    {
-      id: 2,
-      patient: 'Barry Yaya',
-      date: '2026-04-08',
-      type: 'Diagnostic',
-      statut: 'Complété'
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/consultations/reservations/${medecinId}`);
+      const data = await res.json();
+      
+      if (data.success) {
+        const today = new Date().toISOString().split('T')[0];
+        const todayConsults = data.reservations.filter(r => r.date_rendez_vous.split('T')[0] === today);
+        setConsultationsDuJour(todayConsults);
+        
+        setStats(prev => ({
+          ...prev,
+          today: todayConsults.length,
+          patients: new Set(data.reservations.map(r => r.nom + r.prenom)).size
+        }));
+      }
+    } catch (error) {
+      console.error('Erreur fetch dashboard:', error);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
-  const statistiques = [
-    {
-      label: 'Consultations Aujourd\'hui',
-      valeur: '5',
-      icon: Calendar,
-      couleur: 'blue'
-    },
-    {
-      label: 'Patients Actifs',
-      valeur: '24',
-      icon: Users,
-      couleur: 'green'
-    },
-    {
-      label: 'Rapports Complétés',
-      valeur: '12',
-      icon: FileText,
-      couleur: 'purple'
-    },
-    {
-      label: 'Taux de Satisfaction',
-      valeur: '95%',
-      icon: TrendingUp,
-      couleur: 'orange'
+  const fetchRecentReports = async () => {
+    try {
+      const res = await fetch(`/api/consultations/historique/${medecinId}`);
+      const data = await res.json();
+      if (data.success) {
+        setRapportsRecents(data.consultations.slice(0, 5));
+        setStats(prev => ({ ...prev, reports: data.consultations.length }));
+      }
+    } catch (error) {
+      console.error('Erreur fetch rapports:', error);
     }
-  ];
-
-  const actionsRapides = [
-    { icon: Plus, label: 'Nouvelle Consultation', couleur: 'bg-blue-600 hover:bg-blue-700' },
-    { icon: FileText, label: 'Nouveau Rapport', couleur: 'bg-green-600 hover:bg-green-700' },
-    { icon: Users, label: 'Ajouter Patient', couleur: 'bg-purple-600 hover:bg-purple-700' },
-    { icon: Stethoscope, label: 'Mes Disponibilités', couleur: 'bg-orange-600 hover:bg-orange-700' }
-  ];
+  };
 
   const getStatutBadge = (statut) => {
-    return statut === 'Confirmé' 
-      ? 'bg-green-100 text-green-800' 
-      : 'bg-yellow-100 text-yellow-800';
+    switch (statut) {
+      case 'confirme': return 'bg-green-100 text-green-800';
+      case 'attente': return 'bg-yellow-100 text-yellow-800';
+      case 'annule': return 'bg-red-100 text-red-800';
+      case 'termine': return 'bg-blue-100 text-blue-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
   };
+
+  if (loading) {
+    return <Layout><div className="p-8 font-bold text-gray-500">Chargement...</div></Layout>;
+  }
+
+  const statistiques = [
+    { label: "Consultations Aujourd'hui", valeur: stats.today.toString(), icon: Calendar, couleur: 'blue' },
+    { label: 'Patients Actifs', valeur: stats.patients.toString(), icon: Users, couleur: 'green' },
+    { label: 'Rapports Complétés', valeur: stats.reports.toString(), icon: FileText, couleur: 'purple' },
+    { label: 'Taux de Satisfaction', valeur: '98%', icon: TrendingUp, couleur: 'orange' }
+  ];
 
   return (
     <Layout>
-      <div className="space-y-8">
-        {/* En-tête de bienvenue */}
-        <div>
-          <h1 className="text-4xl font-bold text-gray-900">
-            Bienvenue, Dr. {user?.name?.split(' ').pop()} ! 👋
-          </h1>
-          <p className="text-gray-600 mt-2 text-lg">
-            {user?.specialty || 'Médecin'} — Tableau de bord
-          </p>
+      <div className="p-8 space-y-8 bg-gray-50 min-h-screen">
+        {/* Header */}
+        <div className="flex justify-between items-center bg-white p-8 rounded-3xl shadow-sm">
+          <div>
+            <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">
+              Bonjour, <span className="text-blue-600">Dr. {user?.nomComplet}</span> 👋
+            </h1>
+            <p className="text-gray-500 mt-2 text-lg">Prêt pour vos consultations du jour ?</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <p className="text-sm font-semibold text-gray-400 uppercase tracking-widest">Aujourd'hui</p>
+              <p className="text-xl font-bold text-gray-900">
+                {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+              </p>
+            </div>
+            <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-200">
+              <Calendar className="w-8 h-8" />
+            </div>
+          </div>
         </div>
 
-        {/* Alerte */}
-        <div className="p-5 bg-green-50 border border-green-200 rounded-2xl flex items-start gap-4">
-          <CheckCircle className="w-6 h-6 text-green-600 mt-0.5 flex-shrink-0" />
-          <div>
-            <p className="font-semibold text-green-900">Tout est à jour</p>
-            <p className="text-sm text-green-800 mt-1">
-              Vous avez {rapportsRecents.length} rapports complétés cette semaine
-            </p>
-          </div>
+        {/* Actions Rapides */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <button 
+            onClick={() => window.location.href = '/dashboard/planning'}
+            className="flex items-center justify-between p-6 bg-white rounded-3xl shadow-sm border border-gray-100 hover:border-indigo-200 hover:bg-indigo-50 transition group"
+          >
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-indigo-100 text-indigo-600 rounded-2xl group-hover:bg-indigo-600 group-hover:text-white transition">
+                <Calendar className="w-6 h-6" />
+              </div>
+              <div className="text-left">
+                <p className="text-lg font-black text-gray-900">Gérer mon Planning</p>
+                <p className="text-sm text-gray-500 font-medium">Définissez vos disponibilités</p>
+              </div>
+            </div>
+            <Plus className="w-6 h-6 text-gray-300" />
+          </button>
+          <button 
+            onClick={() => window.location.href = '/dashboard/consultations'}
+            className="flex items-center justify-between p-6 bg-white rounded-3xl shadow-sm border border-gray-100 hover:border-blue-200 hover:bg-blue-50 transition group"
+          >
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-blue-100 text-blue-600 rounded-2xl group-hover:bg-blue-600 group-hover:text-white transition">
+                <Stethoscope className="w-6 h-6" />
+              </div>
+              <div className="text-left">
+                <p className="text-lg font-black text-gray-900">Nouvelle Consultation</p>
+                <p className="text-sm text-gray-500 font-medium">Démarrer un suivi patient</p>
+              </div>
+            </div>
+            <Plus className="w-6 h-6 text-gray-300" />
+          </button>
         </div>
 
         {/* Statistiques */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {statistiques.map((stat, index) => {
             const Icon = stat.icon;
+            const colors = {
+              blue: 'bg-blue-50 text-blue-600',
+              green: 'bg-green-50 text-green-600',
+              purple: 'bg-purple-50 text-purple-600',
+              orange: 'bg-orange-50 text-orange-600'
+            };
             return (
-              <div
-                key={index}
-                className={`bg-gradient-to-br from-${stat.couleur}-50 to-${stat.couleur}-100 border border-${stat.couleur}-200 rounded-2xl p-6 hover:shadow-lg transition`}
-              >
+              <div key={index} className="bg-white p-6 rounded-3xl shadow-sm hover:shadow-md transition group border border-transparent hover:border-blue-100">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">{stat.label}</p>
-                    <p className={`text-4xl font-bold text-${stat.couleur}-700 mt-3`}>
-                      {stat.valeur}
-                    </p>
+                  <div className={`p-4 rounded-2xl ${colors[stat.couleur]} group-hover:scale-110 transition transform`}>
+                    <Icon className="w-8 h-8" />
                   </div>
-                  <div className={`p-4 bg-white rounded-2xl shadow-sm`}>
-                    <Icon className={`w-8 h-8 text-${stat.couleur}-500`} />
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-gray-400 uppercase tracking-wider">{stat.label}</p>
+                    <p className="text-3xl font-black text-gray-900 mt-1">{stat.valeur}</p>
                   </div>
                 </div>
               </div>
@@ -150,98 +171,98 @@ export default function TableauDeBord() {
           })}
         </div>
 
-        {/* Actions rapides */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {actionsRapides.map((action, index) => {
-            const Icon = action.icon;
-            return (
-              <button
-                key={index}
-                className={`${action.couleur} text-white rounded-2xl p-5 flex flex-col items-center justify-center gap-3 hover:scale-105 transition transform`}
-              >
-                <Icon className="w-7 h-7" />
-                <span className="font-medium text-sm">{action.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
         {/* Contenu principal */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Consultations du jour */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-2xl shadow p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-                  <Calendar className="w-6 h-6 text-blue-600" />
-                  Consultations d'aujourd'hui
+            <div className="bg-white rounded-3xl shadow-sm p-8 border border-gray-100">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-4">
+                  <div className="p-3 bg-blue-600 rounded-xl text-white">
+                    <Clock className="w-6 h-6" />
+                  </div>
+                  Consultations du jour
                 </h2>
-                <span className="text-sm text-gray-500">{consultationsDuJour.length} rendez-vous</span>
+                <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-full border border-gray-100">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm font-bold text-gray-600">{consultationsDuJour.length} PATIENTS</span>
+                </div>
               </div>
 
-              <div className="space-y-4">
-                {consultationsDuJour.map((consult) => (
-                  <div
-                    key={consult.id}
-                    className="p-5 border border-gray-200 rounded-2xl hover:border-blue-200 hover:shadow-md transition"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center">
-                          <User className="w-6 h-6 text-blue-600" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-gray-900">{consult.patient}</p>
-                          <p className="text-sm text-gray-600">{consult.type}</p>
-                        </div>
-                      </div>
-
-                      <div className="text-right">
-                        <p className="font-mono text-lg font-bold text-gray-900">{consult.heure}</p>
-                        <span className={`inline-block px-4 py-1 rounded-full text-xs font-semibold mt-2 ${getStatutBadge(consult.statut)}`}>
-                          {consult.statut}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-3 mt-5">
-                      <button className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-medium hover:bg-blue-700 transition">
-                        Commencer la consultation
-                      </button>
-                      <button className="flex-1 border border-gray-300 py-3 rounded-xl font-medium hover:bg-gray-50 transition">
-                        Détails
-                      </button>
-                    </div>
+              <div className="space-y-6">
+                {consultationsDuJour.length === 0 ? (
+                  <div className="text-center py-12 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">
+                    <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500 font-medium text-lg">Aucun rendez-vous pour aujourd'hui</p>
                   </div>
-                ))}
+                ) : (
+                  consultationsDuJour.map((consult) => (
+                    <div key={consult.id} className="group p-6 border-2 border-gray-50 rounded-3xl hover:border-blue-100 hover:bg-blue-50/30 transition-all">
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-5">
+                          <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-sm group-hover:scale-105 transition border border-gray-100">
+                            <User className="w-7 h-7 text-blue-600" />
+                          </div>
+                          <div>
+                            <p className="text-xl font-bold text-gray-900 capitalize">{consult.prenom} {consult.nom}</p>
+                            <div className="flex items-center gap-3 mt-1">
+                              <span className="text-sm font-medium text-gray-500">{consult.motif}</span>
+                              <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ${getStatutBadge(consult.statut)}`}>
+                                {consult.statut}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-2xl font-black text-gray-900">{consult.heure_rendez_vous.substring(0, 5)}</p>
+                          <p className="text-xs font-bold text-gray-400 mt-1 uppercase tracking-widest">Heure prévue</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-4 mt-8">
+                        <button 
+                          onClick={() => window.location.href = `/consultations?rdv=${consult.id}`}
+                          className="flex-1 bg-gray-900 text-white py-4 rounded-2xl font-bold hover:bg-blue-600 transition shadow-lg shadow-gray-200 hover:shadow-blue-200 flex items-center justify-center gap-3"
+                        >
+                          <Stethoscope className="w-5 h-5" />
+                          Démarrer la consultation
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
 
-          {/* Rapports récents */}
           <div>
-            <div className="bg-white rounded-2xl shadow p-6 h-full">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-                <FileText className="w-6 h-6 text-green-600" />
+            <div className="bg-white rounded-3xl shadow-sm p-8 border border-gray-100 h-full">
+              <h2 className="text-2xl font-bold text-gray-900 mb-8 flex items-center gap-4">
+                <div className="p-3 bg-green-600 rounded-xl text-white">
+                  <FileText className="w-6 h-6" />
+                </div>
                 Rapports Récents
               </h2>
-
               <div className="space-y-4">
-                {rapportsRecents.map((rapport) => (
-                  <div
-                    key={rapport.id}
-                    className="p-5 border border-gray-200 rounded-2xl hover:bg-gray-50 transition cursor-pointer"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-semibold">{rapport.patient}</p>
-                        <p className="text-sm text-gray-600 mt-1">{rapport.type}</p>
-                        <p className="text-xs text-gray-500 mt-2">{rapport.date}</p>
+                {rapportsRecents.length === 0 ? (
+                  <p className="text-center text-gray-500 py-8 italic font-medium">Aucun rapport récent</p>
+                ) : (
+                  rapportsRecents.map((rapport) => (
+                    <div key={rapport.id} className="p-5 bg-gray-50 rounded-2xl hover:bg-blue-50 hover:scale-[1.02] transition cursor-pointer border border-transparent hover:border-blue-100">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-bold text-gray-900 capitalize">{rapport.patient_prenom} {rapport.patient_nom}</p>
+                          <p className="text-sm font-semibold text-blue-600 mt-1">Consultation terminée</p>
+                          <div className="flex items-center gap-2 mt-3 text-xs text-gray-400 font-bold">
+                            <Calendar className="w-3 h-3" />
+                            {new Date(rapport.date_consultation).toLocaleDateString()}
+                          </div>
+                        </div>
+                        <div className="p-2 bg-green-100 rounded-lg">
+                          <CheckCircle className="w-5 h-5 text-green-600" />
+                        </div>
                       </div>
-                      <CheckCircle className="w-5 h-5 text-green-600" />
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           </div>

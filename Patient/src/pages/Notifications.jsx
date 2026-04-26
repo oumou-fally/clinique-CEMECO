@@ -1,193 +1,214 @@
+import { useState, useEffect } from 'react'
 import Layout from '../layouts/Layout'
-import { Bell, X, Calendar, AlertCircle, CheckCircle, Info } from 'lucide-react'
-import { CLINIC_INFO } from '../data/clinicData'
+import { useAuth } from '../context/AuthContext'
+import { Bell, BellOff, Calendar, Clock, CheckCircle, XCircle, RotateCcw, Stethoscope, CheckCheck } from 'lucide-react'
 
 export default function Notifications() {
-  const allNotifications = [
-    {
-      id: 0,
-      type: 'info',
-      title: 'Horaires de la clinique CEMECO',
-      message: `${CLINIC_INFO.fullName} - Lundi à Samedi: ${CLINIC_INFO.hours.weekday}, ${CLINIC_INFO.hours.weekend}`,
-      time: 'Info permanente',
-      read: true,
-      icon: Info
-    },
-    {
-      id: 1,
-      type: 'appointment',
-      title: 'Rappel de consultation',
-      message: 'Votre rendez-vous avec Dr. Sophie Martin est demain à 14h30',
-      time: 'Il y a 2 heures',
-      read: false,
-      icon: Calendar
-    },
-    {
-      id: 2,
-      type: 'result',
-      title: 'Résultat disponible',
-      message: 'Vos résultats de bilan sanguin sont maintenant disponibles',
-      time: 'Il y a 5 heures',
-      read: false,
-      icon: CheckCircle
-    },
-    {
-      id: 3,
-      type: 'warning',
-      title: 'Rappel important',
-      message: 'Pensez à renouveler votre ordonnance pour l\'aspirine',
-      time: 'Il y a 1 jour',
-      read: true,
-      icon: AlertCircle
-    },
-    {
-      id: 4,
-      type: 'info',
-      title: 'Mise à jour disponible',
-      message: 'Un nouveau médecin spécialiste a rejoint notre clinique',
-      time: 'Il y a 2 jours',
-      read: true,
-      icon: Info
-    },
-    {
-      id: 5,
-      type: 'appointment',
-      title: 'RDV confirmé',
-      message: 'Dr. Jean Rousseau a confirmé votre rendez-vous pour le 22/04/2026',
-      time: 'Il y a 3 jours',
-      read: true,
-      icon: Calendar
-    },
-    {
-      id: 6,
-      type: 'result',
-      title: 'Résultat disponible',
-      message: 'Vos résultats de radiographie thorax sont maintenant disponibles',
-      time: 'Il y a 5 jours',
-      read: true,
-      icon: CheckCircle
-    }
-  ]
+  const { patientId } = useAuth()
+  const [notifications, setNotifications] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState('all')
 
-  const getNotificationColor = (type) => {
-    switch (type) {
-      case 'appointment':
-        return 'bg-blue-50 border-blue-200'
-      case 'result':
-        return 'bg-green-50 border-green-200'
-      case 'warning':
-        return 'bg-red-50 border-red-200'
-      case 'info':
-        return 'bg-purple-50 border-purple-200'
-      default:
-        return 'bg-gray-50 border-gray-200'
+  const API_URL = 'http://localhost:3000'
+
+  // ======================================================
+  // 🔄 CHARGER NOTIFICATIONS RÉELLES
+  // ======================================================
+  const fetchNotifications = async () => {
+    if (!patientId) return
+    try {
+      setLoading(true)
+      const res = await fetch(`${API_URL}/api/reservations/notifications/patient/${patientId}`)
+      const data = await res.json()
+      if (data.success) {
+        setNotifications(data.notifications || [])
+      }
+    } catch (error) {
+      console.error('Erreur chargement notifications patient:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
-  const getIconColor = (type) => {
-    switch (type) {
-      case 'appointment':
-        return 'text-blue-600'
-      case 'result':
-        return 'text-green-600'
-      case 'warning':
-        return 'text-red-600'
-      case 'info':
-        return 'text-purple-600'
-      default:
-        return 'text-gray-600'
+  useEffect(() => {
+    fetchNotifications()
+  }, [patientId])
+
+  // ======================================================
+  // ✅ MARQUER COMME LUE (notif_patient = 0)
+  // ======================================================
+  const markAsRead = async (rdvId) => {
+    try {
+      await fetch(`${API_URL}/api/reservations/notifications/patient/${rdvId}/lu`, {
+        method: 'PUT'
+      })
+      setNotifications(prev => prev.filter(n => n.id !== rdvId))
+    } catch (error) {
+      console.error(error)
     }
   }
+
+  const markAllAsRead = async () => {
+    for (const n of notifications) {
+      await markAsRead(n.id)
+    }
+  }
+
+  // ======================================================
+  // 🎨 CONFIG STATUT
+  // ======================================================
+  const getStatutConfig = (statut) => {
+    const s = (statut || '').toLowerCase()
+    if (s === 'confirme')  return { label: 'Rendez-vous confirmé',   icon: <CheckCircle className="w-6 h-6" />, bg: 'bg-emerald-50', iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600', border: 'border-emerald-200', badge: 'bg-emerald-100 text-emerald-700 border-emerald-200' }
+    if (s === 'attribue')  return { label: 'Médecin attribué',        icon: <Stethoscope className="w-6 h-6" />, bg: 'bg-indigo-50',  iconBg: 'bg-indigo-100',  iconColor: 'text-indigo-600',  border: 'border-indigo-200',  badge: 'bg-indigo-100 text-indigo-700 border-indigo-200' }
+    if (s === 'annule')    return { label: 'Rendez-vous annulé',      icon: <XCircle className="w-6 h-6" />,    bg: 'bg-rose-50',    iconBg: 'bg-rose-100',    iconColor: 'text-rose-600',    border: 'border-rose-200',    badge: 'bg-rose-100 text-rose-700 border-rose-200' }
+    if (s === 'reporte')   return { label: 'Rendez-vous reporté',     icon: <RotateCcw className="w-6 h-6" />,  bg: 'bg-amber-50',   iconBg: 'bg-amber-100',   iconColor: 'text-amber-600',   border: 'border-amber-200',   badge: 'bg-amber-100 text-amber-700 border-amber-200' }
+    return { label: 'Mise à jour de rendez-vous', icon: <Bell className="w-6 h-6" />, bg: 'bg-gray-50', iconBg: 'bg-gray-100', iconColor: 'text-gray-500', border: 'border-gray-200', badge: 'bg-gray-100 text-gray-600 border-gray-200' }
+  }
+
+  const formatTime = (dateStr) => {
+    if (!dateStr) return ''
+    const date = new Date(dateStr)
+    const now = new Date()
+    const diffMs = now - date
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+    if (diffHours < 1)  return 'À l\'instant'
+    if (diffHours < 24) return `Il y a ${diffHours}h`
+    if (diffDays < 7)   return `Il y a ${diffDays} jour${diffDays > 1 ? 's' : ''}`
+    return date.toLocaleDateString('fr-FR')
+  }
+
+  const unreadCount = notifications.length
 
   return (
     <Layout>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Notifications</h1>
-        <p className="text-gray-600 mt-2">Restez informé de vos consultations et résultats</p>
-      </div>
+      <div className="space-y-8">
 
-      {/* Filter Tabs */}
-      <div className="flex gap-2 mb-6 flex-wrap">
-        <button className="px-4 py-2 bg-teal-600 text-white rounded-full text-sm font-medium">
-          Tous
-        </button>
-        <button className="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-full text-sm font-medium transition">
-          Non lus
-        </button>
-        <button className="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-full text-sm font-medium transition">
-          Rendez-vous
-        </button>
-        <button className="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-full text-sm font-medium transition">
-          Résultats
-        </button>
-      </div>
-
-      {/* Notifications List */}
-      <div className="space-y-4">
-        {allNotifications.map((notification) => {
-          const Icon = notification.icon
-          return (
-            <div
-              key={notification.id}
-              className={`p-6 rounded-lg border-2 transition hover:shadow-md ${
-                getNotificationColor(notification.type)
-              } ${!notification.read ? 'opacity-100' : 'opacity-80'}`}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex items-start gap-4 flex-1">
-                  <div className={`p-3 rounded-full ${
-                    notification.type === 'appointment' ? 'bg-blue-100' :
-                    notification.type === 'result' ? 'bg-green-100' :
-                    notification.type === 'warning' ? 'bg-red-100' :
-                    'bg-purple-100'
-                  }`}>
-                    <Icon className={`w-6 h-6 ${getIconColor(notification.type)}`} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-bold text-gray-900">{notification.title}</h3>
-                      {!notification.read && (
-                        <span className="w-2 h-2 bg-teal-600 rounded-full"></span>
-                      )}
-                    </div>
-                    <p className="text-gray-700 mb-2">{notification.message}</p>
-                    <p className="text-sm text-gray-500">{notification.time}</p>
-                  </div>
-                </div>
-                <button className="flex-shrink-0 p-2 hover:bg-gray-200 rounded-lg transition ml-4">
-                  <X className="w-5 h-5 text-gray-400" />
-                </button>
+        {/* HEADER */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-extrabold text-gray-900 flex items-center gap-3">
+              <div className="relative">
+                <Bell className="w-8 h-8 text-teal-600" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center">
+                    {unreadCount}
+                  </span>
+                )}
               </div>
+              Mes Notifications
+            </h1>
+            <p className="text-gray-500 mt-1 font-medium">Suivez l'évolution de vos rendez-vous en temps réel</p>
+          </div>
 
-              {notification.type === 'result' && (
-                <div className="mt-4 ml-16">
-                  <button className="text-teal-600 hover:text-teal-700 font-semibold text-sm">
-                    Voir les résultats →
-                  </button>
-                </div>
-              )}
+          <div className="flex items-center gap-3">
+            {unreadCount > 0 && (
+              <button
+                onClick={markAllAsRead}
+                className="flex items-center gap-2 px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-semibold text-sm transition-all shadow-lg shadow-teal-100 active:scale-95"
+              >
+                <CheckCheck className="w-4 h-4" /> Tout marquer comme lu
+              </button>
+            )}
+            <button
+              onClick={fetchNotifications}
+              className="p-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl transition-colors"
+              title="Actualiser"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+          </div>
+        </div>
 
-              {notification.type === 'appointment' && (
-                <div className="mt-4 ml-16 flex gap-2">
-                  <button className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-medium transition">
-                    Confirmer
-                  </button>
-                  <button className="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-100 rounded-lg text-sm font-medium transition">
-                    Modifier
-                  </button>
-                </div>
-              )}
+        {/* CONTENT */}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center h-64 space-y-4">
+            <div className="w-10 h-10 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin"></div>
+            <p className="text-gray-400 font-medium animate-pulse">Chargement de vos notifications...</p>
+          </div>
+        ) : notifications.length === 0 ? (
+          <div className="bg-white rounded-[2.5rem] p-16 text-center border-2 border-dashed border-gray-200 flex flex-col items-center">
+            <div className="p-6 bg-gray-50 rounded-full mb-5">
+              <BellOff className="w-14 h-14 text-gray-300" />
             </div>
-          )
-        })}
-      </div>
+            <h3 className="text-xl font-bold text-gray-700 mb-2">Vous êtes à jour !</h3>
+            <p className="text-gray-500 max-w-sm mx-auto">
+              Aucune nouvelle notification. Vous serez informé ici dès que votre rendez-vous sera confirmé ou modifié.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {notifications.map((n) => {
+              const config = getStatutConfig(n.statut)
+              const nomMedecin = n.medecin_nom
+                ? `Dr. ${n.medecin_nom} ${n.medecin_prenom || ''}`
+                : null
 
-      {/* Empty State */}
-      <div className="mt-12 text-center py-8">
-        <p className="text-gray-500 mb-4">Vous êtes à jour avec vos notifications</p>
-        <button className="px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-medium transition">
-          Paramètres de notification
-        </button>
+              return (
+                <div
+                  key={n.id}
+                  className={`${config.bg} border-2 ${config.border} rounded-[1.75rem] p-6 shadow-sm hover:shadow-md transition-all duration-200`}
+                >
+                  <div className="flex items-start gap-5">
+                    {/* Icône */}
+                    <div className={`p-3.5 rounded-2xl shrink-0 ${config.iconBg} ${config.iconColor}`}>
+                      {config.icon}
+                    </div>
+
+                    {/* Contenu */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider border ${config.badge}`}>
+                          {config.label}
+                        </span>
+                      </div>
+
+                      <div className="space-y-1.5 mt-3">
+                        {n.date_rendez_vous && (
+                          <p className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                            <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
+                            {new Date(n.date_rendez_vous).toLocaleDateString('fr-FR', {
+                              weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+                            })}
+                          </p>
+                        )}
+                        {n.heure_rendez_vous && (
+                          <p className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                            <Clock className="w-4 h-4 text-gray-400 shrink-0" />
+                            {n.heure_rendez_vous?.substring(0, 5)}
+                          </p>
+                        )}
+                        {nomMedecin && (
+                          <p className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                            <Stethoscope className="w-4 h-4 text-gray-400 shrink-0" />
+                            {nomMedecin}
+                          </p>
+                        )}
+                        {n.motif && (
+                          <p className="text-sm text-gray-500 italic mt-1">Motif : "{n.motif}"</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Marquer comme lu */}
+                  <div className="mt-4 ml-[4.5rem]">
+                    <button
+                      onClick={() => markAsRead(n.id)}
+                      className={`inline-flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl transition-colors ${config.iconColor} hover:opacity-80 bg-white/60 hover:bg-white border border-white/80`}
+                    >
+                      <CheckCheck className="w-4 h-4" /> Marquer comme lu
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
       </div>
     </Layout>
   )
