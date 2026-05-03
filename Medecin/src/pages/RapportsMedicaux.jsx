@@ -33,7 +33,7 @@ export default function RapportsMedicaux() {
   const fetchReports = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/consultations/historique/${medecinId}`);
+      const res = await fetch(`/api/medecin/consultations/historique/${medecinId}`);
       const data = await res.json();
       if (data.success) {
         setReports(data.consultations);

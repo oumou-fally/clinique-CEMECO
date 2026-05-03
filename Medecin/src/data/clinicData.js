@@ -20,8 +20,8 @@ export const CLINIC_INFO = {
 // ============================================
 export const DOCTORS = [
   {
-    id: 1,
-    name: 'Professeur Elhadj Yaya Baldé',
+    id: 3,
+    name: 'Baldé Elhadj Yaya Professeur',
     specialty: 'Cardiologue',
     phone: '224 33 849 96 18',
     email: 'elhadj.yaya.balde@clinic.com',
@@ -40,8 +40,8 @@ export const DOCTORS = [
     }
   },
   {
-    id: 2,
-    name: 'Docteur Mamadou Bassirou Bah',
+    id: 4,
+    name: 'Bah Mamadou Bassirou Docteur',
     specialty: 'Cardiologue',
     phone: '224 33 849 96 18',
     email: 'mamadou.bassirou.bah@clinic.com',
@@ -60,8 +60,8 @@ export const DOCTORS = [
     }
   },
   {
-    id: 3,
-    name: 'Docteur Mamadou Diallo',
+    id: 5,
+    name: 'Diallo Mamadou Docteur',
     specialty: 'Cardiologue',
     phone: '224 33 849 96 18',
     email: 'mamadou.diallo@clinic.com',
@@ -80,8 +80,8 @@ export const DOCTORS = [
     }
   },
   {
-    id: 4,
-    name: 'Docteur Thierno Siradjo Baldé',
+    id: 6,
+    name: 'Baldé Thierno Siradjo Docteur',
     specialty: 'Cardiologue',
     phone: '224 33 849 96 18',
     email: 'thierno.sirardjo.balde@clinic.com',
@@ -100,8 +100,8 @@ export const DOCTORS = [
     }
   },
   {
-    id: 5,
-    name: 'Docteur Thierno Boubacar Barry',
+    id: 7,
+    name: 'Barry Thierno Boubacar Docteur',
     specialty: 'Cardiologue',
     phone: '224 33 849 96 18',
     email: 'thierno.boubacar.barry@clinic.com',

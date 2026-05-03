@@ -187,15 +187,17 @@ export default function Notifications() {
                             {nomMedecin}
                           </p>
                         )}
-                        {n.motif && (
+                        {n.message ? (
+                          <p className="text-sm text-gray-600 mt-2">{n.message}</p>
+                        ) : n.motif ? (
                           <p className="text-sm text-gray-500 italic mt-1">Motif : "{n.motif}"</p>
-                        )}
+                        ) : null}
                       </div>
                     </div>
                   </div>
 
                   {/* Action Marquer comme lu */}
-                  <div className="mt-4 ml-[4.5rem]">
+                  <div className="mt-4 ml-18">
                     <button
                       onClick={() => markAsRead(n.id)}
                       className={`inline-flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl transition-colors ${config.iconColor} hover:opacity-80 bg-white/60 hover:bg-white border border-white/80`}

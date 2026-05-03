@@ -43,6 +43,7 @@ app.use('/api/personnel', require('./Admin/creationcompte'));
 app.use('/api/medecin', require('./medecin/connexionMedecin'));
 app.use('/api/medecin/disponibilites', require('./medecin/disponibilite'));
 app.use('/api/medecin/consultations', require('./medecin/consultation'));
+app.use('/api/consultations', require('./medecin/consultation')); // alias compatible pour les anciens chemins
 app.use('/api/medecin/planning', require('./medecin/planning'));
 
 
@@ -50,6 +51,10 @@ app.use('/api/medecin/planning', require('./medecin/planning'));
 // 🧑 PATIENT
 // ======================================================
 app.use('/api/patient', require('./patient/connexionPatient'));
+app.use('/api/patient/dossier', require('./patient/dossiermedical'));
+app.use('/api/patient/medecins', require('./Patient/medecins'));
+app.use('/api/patient/dashboard', require('./Patient/dashboard'));
+app.use('/api/messagerie', require('./Patient/messagerie'));
 
 
 // ======================================================

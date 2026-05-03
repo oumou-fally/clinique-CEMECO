@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import Layout from '../layouts/Layout'
+import ConsultationForm from '../components/ConsultationForm'
 import { useAuth } from '../context/AuthContext'
 import { Bell, BellOff, Calendar, Clock, User, Phone, FileText, CheckCheck, Stethoscope } from 'lucide-react'
 
@@ -7,6 +8,9 @@ export default function Notifications() {
   const { medecinId } = useAuth()
   const [notifications, setNotifications] = useState([])
   const [loading, setLoading] = useState(true)
+  const [modalLoading, setModalLoading] = useState(false)
+  const [selectedRdv, setSelectedRdv] = useState(null)
+  const [showModal, setShowModal] = useState(false)
   const [filter, setFilter] = useState('all') // 'all' | 'unread'
 
   const API_URL = 'http://localhost:3000'
@@ -52,6 +56,70 @@ export default function Notifications() {
     const unread = notifications.filter(n => !n.lu)
     for (const n of unread) {
       await markAsRead(n.id)
+    }
+  }
+
+  const handleNotificationClick = async (notification) => {
+    if (!notification?.id_reservation) return
+
+    if (notification.id) {
+      await markAsRead(notification.id)
+    }
+
+    const baseData = {
+      id: notification.id_reservation,
+      nom: notification.patient_nom || '',
+      prenom: notification.patient_prenom || '',
+      phone: notification.patient_telephone || '',
+      date: notification.date_rendez_vous?.split('T')[0] || '',
+      time: notification.heure_rendez_vous?.substring(0, 5) || '',
+      status: notification.statut || '',
+      symptoms: notification.motif || '',
+      age: notification.patient_date_naissance ? Math.floor((new Date() - new Date(notification.patient_date_naissance)) / 31557600000) : ''
+    }
+
+    setShowModal(true)
+    setModalLoading(true)
+
+    try {
+      const res = await fetch(`/api/medecin/consultations/detail/${notification.id_reservation}`)
+      const data = await res.json()
+
+      if (data.success) {
+        const consult = data.consultation
+        setSelectedRdv({
+          id: notification.id_reservation,
+          nom: consult.nom || baseData.nom,
+          prenom: consult.prenom || baseData.prenom,
+          telephone: consult.telephone || baseData.phone,
+          date_rendez_vous: consult.date_rendez_vous || notification.date_rendez_vous,
+          heure_rendez_vous: consult.heure_rendez_vous || notification.heure_rendez_vous,
+          statut: notification.statut || consult.statut || '',
+          symptoms: consult.symptomes || baseData.symptoms,
+          diagnosis: consult.diagnostic || '',
+          treatment: consult.traitement || '',
+          notes: consult.notes || '',
+          pa: consult.pa || '',
+          fc: consult.fc || '',
+          fr: consult.fr || '',
+          temperature: consult.temperature || '',
+          saturation: consult.saturation || '',
+          poids: consult.poids || '',
+          taille: consult.taille || '',
+          imc: consult.imc || '',
+          biologie: consult.biologie || '',
+          ecg: consult.ecg || '',
+          rxPulmonaire: consult.rx_pulmonaire || '',
+          ett: consult.ett || ''
+        })
+      } else {
+        setSelectedRdv({ ...baseData, telephone: baseData.phone })
+      }
+    } catch (error) {
+      console.error('Erreur ouverture modal consultation:', error)
+      setSelectedRdv({ ...baseData, telephone: baseData.phone })
+    } finally {
+      setModalLoading(false)
     }
   }
 
@@ -169,9 +237,10 @@ export default function Notifications() {
               return (
                 <div
                   key={n.id}
+                  onClick={() => n.id_reservation && handleNotificationClick(n)}
                   className={`group relative bg-white rounded-[1.75rem] p-6 border-2 transition-all duration-200 hover:shadow-lg ${
                     isUnread ? 'border-indigo-200 shadow-md shadow-indigo-50' : 'border-gray-100'
-                  }`}
+                  } cursor-pointer`}
                 >
                   {/* Point bleu non-lu */}
                   {isUnread && (
@@ -233,9 +302,12 @@ export default function Notifications() {
 
                   {/* Action Marquer comme lu */}
                   {isUnread && (
-                    <div className="mt-5 ml-[4.25rem]">
+                    <div className="mt-5 ml-16">
                       <button
-                        onClick={() => markAsRead(n.id)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          markAsRead(n.id)
+                        }}
                         className="inline-flex items-center gap-2 text-sm font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-4 py-2 rounded-xl transition-colors"
                       >
                         <CheckCheck className="w-4 h-4" /> Marquer comme lu
@@ -249,6 +321,95 @@ export default function Notifications() {
         )}
 
       </div>
+
+      {showModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm">
+          <div className="mx-auto max-w-6xl">
+            <div className="flex items-start justify-end mb-4">
+              <button
+                onClick={() => {
+                  setShowModal(false)
+                  setSelectedRdv(null)
+                }}
+                className="rounded-full bg-white p-3 shadow-lg hover:bg-gray-100"
+              >
+                ✕
+              </button>
+            </div>
+            <ConsultationForm
+              initialData={selectedRdv ? {
+                nom: selectedRdv.nom || '',
+                prenom: selectedRdv.prenom || '',
+                phone: selectedRdv.telephone || selectedRdv.phone || '',
+                date: selectedRdv.date_rendez_vous?.split('T')[0] || selectedRdv.date || '',
+                time: selectedRdv.heure_rendez_vous?.substring(0, 5) || selectedRdv.time || '',
+                status: selectedRdv.statut || selectedRdv.status || '',
+                symptoms: selectedRdv.symptoms || selectedRdv.motif || '',
+                age: selectedRdv.date_naissance ? Math.floor((new Date() - new Date(selectedRdv.date_naissance)) / 31557600000) : selectedRdv.age || '',
+                pa: selectedRdv.pa || '',
+                fc: selectedRdv.fc || '',
+                fr: selectedRdv.fr || '',
+                temperature: selectedRdv.temperature || '',
+                saturation: selectedRdv.saturation || '',
+                poids: selectedRdv.poids || '',
+                taille: selectedRdv.taille || '',
+                imc: selectedRdv.imc || '',
+                biologie: selectedRdv.biologie || '',
+                ecg: selectedRdv.ecg || '',
+                rxPulmonaire: selectedRdv.rx_pulmonaire || '',
+                ett: selectedRdv.ett || '',
+                diagnosis: selectedRdv.diagnosis || '',
+                treatment: selectedRdv.treatment || '',
+                notes: selectedRdv.notes || ''
+              } : null}
+              onSave={async (formData) => {
+                try {
+                  const payload = {
+                    id_reservation: selectedRdv.id,
+                    id_medecin: medecinId,
+                    pa: formData.pa,
+                    fc: formData.fc,
+                    fr: formData.fr,
+                    temperature: formData.temperature,
+                    saturation: formData.saturation,
+                    poids: formData.poids,
+                    taille: formData.taille,
+                    imc: formData.imc,
+                    biologie: formData.biologie,
+                    ecg: formData.ecg,
+                    rx_pulmonaire: formData.rxPulmonaire,
+                    ett: formData.ett,
+                    symptomes: formData.symptoms,
+                    diagnostic: formData.diagnosis,
+                    traitement: formData.treatment,
+                    notes: formData.notes
+                  }
+
+                  const res = await fetch('/api/medecin/consultations', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                  })
+
+                  const data = await res.json()
+                  if (data.success) {
+                    alert('Consultation enregistrée avec succès')
+                    setShowModal(false)
+                    setSelectedRdv(null)
+                    fetchNotifications()
+                  }
+                } catch (error) {
+                  console.error('Erreur sauvegarde consultation depuis notification:', error)
+                }
+              }}
+              onClose={() => {
+                setShowModal(false)
+                setSelectedRdv(null)
+              }}
+            />
+          </div>
+        </div>
+      )}
     </Layout>
   )
 }

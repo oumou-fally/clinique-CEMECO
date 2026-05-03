@@ -78,6 +78,14 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/dashboard/profile"
+          element={
+            <ProtectedRoute>
+              <ParametresCompte />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </Router>

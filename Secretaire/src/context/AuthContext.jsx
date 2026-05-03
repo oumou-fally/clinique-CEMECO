@@ -75,7 +75,7 @@ export function AuthProvider({ children }) {
 
     try {
       console.log('📡 Envoi de la requête au backend...')
-      const response = await fetch('http://localhost:3000/api/login-secretaire', {
+      const response = await fetch('http://localhost:3000/api/secretaire/login-secretaire', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

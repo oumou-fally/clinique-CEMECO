@@ -1,4 +1,4 @@
-import { Calendar, FileText, Stethoscope, Phone, MapPin, Clock, ArrowRight, Heart, AlertCircle, MessageCircle } from 'lucide-react'
+import { Calendar, FileText, Stethoscope, Phone, MapPin, Clock, ArrowRight, Heart, AlertCircle, MessageCircle, RefreshCw, User, ClipboardList } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import Layout from '../layouts/Layout'
 import { useAuth } from '../context/AuthContext'
@@ -6,189 +6,245 @@ import { useState, useEffect } from 'react'
 import AppointmentForm from '../components/AppointmentForm'
 import AskDoctorForm from '../components/AskDoctorForm'
 
-// ===================== COMPOSANT PRINCIPAL =====================
-// Tableau de bord du patient
 export default function TableauDeBordPatient() {
-
-  // ===================== AUTH =====================
-  // Récupération des informations de l'utilisateur connecté
   const { user, patientId, isAuthenticated } = useAuth()
-
-  // ===================== LOGS =====================
-  useEffect(() => {
-    console.log('📊 TableauDeBordPatient chargé')
-    console.log('✅ Authentifié:', isAuthenticated)
-    console.log('👤 Données du patient:', user)
-    console.log('🆔 ID du patient:', patientId)
-    console.log('📂 localStorage.patient:', JSON.parse(localStorage.getItem('patient') || 'null'))
-    console.log('📍 localStorage.patientId:', localStorage.getItem('patientId'))
-    
-    if (isAuthenticated && user) {
-      console.log('✓ Nom du patient:', user.nomComplet)
-      console.log('✓ Email:', user.email)
-      console.log('✓ ID complet:', user.id)
-    }
-  }, [user, patientId, isAuthenticated])
-
-  // ===================== ETATS =====================
-  // Contrôle l'affichage du formulaire de rendez-vous
   const [showAppointmentForm, setShowAppointmentForm] = useState(false)
-
-  // Contrôle l'affichage du formulaire de consultation (poser une question)
   const [showConsultationForm, setShowConsultationForm] = useState(false)
+  
+  const [dashboardData, setDashboardData] = useState({
+    appointments: [],
+    stats: { rdv_count: 0, medecin_count: 0, dossier_count: 0 },
+    profile: {}
+  })
+  const [loading, setLoading] = useState(true)
 
-  // ===================== DONNÉES SIMULÉES =====================
-  // Liste des prochains rendez-vous
-  const upcomingAppointments = [
-    {
-      id: 1,
-      doctor: 'Professeur Elhadj Yaya Baldé',
-      specialty: 'Cardiologue',
-      date: '2026-04-15',
-      time: '14:30',
-      location: 'CEMECO Cabinet de Cardiologie - Kipé',
-      type: 'Consultation Cardiaque'
-    },
-    {
-      id: 2,
-      doctor: 'Docteur Mamadou Bassirou Bah',
-      specialty: 'Cardiologue',
-      date: '2026-04-22',
-      time: '10:00',
-      location: 'CEMECO Cabinet de Cardiologie - Kipé',
-      type: 'Suivi Tensionnel'
+  const fetchDashboardData = async () => {
+    if (!patientId) return;
+    try {
+      setLoading(true);
+      const response = await fetch(`http://localhost:3000/api/patient/dashboard/${patientId}`);
+      const data = await response.json();
+      if (data.success) {
+        setDashboardData(data.data);
+      }
+    } catch (error) {
+      console.error('Erreur dashboard:', error);
+    } finally {
+      setLoading(false);
     }
-  ]
+  }
 
-  // Informations médicales du patient
-  const medicalInfo = [
-    { label: 'Groupe Sanguin', value: 'O+' },
-    { label: 'Allergies', value: 'Pénicilline' },
-    { label: 'Tension Artérielle', value: '120/80 mmHg' },
-    { label: 'Poids', value: '75 kg' }
-  ]
+  useEffect(() => {
+    fetchDashboardData();
+  }, [patientId]);
 
-  // Actions rapides affichées dans le dashboard
-  const quickActions = [
-    { icon: Calendar, label: 'Prendre RDV', color: 'bg-teal-500' },
-    { icon: Phone, label: 'Appeler', color: 'bg-blue-500' },
-    { icon: FileText, label: 'Ordonnances', color: 'bg-green-500' },
-    { icon: Heart, label: 'Mes Résultats', color: 'bg-red-500' }
-  ]
+  if (loading) {
+    return (
+      <Layout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh]">
+          <RefreshCw className="w-12 h-12 text-teal-600 animate-spin mb-4" />
+          <p className="text-gray-500 font-bold">Initialisation de votre espace santé...</p>
+        </div>
+      </Layout>
+    )
+  }
 
   return (
     <Layout>
-
-      {/* ===================== EN-TÊTE ===================== */}
-      <div className="mb-8">
-       <h1 className="text-4xl font-bold text-gray-900">
-  Bienvenue, {user?.prenom} {user?.nom}! 👋
-</h1>
-        <p className="text-gray-600 mt-2">ID Patient: {patientId} — Email: {user?.email || 'N/A'}</p>
-        <p className="text-gray-600 mt-1">Vue d'ensemble de votre état de santé</p>
-      </div>
-
-      {/* ===================== ALERTE ===================== */}
-      <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-3">
-        <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
+      {/* Header */}
+      <div className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100">
         <div>
-          <p className="font-semibold text-blue-900">Rappel de consultation</p>
-          <p className="text-sm text-blue-800 mt-1">Vous avez un rendez-vous demain</p>
+          <h1 className="text-4xl font-black text-gray-900 tracking-tight">
+            Bonjour, <span className="text-teal-600">{user?.prenom} {user?.nom}</span> ! 👋
+          </h1>
+          <p className="text-gray-500 mt-2 font-medium">Heureux de vous revoir. Voici le résumé de votre suivi à la clinique.</p>
         </div>
-      </div>
-
-      {/* ===================== STATISTIQUES ===================== */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-
-        <div className="bg-white p-6 rounded-lg shadow">
-          <p className="text-sm">Prochains RDV</p>
-          <p className="text-3xl font-bold">2</p>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow">
-          <p className="text-sm">Médecins</p>
-          <p className="text-3xl font-bold">3</p>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow">
-          <p className="text-sm">Dossiers</p>
-          <p className="text-3xl font-bold">8</p>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow">
-          <p className="text-sm">Score Santé</p>
-          <p className="text-3xl font-bold">86%</p>
-        </div>
-
-      </div>
-
-      {/* ===================== RENDEZ-VOUS ===================== */}
-      <div className="bg-white rounded-xl shadow p-6 mb-8">
-        <h2 className="text-xl font-bold mb-4">Prochains Rendez-vous</h2>
-
-        {upcomingAppointments.map((appointment) => (
-          <div key={appointment.id} className="mb-4 border p-4 rounded-lg">
-            <p className="font-bold">{appointment.doctor}</p>
-            <p className="text-sm text-gray-600">{appointment.specialty}</p>
-            <p className="text-sm">{appointment.date} à {appointment.time}</p>
-            <p className="text-sm text-gray-500">{appointment.location}</p>
+        <div className="flex items-center gap-3 bg-gray-50 px-6 py-4 rounded-2xl border border-gray-100">
+          <div className="text-right">
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">ID Patient</p>
+            <p className="font-bold text-gray-900">{patientId}</p>
           </div>
-        ))}
-
-        <button className="mt-4 w-full bg-teal-600 text-white py-2 rounded-lg">
-          Ajouter un rendez-vous
-        </button>
-      </div>
-
-      {/* ===================== ACTIONS RAPIDES ===================== */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <button onClick={() => setShowAppointmentForm(true)} className="bg-teal-500 text-white p-4 rounded-lg">
-          Prendre RDV
-        </button>
-        <Link to="/dashboard/consultations" className="bg-purple-500 text-white p-4 rounded-lg text-center">
-          Poser Question
-        </Link>
-        <Link to="/dashboard/medical-record" className="bg-green-500 text-white p-4 rounded-lg text-center">
-          Ordonnances
-        </Link>
-        <Link to="/dashboard/doctors" className="bg-red-500 text-white p-4 rounded-lg text-center">
-          Mes Médecins
-        </Link>
-      </div>
-
-      {/* ===================== PROFIL MÉDICAL ===================== */}
-      <div className="bg-white rounded-xl shadow p-6 mb-8">
-        <h2 className="text-xl font-bold mb-4">Mon Profil Médical</h2>
-
-        {medicalInfo.map((info, index) => (
-          <div key={index} className="border-b py-2">
-            <p className="text-xs text-gray-500">{info.label}</p>
-            <p className="font-bold">{info.value}</p>
+          <div className="w-12 h-12 bg-teal-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-teal-100">
+            <User className="w-6 h-6" />
           </div>
-        ))}
+        </div>
       </div>
 
-      {/* ===================== FORMULAIRES MODALS ===================== */}
+      {/* Alert / Reminder */}
+      {dashboardData.appointments.length > 0 && (
+        <div className="mb-8 p-6 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl text-white flex items-center justify-between shadow-xl shadow-blue-100 overflow-hidden relative group">
+          <div className="absolute right-0 top-0 opacity-10 group-hover:scale-110 transition-transform">
+            <Calendar className="w-40 h-40" />
+          </div>
+          <div className="flex items-center gap-6 relative z-10">
+            <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center">
+              <Clock className="w-8 h-8" />
+            </div>
+            <div>
+              <p className="text-blue-100 text-xs font-black uppercase tracking-widest">Prochain Rendez-vous</p>
+              <h3 className="text-xl font-bold mt-1">
+                {new Date(dashboardData.appointments[0].date_rendez_vous).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} à {dashboardData.appointments[0].heure_rendez_vous.substring(0,5)}
+              </h3>
+              <p className="text-blue-50 text-sm opacity-80">Avec Dr. {dashboardData.appointments[0].medecin_nom}</p>
+            </div>
+          </div>
+          <button className="bg-white text-blue-600 px-8 py-3 rounded-2xl font-black text-sm hover:bg-blue-50 transition shadow-lg relative z-10">
+            Détails
+          </button>
+        </div>
+      )}
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-md transition">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-4 bg-teal-50 text-teal-600 rounded-2xl">
+              <Calendar className="w-8 h-8" />
+            </div>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Rendez-vous</p>
+          </div>
+          <p className="text-4xl font-black text-gray-900">{dashboardData.stats.rdv_count}</p>
+          <p className="text-sm text-gray-500 mt-2 font-medium">Consultations à venir</p>
+        </div>
+
+        <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-md transition">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-4 bg-indigo-50 text-indigo-600 rounded-2xl">
+              <Stethoscope className="w-8 h-8" />
+            </div>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Spécialistes</p>
+          </div>
+          <p className="text-4xl font-black text-gray-900">{dashboardData.stats.medecin_count}</p>
+          <p className="text-sm text-gray-500 mt-2 font-medium">Médecins consultés</p>
+        </div>
+
+        <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-md transition">
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-4 bg-purple-50 text-purple-600 rounded-2xl">
+              <FileText className="w-8 h-8" />
+            </div>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Archives</p>
+          </div>
+          <p className="text-4xl font-black text-gray-900">{dashboardData.stats.dossier_count}</p>
+          <p className="text-sm text-gray-500 mt-2 font-medium">Dossiers & Comptes-rendus</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
+        {/* Appointments List */}
+        <div className="lg:col-span-2 bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-8">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl font-black text-gray-900 flex items-center gap-3">
+              <div className="w-2 h-8 bg-teal-600 rounded-full"></div>
+              Prochains RDV
+            </h2>
+            <Link to="/dashboard/planning" className="text-teal-600 font-bold text-sm hover:underline">Voir tout</Link>
+          </div>
+
+          <div className="space-y-6">
+            {dashboardData.appointments.length === 0 ? (
+              <div className="text-center py-10 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-100">
+                <p className="text-gray-400 font-bold">Aucun rendez-vous prévu</p>
+              </div>
+            ) : (
+              dashboardData.appointments.map((appointment) => (
+                <div key={appointment.id} className="flex items-center justify-between p-6 bg-gray-50 rounded-3xl group hover:bg-white hover:shadow-xl hover:scale-[1.02] transition-all border border-transparent hover:border-gray-100">
+                  <div className="flex items-center gap-6">
+                    <div className="w-16 h-16 bg-white rounded-2xl flex flex-col items-center justify-center shadow-sm">
+                      <p className="text-[10px] font-black text-teal-600 uppercase">
+                        {new Date(appointment.date_rendez_vous).toLocaleDateString('fr-FR', { month: 'short' })}
+                      </p>
+                      <p className="text-2xl font-black text-gray-900">
+                        {new Date(appointment.date_rendez_vous).getDate()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="font-black text-gray-900 text-lg">Dr. {appointment.medecin_nom} {appointment.medecin_prenom}</p>
+                      <p className="text-sm text-gray-500 font-bold uppercase tracking-widest text-[10px]">{appointment.specialite}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="flex items-center gap-2 justify-end text-gray-900 font-black mb-1">
+                      <Clock className="w-4 h-4 text-teal-600" />
+                      {appointment.heure_rendez_vous.substring(0,5)}
+                    </div>
+                    <span className="px-3 py-1 bg-teal-100 text-teal-700 rounded-full text-[10px] font-black uppercase tracking-widest">Confirmé</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          
+          <button 
+            onClick={() => setShowAppointmentForm(true)}
+            className="w-full mt-8 py-5 bg-teal-600 text-white rounded-3xl font-black text-lg shadow-xl shadow-teal-100 hover:bg-teal-700 transition-all flex items-center justify-center gap-3"
+          >
+            <Calendar className="w-6 h-6" />
+            Prendre un nouveau rendez-vous
+          </button>
+        </div>
+
+        {/* Quick Access & Profile */}
+        <div className="space-y-8">
+          {/* Profile Card */}
+          <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-8">
+            <h2 className="text-xl font-black text-gray-900 mb-6 flex items-center gap-3">
+              <Heart className="w-6 h-6 text-red-500" />
+              Profil Médical
+            </h2>
+            <div className="space-y-4">
+              <div className="p-4 bg-red-50 rounded-2xl flex justify-between items-center border border-red-100">
+                <span className="text-sm font-bold text-red-900">Groupe Sanguin</span>
+                <span className="text-lg font-black text-red-600">{dashboardData.profile.groupe_sanguin || 'N/A'}</span>
+              </div>
+              <div className="space-y-2">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-2">Allergies</p>
+                <div className="p-4 bg-gray-50 rounded-2xl text-sm font-bold text-gray-700">
+                  {dashboardData.profile.allergies || 'Aucune allergie déclarée'}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-2">Antécédents</p>
+                <div className="p-4 bg-gray-50 rounded-2xl text-sm font-bold text-gray-700 leading-relaxed italic">
+                  "{dashboardData.profile.antecedent_personnel || 'Non renseigné'}"
+                </div>
+              </div>
+            </div>
+            <Link to="/dashboard/profile" className="mt-6 flex items-center justify-center gap-2 w-full py-4 bg-gray-900 text-white rounded-2xl font-bold text-sm hover:bg-gray-800 transition shadow-lg shadow-gray-100">
+              Compléter mon profil
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          {/* Quick Links */}
+          <div className="grid grid-cols-2 gap-4">
+            <Link to="/dashboard/consultations" className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl transition group text-center">
+              <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition">
+                <MessageCircle className="w-6 h-6" />
+              </div>
+              <p className="text-xs font-black text-gray-900 uppercase tracking-widest">Conseil</p>
+            </Link>
+            <Link to="/dashboard/medical-record" className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl transition group text-center">
+              <div className="w-12 h-12 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition">
+                <ClipboardList className="w-6 h-6" />
+              </div>
+              <p className="text-xs font-black text-gray-900 uppercase tracking-widest">Dossier</p>
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Forms */}
       <AppointmentForm
         isOpen={showAppointmentForm}
         onClose={() => setShowAppointmentForm(false)}
-        onSubmit={(formData) => {
-          console.log('Rendez-vous:', formData)
-          alert('Rendez-vous demandé avec succès!')
-          setShowAppointmentForm(false)
-        }}
+        onSubmit={() => fetchDashboardData()}
       />
 
       <AskDoctorForm
         isOpen={showConsultationForm}
         onClose={() => setShowConsultationForm(false)}
-        onSubmit={(formData) => {
-          console.log('Consultation:', formData)
-          alert('Question envoyée!')
-          setShowConsultationForm(false)
-        }}
       />
-
     </Layout>
   )
 }

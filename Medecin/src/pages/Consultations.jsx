@@ -20,11 +20,13 @@ import {
   History
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import OrdonnanceModal from '../components/OrdonnanceModal'
 
 export default function Consultations() {
   const { medecinId, user } = useAuth()
+  const location = useLocation()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedTab, setSelectedTab] = useState('all')
   const [showModal, setShowModal] = useState(false)
@@ -40,10 +42,10 @@ export default function Consultations() {
   }, [medecinId])
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
+    const params = new URLSearchParams(location.search)
     const rdvId = params.get('rdv')
     if (rdvId && reservations.length > 0) {
-      const rdv = reservations.find(r => r.id === parseInt(rdvId))
+      const rdv = reservations.find(r => r.id === parseInt(rdvId, 10))
       if (rdv) {
         if (rdv.statut === 'termine') {
           fetchExistingConsultation(rdv)
@@ -52,12 +54,12 @@ export default function Consultations() {
         }
       }
     }
-  }, [reservations])
+  }, [reservations, location.search])
 
   const fetchExistingConsultation = async (rdv) => {
     try {
       setLoading(true)
-      const res = await fetch(`/api/consultations/detail/${rdv.id}`)
+      const res = await fetch(`/api/medecin/consultations/detail/${rdv.id}`)
       const data = await res.json()
       if (data.success) {
         const consult = data.consultation
@@ -95,7 +97,7 @@ export default function Consultations() {
   const fetchReservations = async () => {
     try {
       setLoading(true)
-      const res = await fetch(`/api/consultations/reservations/${medecinId}`)
+      const res = await fetch(`/api/medecin/consultations/reservations/${medecinId}`)
       const data = await res.json()
       if (data.success) {
         setReservations(data.reservations)
@@ -119,8 +121,8 @@ export default function Consultations() {
   const handleCloseForm = () => {
     setShowModal(false)
     setSelectedRdv(null)
-    // On nettoie l'URL
-    window.history.pushState({}, '', '/consultations')
+    // On nettoie l'URL vers la route médecin
+    window.history.pushState({}, '', '/dashboard/consultations')
     fetchReservations()
   }
 
@@ -147,7 +149,7 @@ export default function Consultations() {
         notes: consultData.notes
       }
 
-      const res = await fetch('/api/consultations', {
+      const res = await fetch('/api/medecin/consultations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -324,13 +326,13 @@ export default function Consultations() {
         ) : (
           <ConsultationForm 
             initialData={selectedRdv ? {
-              nom: selectedRdv.nom,
-              prenom: selectedRdv.prenom,
-              phone: selectedRdv.telephone,
-              date: selectedRdv.date_rendez_vous.split('T')[0],
-              time: selectedRdv.heure_rendez_vous.substring(0, 5),
-              status: selectedRdv.statut,
-              symptoms: selectedRdv.symptoms || selectedRdv.motif,
+              nom: selectedRdv.nom || '',
+              prenom: selectedRdv.prenom || '',
+              phone: selectedRdv.telephone || '',
+              date: selectedRdv.date_rendez_vous?.split('T')[0] || '',
+              time: selectedRdv.heure_rendez_vous?.substring(0, 5) || '',
+              status: selectedRdv.statut || '',
+              symptoms: selectedRdv.symptoms || selectedRdv.motif || '',
               age: selectedRdv.date_naissance ? Math.floor((new Date() - new Date(selectedRdv.date_naissance)) / 31557600000) : '',
               pa: selectedRdv.pa || '',
               fc: selectedRdv.fc || '',
@@ -342,7 +344,7 @@ export default function Consultations() {
               imc: selectedRdv.imc || '',
               biologie: selectedRdv.biologie || '',
               ecg: selectedRdv.ecg || '',
-              rxPulmonaire: selectedRdv.rxPulmonaire || '',
+              rxPulmonaire: selectedRdv.rx_pulmonaire || '',
               ett: selectedRdv.ett || '',
               diagnosis: selectedRdv.diagnosis || '',
               treatment: selectedRdv.treatment || '',

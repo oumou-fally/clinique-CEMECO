@@ -1,146 +1,178 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Layout from '../layouts/Layout'
-import { Star, MapPin, Phone, Mail, Calendar, MessageCircle, Search, Filter } from 'lucide-react'
+import { Star, MapPin, Phone, Mail, Calendar, MessageCircle, Search, Filter, RefreshCw, UserPlus } from 'lucide-react'
 import AskDoctorForm from '../components/AskDoctorForm'
 import AppointmentForm from '../components/AppointmentForm'
-import { DOCTORS, CLINIC_INFO } from '../data/clinicData'
 
-// Composant principal de la page des médecins (renommé en français pour faciliter la recherche)
 export default function Medecins() {
-  // États pour gérer l'ouverture des formulaires et le médecin sélectionné
   const [showAskForm, setShowAskForm] = useState(false)
   const [showAppointmentForm, setShowAppointmentForm] = useState(false)
   const [selectedDoctor, setSelectedDoctor] = useState(null)
+  const [mesMedecins, setMesMedecins] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
 
-  // Liste des spécialités pour filtrage
-  const specialties = [
-    'Tous',
-    'Cardiologie'
-  ]
+  const patientId = localStorage.getItem('patientId')
+
+  const fetchMesMedecins = async () => {
+    if (!patientId) return;
+    try {
+      setLoading(true);
+      const response = await fetch(`http://localhost:3000/api/patient/medecins/${patientId}/mes-medecins`);
+      const data = await response.json();
+      if (data.success) {
+        setMesMedecins(data.data);
+      }
+    } catch (error) {
+      console.error('Erreur récupération médecins:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchMesMedecins();
+  }, [patientId]);
+
+  const filteredDoctors = mesMedecins.filter(doc => 
+    `${doc.nom} ${doc.prenom}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    doc.specialty.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <Layout>
-      {/* Titre de la page */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Nos Cardiologues</h1>
-        <p className="text-gray-600 mt-2">Rencontrez notre équipe de spécialistes en cardiologie</p>
+      <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-black text-gray-900">Mes Médecins Traitants</h1>
+          <p className="text-gray-500 font-medium mt-1">Spécialistes vous ayant déjà consulté</p>
+        </div>
+        <button 
+          onClick={fetchMesMedecins}
+          className="p-3 bg-white border border-gray-100 rounded-xl text-gray-400 hover:text-teal-600 transition shadow-sm"
+        >
+          <RefreshCw className="w-5 h-5" />
+        </button>
       </div>
 
-      {/* Zone de recherche et filtres */}
-      <div className="mb-6 space-y-4">
-        <div className="flex gap-4">
-          {/* Recherche médecin */}
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Rechercher un médecin..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none"
-            />
-          </div>
+      {/* Barre de recherche */}
+      <div className="mb-8 relative">
+        <Search className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
+        <input
+          type="text"
+          placeholder="Rechercher parmi vos médecins..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full pl-12 pr-4 py-3.5 bg-white border border-gray-100 rounded-2xl shadow-sm focus:ring-2 focus:ring-teal-500 outline-none transition font-medium"
+        />
+      </div>
 
-          {/* Bouton filtre */}
-          <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700 font-medium transition">
-            <Filter className="w-5 h-5" />
-            Filtrer
-          </button>
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+          <RefreshCw className="w-10 h-10 animate-spin mb-4" />
+          <p className="font-bold">Chargement de votre équipe médicale...</p>
         </div>
-
-        {/* Filtres par spécialité */}
-        <div className="flex flex-wrap gap-2">
-          {specialties.map((specialty, index) => (
-            <button
-              key={index}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition ${
-                index === 0
-                  ? 'bg-teal-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              {specialty}
+      ) : filteredDoctors.length === 0 ? (
+        <div className="text-center py-20 bg-white rounded-[2.5rem] border border-gray-100 shadow-sm px-6">
+          <div className="w-20 h-20 bg-teal-50 rounded-3xl flex items-center justify-center mx-auto mb-6">
+            <Stethoscope className="w-10 h-10 text-teal-600 opacity-20" />
+          </div>
+          <h3 className="text-xl font-black text-gray-900">Aucun médecin trouvé</h3>
+          <p className="text-gray-500 mt-2 font-medium max-w-sm mx-auto">
+            {searchTerm 
+              ? "Aucun de vos médecins ne correspond à cette recherche." 
+              : "Vous n'avez pas encore effectué de consultation à la clinique CEMECO."}
+          </p>
+          {!searchTerm && (
+            <button className="mt-8 px-8 py-3 bg-teal-600 text-white rounded-2xl font-bold shadow-lg shadow-teal-100 hover:bg-teal-700 transition">
+              Découvrir nos spécialistes
             </button>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+          {filteredDoctors.map((doctor) => (
+            <div key={doctor.id} className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl hover:scale-[1.01] transition-all group">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-teal-600 to-green-600 p-8 text-white relative overflow-hidden">
+                <div className="absolute -right-4 -bottom-4 opacity-10">
+                  <Star className="w-32 h-32" />
+                </div>
+                <div className="flex items-start justify-between relative z-10">
+                  <div>
+                    <h3 className="text-2xl font-black">{doctor.nom} {doctor.prenom}</h3>
+                    <p className="text-teal-50 font-bold uppercase tracking-widest text-[10px] mt-1">{doctor.specialty}</p>
+                  </div>
+                  <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-xl flex items-center gap-1">
+                    <Star className="w-4 h-4 fill-current" />
+                    <span className="text-sm font-black">{doctor.rating}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Info */}
+              <div className="p-8 space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-teal-50 rounded-xl flex items-center justify-center text-teal-600">
+                      <MapPin className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">Clinique</p>
+                      <p className="text-sm font-bold text-gray-700">Kipé, Conakry</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-teal-50 rounded-xl flex items-center justify-center text-teal-600">
+                      <Calendar className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">Disponibilité</p>
+                      <p className="text-sm font-bold text-gray-700">Lun - Sam</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3 pt-4 border-t border-gray-50">
+                  <div className="flex items-center gap-3 text-gray-500 hover:text-teal-600 transition cursor-pointer">
+                    <Phone className="w-4 h-4" />
+                    <span className="text-sm font-medium">{doctor.phone}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-gray-500 hover:text-teal-600 transition cursor-pointer">
+                    <Mail className="w-4 h-4" />
+                    <span className="text-sm font-medium">{doctor.email}</span>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-4 pt-4">
+                  <button
+                    onClick={() => {
+                      setSelectedDoctor(doctor)
+                      setShowAppointmentForm(true)
+                    }}
+                    className="flex-1 py-4 bg-teal-600 hover:bg-teal-700 text-white rounded-2xl font-black text-sm transition shadow-lg shadow-teal-100 flex items-center justify-center gap-2"
+                  >
+                    <Calendar className="w-5 h-5" />
+                    Reprogrammer
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelectedDoctor(doctor)
+                      setShowAskForm(true)
+                    }}
+                    className="flex-1 py-4 border-2 border-indigo-600 text-indigo-600 hover:bg-indigo-50 rounded-2xl font-black text-sm transition flex items-center justify-center gap-2"
+                  >
+                    <MessageCircle className="w-5 h-5" />
+                    Conseil
+                  </button>
+                </div>
+              </div>
+            </div>
           ))}
         </div>
-      </div>
+      )}
 
-      {/* Liste des médecins */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
-        {DOCTORS.map((doctor) => (
-          <div key={doctor.id} className="bg-white rounded-xl shadow-lg hover:shadow-xl transition overflow-hidden">
-            {/* En-tête carte médecin */}
-            <div className="bg-gradient-to-r from-teal-600 to-green-600 p-6 text-white">
-              <div className="flex items-start justify-end mb-4">
-                <div className="flex items-center gap-1 bg-white bg-opacity-20 px-3 py-1 rounded-full">
-                  <Star className="w-4 h-4 fill-white" />
-                  <span className="text-sm font-semibold">{doctor.rating}</span>
-                </div>
-              </div>
-              <h3 className="text-2xl font-bold">{doctor.name}</h3>
-              <p className="text-teal-100 mt-1">{doctor.specialty}</p>
-            </div>
-
-            {/* Contenu carte */}
-            <div className="p-6">
-              {/* Informations localisation */}
-              <div className="flex items-start gap-3 mb-3">
-                <MapPin className="w-5 h-5 text-teal-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs font-semibold text-gray-600 uppercase">Localisation</p>
-                  <p className="text-sm text-gray-900">{doctor.location}</p>
-                </div>
-              </div>
-
-              {/* Disponibilité */}
-              <div className="flex items-start gap-3 mb-3">
-                <Calendar className="w-5 h-5 text-teal-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs font-semibold text-gray-600 uppercase">Disponibilité</p>
-                  <p className="text-sm text-gray-900">{doctor.availability}</p>
-                </div>
-              </div>
-
-              {/* Contact */}
-              <div className="space-y-2 mb-6">
-                <div className="flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-gray-400" />
-                  <p className="text-sm text-gray-600">{doctor.phone}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-gray-400" />
-                  <p className="text-sm text-gray-600">{doctor.email}</p>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setSelectedDoctor(doctor)
-                    setShowAppointmentForm(true)
-                  }}
-                  className="flex-1 py-3 px-4 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
-                >
-                  <Calendar className="w-5 h-5" />
-                  Prendre RDV
-                </button>
-
-                <button
-                  onClick={() => {
-                    setSelectedDoctor(doctor)
-                    setShowAskForm(true)
-                  }}
-                  className="flex-1 py-3 px-4 border-2 border-purple-600 text-purple-600 hover:bg-purple-50 rounded-lg font-semibold transition flex items-center justify-center gap-2"
-                >
-                  <MessageCircle className="w-5 h-5" />
-                  Poser Question
-                </button>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Formulaire poser question */}
+      {/* Modals */}
       <AskDoctorForm
         isOpen={showAskForm}
         onClose={() => {
@@ -148,15 +180,32 @@ export default function Medecins() {
           setSelectedDoctor(null)
         }}
         selectedDoctorId={selectedDoctor?.id}
-        onSubmit={(formData) => {
-          console.log('Consultation avec', selectedDoctor?.name, formData)
-          alert('Question envoyée avec succès!')
-          setShowAskForm(false)
-          setSelectedDoctor(null)
+        onSubmit={async (formData) => {
+          try {
+            const response = await fetch('http://localhost:3000/api/messagerie/envoyer', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                id_medecin: selectedDoctor?.id || formData.doctor,
+                id_patient: patientId,
+                expediteur: 'patient',
+                sujet: formData.subject,
+                priorite: formData.priority,
+                message: formData.message
+              })
+            });
+            const data = await response.json();
+            if (data.success) {
+              alert('Votre question a été envoyée avec succès.');
+            }
+          } catch (error) {
+            console.error('Erreur envoi:', error);
+          }
+          setShowAskForm(false);
+          setSelectedDoctor(null);
         }}
       />
 
-      {/* Formulaire rendez-vous */}
       <AppointmentForm
         isOpen={showAppointmentForm}
         onClose={() => {
@@ -165,12 +214,34 @@ export default function Medecins() {
         }}
         selectedDoctorId={selectedDoctor?.id}
         onSubmit={(formData) => {
-          console.log('Rendez-vous avec', selectedDoctor?.name, formData)
-          alert('Rendez-vous réservé avec succès!')
+          alert('Demande de reprogrammation envoyée au Dr. ' + selectedDoctor?.nom);
           setShowAppointmentForm(false)
           setSelectedDoctor(null)
         }}
       />
     </Layout>
+  )
+}
+
+function Stethoscope(props) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M4.8 2.3A.3.3 0 1 0 5 2a.3.3 0 0 0-.2.3Z" />
+      <path d="M10 2v2" />
+      <path d="M7 2v2" />
+      <path d="M3 14c0-3 3-6 7-6s7 3 7 6v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3Z" />
+      <path d="M15 8h2a3 3 0 0 1 3 3v5a2 2 0 0 1-2 2h-2" />
+    </svg>
   )
 }

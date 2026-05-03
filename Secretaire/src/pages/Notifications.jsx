@@ -7,6 +7,7 @@ export default function Notifications() {
   const [notifications, setNotifications] = useState([])
   const [systemNotifications, setSystemNotifications] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const navigate = useNavigate()
 
   const API_URL = 'http://localhost:3000'
@@ -16,18 +17,27 @@ export default function Notifications() {
   // ======================================================
   const fetchNotifications = async () => {
     try {
+      setError(null)
       setLoading(true)
 
       const res = await fetch(`${API_URL}/api/reservations/notifications/secretaire`)
       const data = await res.json()
 
-      if (data.success) {
-        setNotifications(data.notifications.rendezvous || [])
-        setSystemNotifications(data.notifications.planning || [])
+      if (!res.ok || !data.success) {
+        setError('Impossible de charger les notifications. Vérifiez le serveur.')
+        setNotifications([])
+        setSystemNotifications([])
+        return
       }
+
+      setNotifications(data.notifications.rendezvous || [])
+      setSystemNotifications(data.notifications.planning || [])
 
     } catch (error) {
       console.error(error)
+      setError('Erreur réseau lors du chargement des notifications.')
+      setNotifications([])
+      setSystemNotifications([])
     } finally {
       setLoading(false)
     }
@@ -38,23 +48,44 @@ export default function Notifications() {
   }, [])
 
   // ======================================================
-  // ✅ CONFIRMER → PASSE À ATTRIBUTION MÉDECIN
+  // ✅ CONFIRMER → ESSAYER D'ATTRIBUER UN MÉDECIN DISPONIBLE
   // ======================================================
   const handleConfirmer = async (notification) => {
     try {
-      // 1. confirmation backend
-      await fetch(`${API_URL}/api/reservations/${notification.id}/confirm`, {
+      setLoading(true)
+      setError(null)
+
+      const confirmRes = await fetch(`${API_URL}/api/reservations/${notification.id}/confirm`, {
         method: 'PUT'
       })
+      const confirmData = await confirmRes.json()
 
-      // 2. stocker temporairement pour attribution
+      if (!confirmRes.ok || !confirmData.success) {
+        setError('Erreur lors de la confirmation. Réessayez.')
+        return
+      }
+
       localStorage.setItem('rdv_selection', JSON.stringify(notification))
 
-      // 3. redirection vers disponibilités pour chercher le médecin du jour
+      const assignRes = await fetch(`${API_URL}/api/reservations/${notification.id}/auto-assign`, {
+        method: 'PUT'
+      })
+      const assignData = await assignRes.json()
+
+      if (assignRes.ok && assignData.success && assignData.medecin) {
+        localStorage.setItem('medecin_selection', String(assignData.medecin.id))
+      } else if (assignData && !assignData.success) {
+        alert(assignData.message || 'Aucun médecin disponible pour ce créneau. Vous pouvez attribuer manuellement.')
+      }
+
+      await fetchNotifications()
       navigate('/dashboard/disponibilites')
 
     } catch (error) {
       console.error(error)
+      setError('Erreur serveur lors de la confirmation.')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -63,14 +94,26 @@ export default function Notifications() {
   // ======================================================
   const handleAnnuler = async (id) => {
     try {
-      await fetch(`${API_URL}/api/reservations/${id}/cancel`, {
+      setLoading(true)
+      setError(null)
+
+      const res = await fetch(`${API_URL}/api/reservations/${id}/cancel`, {
         method: 'PUT'
       })
+      const data = await res.json()
 
-      fetchNotifications()
+      if (!res.ok || !data.success) {
+        setError('Impossible d’annuler le rendez-vous.')
+        return
+      }
+
+      await fetchNotifications()
 
     } catch (error) {
       console.error(error)
+      setError('Erreur serveur lors de l’annulation.')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -84,16 +127,28 @@ export default function Notifications() {
     if (!date || !heure) return
 
     try {
-      await fetch(`${API_URL}/api/reservations/${id}/report`, {
+      setLoading(true)
+      setError(null)
+
+      const res = await fetch(`${API_URL}/api/reservations/${id}/report`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ date_rendez_vous: date, heure_rendez_vous: heure })
       })
+      const data = await res.json()
 
-      fetchNotifications()
+      if (!res.ok || !data.success) {
+        setError('Impossible de reporter le rendez-vous.')
+        return
+      }
+
+      await fetchNotifications()
 
     } catch (error) {
       console.error(error)
+      setError('Erreur serveur lors du report.')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -118,6 +173,12 @@ export default function Notifications() {
         Actualiser
       </button>
 
+      {error && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
       {loading && <p>Chargement...</p>}
 
       <div className="space-y-4">
@@ -125,7 +186,9 @@ export default function Notifications() {
         {/* NOTIFICATIONS SYSTEME (PLANNING MÉDECIN) */}
         {systemNotifications.length > 0 && (
           <div className="mb-4">
-            <h2 className="text-xl font-bold text-gray-800 mb-3 border-b pb-2">Mises à jour des plannings</h2>
+            <h2 className="text-xl font-bold text-gray-800 mb-3 border-b pb-2">
+              Mises à jour des plannings ({systemNotifications.length})
+            </h2>
             <div className="space-y-3">
               {systemNotifications.map(n => (
                 <div key={`sys-${n.id}`} className="p-4 border border-indigo-200 rounded-lg bg-indigo-50 flex justify-between items-center">
@@ -135,12 +198,13 @@ export default function Notifications() {
                   </div>
                   <button 
                     onClick={async () => {
-                      // Marquer comme lu
                       try {
-                        await fetch(`${API_URL}/api/reservations/notifications/systeme/${n.id}/lu`, {
+                        const res = await fetch(`${API_URL}/api/reservations/notifications/systeme/${n.id}/lu`, {
                           method: 'PUT'
                         })
-                        setSystemNotifications(prev => prev.filter(sys => sys.id !== n.id))
+                        if (res.ok) {
+                          setSystemNotifications(prev => prev.filter(sys => sys.id !== n.id))
+                        }
                         navigate('/dashboard/disponibilites')
                       } catch (error) {
                         console.error('Erreur mark as read:', error)
@@ -158,7 +222,10 @@ export default function Notifications() {
         )}
 
         {/* NOTIFICATIONS DEMANDES DE RENDEZ-VOUS */}
-        <h2 className="text-xl font-bold text-gray-800 mb-3 border-b pb-2 mt-8">Demandes de rendez-vous patients</h2>
+        <div className="flex items-center justify-between gap-3 mt-10 mb-3 border-b pb-2">
+          <h2 className="text-xl font-bold text-gray-800">Demandes de rendez-vous patients</h2>
+          <span className="text-sm text-gray-500">{notifications.length} nouvelle(s)</span>
+        </div>
         
         {notifications.length === 0 && !loading && (
           <p className="text-center text-gray-500 py-8">
@@ -180,7 +247,7 @@ export default function Notifications() {
                 <p className="text-gray-600 mt-1 italic">"{n.motif}"</p>
               </div>
 
-              <div className="flex flex-col gap-2 min-w-[120px]">
+              <div className="flex flex-col gap-2 min-w-30">
                 <button
                   onClick={() => handleConfirmer(n)}
                   className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-4 py-2 rounded shadow-sm transition-colors w-full"

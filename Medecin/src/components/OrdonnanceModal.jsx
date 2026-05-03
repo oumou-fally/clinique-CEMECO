@@ -8,20 +8,24 @@ export default function OrdonnanceModal({ isOpen, onClose, reservation, medecinI
   useEffect(() => {
     if (isOpen && reservation) {
       fetchExistingOrdonnance();
+    } else if (isOpen) {
+      setMedicaments([{ nom: '', dosage: '' }]);
     }
   }, [isOpen, reservation]);
 
   const fetchExistingOrdonnance = async () => {
     try {
-      const res = await fetch(`/api/consultations/ordonnance/${reservation.id}`);
+      const res = await fetch(`/api/medecin/consultations/ordonnance/${reservation.id}`);
       const data = await res.json();
-      if (data.success && data.medicaments.length > 0) {
-        setMedicaments(data.medicaments.map(m => ({ nom: m.nom_medicament, dosage: m.dosage })));
+      if (data.success && data.ordonnance) {
+        const meds = Array.isArray(data.ordonnance.medicaments) ? data.ordonnance.medicaments : [];
+        setMedicaments(meds.length > 0 ? meds : [{ nom: '', dosage: '' }]);
       } else {
         setMedicaments([{ nom: '', dosage: '' }]);
       }
     } catch (error) {
       console.error('Erreur fetch ordonnance:', error);
+      setMedicaments([{ nom: '', dosage: '' }]);
     }
   };
 
@@ -49,18 +53,18 @@ export default function OrdonnanceModal({ isOpen, onClose, reservation, medecinI
 
     try {
       setLoading(true);
-      const res = await fetch('/api/consultations/ordonnance', {
+      const res = await fetch('/api/medecin/consultations/ordonnance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id_reservation: reservation.id,
-          id_medecin: medecinId,
+          id_consultation: reservation.id,
           medicaments: validMeds
         })
       });
       const data = await res.json();
       if (data.success) {
         alert('Ordonnance enregistrée avec succès !');
+        onClose();
       }
     } catch (error) {
       console.error('Erreur sauvegarde ordonnance:', error);
@@ -76,7 +80,7 @@ export default function OrdonnanceModal({ isOpen, onClose, reservation, medecinI
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-[60]">
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-60">
       <div className="bg-white rounded-[40px] shadow-2xl max-w-2xl w-full overflow-hidden border border-gray-100 flex flex-col animate-in fade-in zoom-in duration-300 print:shadow-none print:border-none print:max-w-none print:w-full print:h-full">
         
         {/* Header - Masqué à l'impression */}

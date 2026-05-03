@@ -20,55 +20,65 @@ export default function Prescriptions() {
   const { medecinId, user } = useAuth()
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
-  const [ordonnances, setOrdonnances] = useState([])
+  const [consultations, setConsultations] = useState([])
+  const [ordonnanceMap, setOrdonnanceMap] = useState({})
   const [selectedOrdForModal, setSelectedOrdForModal] = useState(null)
   const [showModal, setShowModal] = useState(false)
 
   useEffect(() => {
     if (medecinId) {
+      fetchConsultations()
       fetchOrdonnances()
     }
   }, [medecinId])
 
   const fetchOrdonnances = async () => {
     try {
-      setLoading(true)
-      const res = await fetch(`/api/consultations/ordonnances/medecin/${medecinId}`)
+      const res = await fetch(`/api/medecin/consultations/ordonnances/medecin/${medecinId}`)
       const data = await res.json()
       if (data.success) {
-        // Grouper les médicaments par réservation
-        const grouped = data.ordonnances.reduce((acc, curr) => {
-          if (!acc[curr.id_reservation]) {
-            acc[curr.id_reservation] = {
-              id: curr.id_reservation,
-              patient: `${curr.patient_prenom} ${curr.patient_nom}`,
-              prenom: curr.patient_prenom,
-              nom: curr.patient_nom,
-              date: curr.date_ordination,
-              medicaments: []
-            }
+        const map = {}
+        data.ordonnances.forEach((ord) => {
+          map[ord.id_consultation] = {
+            ...ord,
+            medicaments: Array.isArray(ord.medicaments) ? ord.medicaments : []
           }
-          acc[curr.id_reservation].medicaments.push({
-            nom: curr.nom_medicament,
-            dosage: curr.dosage
-          })
-          return acc
-        }, {})
-        setOrdonnances(Object.values(grouped))
+        })
+        setOrdonnanceMap(map)
       }
     } catch (error) {
       console.error('Erreur fetch ordonnances:', error)
+    }
+  }
+
+  const fetchConsultations = async () => {
+    try {
+      setLoading(true)
+      const res = await fetch(`/api/medecin/consultations/historique/${medecinId}`)
+      const data = await res.json()
+      if (data.success) {
+        setConsultations(data.consultations)
+      }
+    } catch (error) {
+      console.error('Erreur fetch consultations:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  const filteredOrdonnances = ordonnances.filter(ord => 
-    ord.patient.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredConsultations = consultations.filter(consult => {
+    const fullName = `${consult.patient_prenom} ${consult.patient_nom}`.toLowerCase()
+    return fullName.includes(searchTerm.toLowerCase()) || (consult.motif || '').toLowerCase().includes(searchTerm.toLowerCase())
+  })
 
-  const handleOpenOrdonnance = (ord) => {
-    setSelectedOrdForModal(ord)
+  const handleOpenOrdonnance = (consult) => {
+    setSelectedOrdForModal({
+      id: consult.id,
+      prenom: consult.patient_prenom,
+      nom: consult.patient_nom,
+      date: consult.date_rendez_vous,
+      consultationId: consult.id
+    })
     setShowModal(true)
   }
 
@@ -85,7 +95,10 @@ export default function Prescriptions() {
             <p className="text-gray-500 mt-2 font-medium">Historique de vos ordonnances pour le <span className="text-orange-600 font-bold">Dr. {user?.nomComplet}</span></p>
           </div>
           <button 
-            onClick={fetchOrdonnances}
+            onClick={() => {
+              fetchOrdonnances()
+              fetchConsultations()
+            }}
             className="px-6 py-3 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-2xl font-bold transition-all border border-gray-100"
           >
             Actualiser
@@ -113,52 +126,81 @@ export default function Prescriptions() {
               <div className="w-12 h-12 border-4 border-orange-600 border-t-transparent rounded-full animate-spin"></div>
               <p className="text-gray-500 font-bold">Chargement de vos archives...</p>
             </div>
-          ) : filteredOrdonnances.length === 0 ? (
+          ) : filteredConsultations.length === 0 ? (
             <div className="col-span-full bg-white p-20 rounded-[40px] text-center border border-gray-100">
               <History className="w-20 h-20 text-gray-100 mx-auto mb-4" />
-              <p className="text-gray-400 font-bold text-xl">Aucune prescription trouvée</p>
+              <p className="text-gray-400 font-bold text-xl">Aucune consultation enregistrée</p>
             </div>
           ) : (
-            filteredOrdonnances.map((ord) => (
-              <div 
-                key={ord.id}
-                onClick={() => handleOpenOrdonnance(ord)}
-                className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-100 hover:border-orange-200 hover:shadow-xl hover:shadow-orange-500/5 transition-all group cursor-pointer"
-              >
-                <div className="flex justify-between items-start mb-6">
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Patient</p>
-                    <h3 className="text-xl font-black text-gray-900 capitalize">{ord.patient}</h3>
-                  </div>
-                  <div className="p-3 bg-gray-50 rounded-2xl group-hover:bg-orange-600 group-hover:text-white transition-all">
-                    <User className="w-5 h-5" />
-                  </div>
-                </div>
+            filteredConsultations.map((consult) => {
+              const ordonnance = ordonnanceMap[consult.id]
+              const hasOrdonnance = !!ordonnance
+              const createdAt = ordonnance?.date_ordination ? new Date(ordonnance.date_ordination).toLocaleDateString() : null
+              const consultationDate = consult.date_consultation ? new Date(consult.date_consultation).toLocaleString() : 'Date de consultation non renseignée'
+              const appointmentDate = consult.date_rendez_vous ? new Date(consult.date_rendez_vous).toLocaleDateString() : 'Date de rendez-vous non renseignée'
+              const appointmentTime = consult.heure_rendez_vous || 'Heure non précisée'
 
-                <div className="space-y-4 mb-8">
-                  <div className="flex items-center gap-3 text-sm font-bold text-gray-500">
-                    <Calendar className="w-4 h-4 text-orange-400" />
-                    {new Date(ord.date).toLocaleDateString()}
+              return (
+                <div 
+                  key={`consult-${consult.id}`}
+                  className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-100 hover:border-orange-200 hover:shadow-xl hover:shadow-orange-500/5 transition-all group"
+                >
+                  <div className="flex justify-between items-start mb-6">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-3">
+                        <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Patient</div>
+                        <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-[10px] uppercase tracking-widest">ID {consult.id}</span>
+                      </div>
+                      <h3 className="text-2xl font-black text-gray-900 capitalize">{consult.patient_prenom} {consult.patient_nom}</h3>
+                      <p className="text-sm text-gray-500 max-w-xl">{consult.motif || 'Motif non renseigné'}</p>
+                    </div>
+                    <div className="p-3 bg-gray-50 rounded-2xl group-hover:bg-orange-600 group-hover:text-white transition-all">
+                      <User className="w-5 h-5" />
+                    </div>
                   </div>
-                  <div className="bg-gray-50 p-4 rounded-2xl border border-gray-50">
-                     <p className="text-[10px] font-black text-gray-400 uppercase mb-2">Prescription ({ord.medicaments.length})</p>
-                     <ul className="space-y-1">
-                       {ord.medicaments.slice(0, 3).map((m, i) => (
-                         <li key={i} className="text-xs font-bold text-gray-700 truncate">• {m.nom}</li>
-                       ))}
-                       {ord.medicaments.length > 3 && (
-                         <li className="text-[10px] text-gray-400 font-bold italic">+{ord.medicaments.length - 3} autres...</li>
-                       )}
-                     </ul>
-                  </div>
-                </div>
 
-                <div className="flex items-center justify-between text-orange-600 font-bold text-sm">
-                  <span>Voir / Modifier</span>
-                  <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-all" />
+                  <div className="grid gap-3 mb-8 rounded-[30px] bg-slate-50 p-6 border border-slate-100">
+                    <div className="flex items-center gap-3 text-sm text-slate-600">
+                      <Calendar className="w-4 h-4 text-orange-400" />
+                      <span className="font-semibold">Rendez-vous :</span>
+                      <span>{appointmentDate} • {appointmentTime}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-sm text-slate-600">
+                      <Stethoscope className="w-4 h-4 text-blue-500" />
+                      <span className="font-semibold">Consultation :</span>
+                      <span>{consultationDate}</span>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div className="rounded-3xl bg-white p-4 border border-gray-100">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Diagnostic</p>
+                        <p className="text-sm text-gray-700 min-h-12">{consult.diagnostic || 'Aucun diagnostic enregistré'}</p>
+                      </div>
+                      <div className="rounded-3xl bg-white p-4 border border-gray-100">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Traitement</p>
+                        <p className="text-sm text-gray-700 min-h-12">{consult.traitement || 'Aucun traitement enregistré'}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 items-center text-xs font-bold uppercase tracking-widest mb-4">
+                    <span className={`px-3 py-2 rounded-full ${hasOrdonnance ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                      {hasOrdonnance ? 'Ordonnance créée' : 'Aucune ordonnance'}
+                    </span>
+                    {createdAt && (
+                      <span className="px-3 py-2 rounded-full bg-blue-100 text-blue-700">Le {createdAt}</span>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => handleOpenOrdonnance(consult)}
+                    className="w-full inline-flex items-center justify-center gap-2 px-6 py-4 bg-orange-600 text-white rounded-2xl font-bold hover:bg-orange-700 transition-all"
+                  >
+                    <Pill className="w-4 h-4" />
+                    {hasOrdonnance ? 'Modifier l’ordonnance' : 'Créer l’ordonnance'}
+                  </button>
                 </div>
-              </div>
-            ))
+              )
+            })
           )}
         </div>
       </div>
@@ -169,6 +211,7 @@ export default function Prescriptions() {
         onClose={() => {
           setShowModal(false)
           fetchOrdonnances()
+          fetchConsultations()
         }}
         reservation={selectedOrdForModal}
         medecinId={medecinId}

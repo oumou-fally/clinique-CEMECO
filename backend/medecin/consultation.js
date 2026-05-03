@@ -2,14 +2,16 @@ const express = require('express');
 const pool = require('../config/db');
 const router = express.Router();
 
-// Récupérer les réservations confirmées pour un médecin spécifique
+// Récupérer les réservations confirmées pour un médecin spécifique (avec infos patient)
 router.get('/reservations/:medecinId', async (req, res) => {
     const { medecinId } = req.params;
     try {
         const [rows] = await pool.execute(`
-            SELECT * FROM reservation 
-            WHERE id_medecin = ?
-            ORDER BY date_rendez_vous DESC, heure_rendez_vous DESC
+            SELECT r.id_reservation AS id, r.*, p.nom, p.prenom, p.telephone, p.sexe, p.date_naissance, p.email
+            FROM reservation r
+            JOIN patient p ON r.patient_id = p.id
+            WHERE r.id_medecin = ?
+            ORDER BY r.date_rendez_vous DESC, r.heure_rendez_vous DESC
         `, [medecinId]);
         
         res.json({ success: true, reservations: rows });
@@ -78,7 +80,7 @@ router.post('/', async (req, res) => {
 
         // 2. Mettre à jour le statut de la réservation (au cas où elle n'était pas encore 'termine')
         await connection.execute(
-            "UPDATE reservation SET statut = 'termine' WHERE id = ?",
+            "UPDATE reservation SET statut = 'termine', notif_patient = 1 WHERE id_reservation = ?",
             [id_reservation]
         );
 
@@ -99,9 +101,10 @@ router.get('/historique/:medecinId', async (req, res) => {
     const { medecinId } = req.params;
     try {
         const [rows] = await pool.execute(`
-            SELECT c.*, r.nom as patient_nom, r.prenom as patient_prenom, r.date_rendez_vous, r.heure_rendez_vous
+            SELECT c.*, p.nom as patient_nom, p.prenom as patient_prenom, r.date_rendez_vous, r.heure_rendez_vous, r.motif
             FROM consultation c
-            JOIN reservation r ON c.id_reservation = r.id
+            JOIN reservation r ON c.id_reservation = r.id_reservation
+            JOIN patient p ON r.patient_id = p.id
             WHERE c.id_medecin = ?
             ORDER BY c.date_consultation DESC
         `, [medecinId]);
@@ -118,9 +121,10 @@ router.get('/detail/:reservationId', async (req, res) => {
     const { reservationId } = req.params;
     try {
         const [rows] = await pool.execute(`
-            SELECT c.*, r.nom, r.prenom, r.telephone, r.date_naissance, r.motif
+            SELECT c.*, p.nom, p.prenom, p.telephone, p.date_naissance, r.motif
             FROM consultation c
-            JOIN reservation r ON c.id_reservation = r.id
+            JOIN reservation r ON c.id_reservation = r.id_reservation
+            JOIN patient p ON r.patient_id = p.id
             WHERE c.id_reservation = ?
         `, [reservationId]);
         
@@ -137,9 +141,9 @@ router.get('/detail/:reservationId', async (req, res) => {
 
 // Enregistrer une ordonnance
 router.post('/ordonnance', async (req, res) => {
-    const { id_reservation, id_medecin, medicaments } = req.body;
+    const { id_consultation, medicaments } = req.body;
 
-    if (!id_reservation || !id_medecin || !medicaments || !Array.isArray(medicaments)) {
+    if (!id_consultation || !medicaments || !Array.isArray(medicaments) || medicaments.length === 0) {
         return res.status(400).json({ success: false, message: 'Données invalides' });
     }
 
@@ -147,13 +151,22 @@ router.post('/ordonnance', async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        // On peut supprimer les anciennes ordonnances pour cette réservation si on veut "remplacer"
-        await connection.execute('DELETE FROM ordonnance WHERE id_reservation = ?', [id_reservation]);
+        const [existing] = await connection.execute(
+            'SELECT id FROM ordonnance WHERE id_consultation = ?',
+            [id_consultation]
+        );
 
-        for (const med of medicaments) {
+        const medicamentsJson = JSON.stringify(medicaments);
+
+        if (existing.length > 0) {
             await connection.execute(
-                'INSERT INTO ordonnance (id_medecin, id_reservation, nom_medicament, dosage) VALUES (?, ?, ?, ?)',
-                [id_medecin, id_reservation, med.nom, med.dosage]
+                'UPDATE ordonnance SET medicaments = ?, date_ordination = CURRENT_TIMESTAMP WHERE id_consultation = ?',
+                [medicamentsJson, id_consultation]
+            );
+        } else {
+            await connection.execute(
+                'INSERT INTO ordonnance (id_consultation, medicaments) VALUES (?, ?)',
+                [id_consultation, medicamentsJson]
             );
         }
 
@@ -168,15 +181,26 @@ router.post('/ordonnance', async (req, res) => {
     }
 });
 
-// Récupérer l'ordonnance d'une réservation
-router.get('/ordonnance/:reservationId', async (req, res) => {
-    const { reservationId } = req.params;
+// Récupérer l'ordonnance d'une consultation
+router.get('/ordonnance/:consultationId', async (req, res) => {
+    const { consultationId } = req.params;
     try {
         const [rows] = await pool.execute(
-            'SELECT * FROM ordonnance WHERE id_reservation = ?',
-            [reservationId]
+            'SELECT * FROM ordonnance WHERE id_consultation = ?',
+            [consultationId]
         );
-        res.json({ success: true, medicaments: rows });
+
+        if (rows.length > 0) {
+            const ordonnance = rows[0];
+            try {
+                ordonnance.medicaments = JSON.parse(ordonnance.medicaments);
+            } catch (error) {
+                ordonnance.medicaments = [];
+            }
+            res.json({ success: true, ordonnance });
+        } else {
+            res.json({ success: true, ordonnance: null });
+        }
     } catch (error) {
         console.error('Erreur récup ordonnance:', error);
         res.status(500).json({ success: false, message: 'Erreur serveur' });
@@ -187,10 +211,11 @@ router.get('/ordonnance/:reservationId', async (req, res) => {
 router.get('/ordonnances/all', async (req, res) => {
     try {
         const [rows] = await pool.execute(`
-            SELECT o.*, r.nom as patient_nom, r.prenom as patient_prenom, m.nom as medecin_nom, m.prenom as medecin_prenom
+            SELECT o.*, c.id AS id_consultation, p.nom as patient_nom, p.prenom as patient_prenom, r.date_rendez_vous, r.motif
             FROM ordonnance o
-            JOIN reservation r ON o.id_reservation = r.id
-            JOIN medecin m ON o.id_medecin = m.id
+            JOIN consultation c ON o.id_consultation = c.id
+            JOIN reservation r ON c.id_reservation = r.id_reservation
+            JOIN patient p ON r.patient_id = p.id
             ORDER BY o.date_ordination DESC
         `);
         res.json({ success: true, ordonnances: rows });
@@ -205,15 +230,37 @@ router.get('/ordonnances/medecin/:medecinId', async (req, res) => {
     const { medecinId } = req.params;
     try {
         const [rows] = await pool.execute(`
-            SELECT o.*, r.nom as patient_nom, r.prenom as patient_prenom
+            SELECT o.*, c.id AS id_consultation, p.nom as patient_nom, p.prenom as patient_prenom, r.date_rendez_vous, r.motif
             FROM ordonnance o
-            JOIN reservation r ON o.id_reservation = r.id
-            WHERE o.id_medecin = ?
+            JOIN consultation c ON o.id_consultation = c.id
+            JOIN reservation r ON c.id_reservation = r.id_reservation
+            JOIN patient p ON r.patient_id = p.id
+            WHERE c.id_medecin = ?
             ORDER BY o.date_ordination DESC
         `, [medecinId]);
         res.json({ success: true, ordonnances: rows });
     } catch (error) {
         console.error('Erreur récup ordonnances medecin:', error);
+        res.status(500).json({ success: false, message: 'Erreur serveur' });
+    }
+});
+
+// Récupérer la liste unique des patients d'un médecin
+router.get('/patients/:medecinId', async (req, res) => {
+    const { medecinId } = req.params;
+    try {
+        const [rows] = await pool.execute(`
+            SELECT DISTINCT p.*, 
+                (SELECT MAX(date_rendez_vous) FROM reservation WHERE patient_id = p.id AND id_medecin = ?) as derniere_visite
+            FROM patient p
+            JOIN reservation r ON p.id = r.patient_id
+            WHERE r.id_medecin = ?
+            ORDER BY p.nom ASC
+        `, [medecinId, medecinId]);
+        
+        res.json({ success: true, patients: rows });
+    } catch (error) {
+        console.error('Erreur récupération patients médecin:', error);
         res.status(500).json({ success: false, message: 'Erreur serveur' });
     }
 });

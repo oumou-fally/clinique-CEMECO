@@ -76,7 +76,7 @@ router.post('/login', async (req, res) => {
         nom: medecin.nom,
         prenom: medecin.prenom,
         email: medecin.email,
-        nomComplet: `${medecin.prenom} ${medecin.nom}`
+        nomComplet: `${medecin.nom} ${medecin.prenom}`
       }
     });
 

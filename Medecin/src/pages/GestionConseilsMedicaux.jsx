@@ -1,354 +1,374 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Layout from '../layouts/Layout';
+import { useAuth } from '../context/AuthContext';
 import { 
-  Plus, Search, MessageSquare, Eye, Trash2, Save, 
-  ArrowLeft, Clock, User 
+  Plus, Search, MessageSquare, Eye, Trash2, Send, 
+  ArrowLeft, Clock, User, CheckCircle2, AlertCircle, RefreshCw, Filter
 } from 'lucide-react';
 
 export default function GestionConseilsMedicaux() {
+  const { medecinId } = useAuth();
   const [recherche, setRecherche] = useState('');
-  const [showForm, setShowForm] = useState(false);
-  const [conseilSelectionne, setConseilSelectionne] = useState(null);
+  const [discussions, setDiscussions] = useState([]);
+  const [stats, setStats] = useState({ total_patients: 0, non_lus: 0, en_attente: 0 });
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState('all'); // all, pending, answered
+  const [discussionSelectionnee, setDiscussionSelectionnee] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [nouveauMessage, setNouveauMessage] = useState('');
+  const messagesEndRef = useRef(null);
 
-  const [conseils, setConseils] = useState([
-    {
-      id: 1,
-      patient: 'Baldé Oumou Fally',
-      sujet: 'Hypertension et alimentation',
-      conseil: 'Réduisez votre consommation de sel et privilégiez les aliments riches en potassium comme les bananes et les épinards.',
-      date: '2026-04-15',
-      vues: 245,
-      reponses: 3,
-      statut: 'responded',
-      categorie: 'Nutrition'
-    },
-    {
-      id: 2,
-      patient: 'Camara Aissatou',
-      sujet: 'Exercice physique après intervention',
-      conseil: 'Commencez graduellement avec 15 minutes de marche légère par jour pendant la première semaine.',
-      date: '2026-04-13',
-      vues: 189,
-      reponses: 5,
-      statut: 'responded',
-      categorie: 'Exercice'
-    },
-    {
-      id: 3,
-      patient: 'Touré Mariama',
-      sujet: 'Prévention du diabète',
-      conseil: 'Maintenez un poids santé, mangez équilibré avec beaucoup de fibres.',
-      date: '2026-04-10',
-      vues: 412,
-      reponses: 8,
-      statut: 'responded',
-      categorie: 'Prévention'
-    },
-    {
-      id: 4,
-      patient: 'Diallo Mamadou',
-      sujet: 'Gestion du stress',
-      conseil: 'Pratiquez la respiration profonde 5 minutes par jour et dormez suffisamment.',
-      date: '2026-04-08',
-      vues: 156,
-      reponses: 1,
-      statut: 'pending',
-      categorie: 'Bien-être'
+  // Charger les stats depuis la base de données
+  const fetchStats = async () => {
+    if (!medecinId) return;
+    try {
+      const response = await fetch(`/api/messagerie/medecin/${medecinId}/stats`);
+      const data = await response.json();
+      if (data.success) setStats(data.data);
+    } catch (error) {
+      console.error('Erreur stats messagerie:', error);
     }
-  ]);
+  };
 
-  const [formData, setFormData] = useState({
-    patient: '',
-    sujet: '',
-    conseil: '',
-    categorie: 'Prévention',
-    statut: 'pending',
-    date: new Date().toISOString().split('T')[0]
+  // Charger les discussions (derniers messages par patient)
+  const fetchDiscussions = async (showLoading = false) => {
+    if (!medecinId) return;
+    if (showLoading) setLoading(true);
+    setRefreshing(true);
+    try {
+      const response = await fetch(`/api/messagerie/medecin/${medecinId}/discussions`);
+      const data = await response.json();
+      if (data.success) {
+        setDiscussions(data.data);
+      }
+    } catch (error) {
+      console.error('Erreur chargement discussions:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  // Charger l'historique complet d'une conversation
+  const fetchMessages = async (patientId) => {
+    if (!medecinId || !patientId) return;
+    try {
+      const response = await fetch(`/api/messagerie/conversation/${patientId}/${medecinId}`);
+      const data = await response.json();
+      if (data.success) {
+        setMessages(data.data);
+        
+        // Marquer comme lu si le dernier message vient du patient
+        const aDesMessagesNonLus = data.data.some(m => m.expediteur === 'patient' && m.lu === 0);
+        if (aDesMessagesNonLus) {
+          await fetch('/api/messagerie/marquer-lu', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id_patient: patientId, id_medecin: medecinId, pour_qui: 'medecin' })
+          });
+          fetchStats(); // Update stats après marquage
+        }
+      }
+    } catch (error) {
+      console.error('Erreur chargement messages:', error);
+    }
+  };
+
+  // Sync initiale et polling global
+  useEffect(() => {
+    if (medecinId) {
+      fetchDiscussions(true);
+      fetchStats();
+      const interval = setInterval(() => {
+        fetchDiscussions();
+        fetchStats();
+      }, 10000); // 10s pour la liste globale
+      return () => clearInterval(interval);
+    }
+  }, [medecinId]);
+
+  // Polling spécifique pour la conversation active
+  useEffect(() => {
+    let interval;
+    if (discussionSelectionnee && medecinId) {
+      fetchMessages(discussionSelectionnee.patient_id);
+      interval = setInterval(() => fetchMessages(discussionSelectionnee.patient_id), 4000);
+    }
+    return () => clearInterval(interval);
+  }, [discussionSelectionnee, medecinId]);
+
+  // Scroll automatique au dernier message
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const envoyerReponse = async (e) => {
+    e.preventDefault();
+    if (!nouveauMessage.trim() || !discussionSelectionnee || !medecinId) return;
+
+    const messageAEnvoyer = nouveauMessage;
+    setNouveauMessage(''); 
+
+    try {
+      const response = await fetch('/api/messagerie/envoyer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id_medecin: medecinId,
+          id_patient: discussionSelectionnee.patient_id,
+          expediteur: 'medecin',
+          message: messageAEnvoyer
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        fetchMessages(discussionSelectionnee.patient_id);
+        fetchDiscussions();
+      } else {
+        setNouveauMessage(messageAEnvoyer);
+        alert('Erreur lors de l\'envoi du message');
+      }
+    } catch (error) {
+      console.error('Erreur envoi réponse:', error);
+      setNouveauMessage(messageAEnvoyer);
+    }
+  };
+
+  const discussionsFiltrees = discussions.filter(d => {
+    const nomComplet = `${d.patient_prenom} ${d.patient_nom}`.toLowerCase();
+    const matchesSearch = nomComplet.includes(recherche.toLowerCase()) ||
+                          (d.dernier_message && d.dernier_message.toLowerCase().includes(recherche.toLowerCase()));
+    
+    if (activeTab === 'pending') return matchesSearch && d.non_lus > 0;
+    if (activeTab === 'answered') return matchesSearch && d.expediteur === 'medecin';
+    return matchesSearch;
   });
 
-  // Filtrage
-  const conseilsFiltres = conseils.filter(c =>
-    c.patient.toLowerCase().includes(recherche.toLowerCase()) ||
-    c.sujet.toLowerCase().includes(recherche.toLowerCase())
-  );
-
-  const getStatutBadge = (statut) => {
-    return statut === 'responded' 
-      ? 'bg-green-100 text-green-800' 
-      : 'bg-yellow-100 text-yellow-800';
-  };
-
-  const getStatutLabel = (statut) => {
-    return statut === 'responded' ? 'Répondu' : 'En attente';
-  };
-
-  const ouvrirNouveauConseil = () => {
-    setFormData({
-      patient: '',
-      sujet: '',
-      conseil: '',
-      categorie: 'Prévention',
-      statut: 'pending',
-      date: new Date().toISOString().split('T')[0]
-    });
-    setConseilSelectionne(null);
-    setShowForm(true);
-  };
-
-  const ouvrirModification = (conseil) => {
-    setFormData(conseil);
-    setConseilSelectionne(conseil.id);
-    setShowForm(true);
-  };
-
-  const sauvegarderConseil = () => {
-    if (conseilSelectionne) {
-      // Modification
-      setConseils(conseils.map(c => 
-        c.id === conseilSelectionne 
-          ? { ...formData, id: conseilSelectionne, vues: c.vues, reponses: c.reponses }
-          : c
-      ));
-    } else {
-      // Création
-      setConseils([...conseils, {
-        ...formData,
-        id: Date.now(),
-        vues: 0,
-        reponses: 0
-      }]);
+  const formaterDate = (dateStr) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const today = new Date().toLocaleDateString();
+    const msgDate = date.toLocaleDateString();
+    
+    if (today === msgDate) {
+      return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
     }
-    setShowForm(false);
-    setConseilSelectionne(null);
-  };
-
-  const supprimerConseil = (id) => {
-    if (confirm('Voulez-vous vraiment supprimer ce conseil ?')) {
-      setConseils(conseils.filter(c => c.id !== id));
-    }
-  };
-
-  const voirDiscussion = (id) => {
-    alert(`Ouverture du fil de discussion pour le conseil #${id} (à implémenter)`);
+    return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
   };
 
   return (
     <Layout>
-      {!showForm ? (
-        <div className="space-y-6">
-          {/* En-tête */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                <MessageSquare className="w-8 h-8 text-purple-600" />
-                Conseils Médicaux
-              </h1>
-              <p className="text-gray-600 mt-1">Conseils et suivi à distance des patients</p>
+      <div className="h-[calc(100vh-120px)] flex flex-col space-y-4">
+        {/* En-tête Dynamique */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+          <div>
+            <h1 className="text-3xl font-black text-gray-900 flex items-center gap-3">
+              <MessageSquare className="w-10 h-10 text-indigo-600" />
+              Messagerie Médicale
+            </h1>
+            <p className="text-gray-500 text-sm font-medium mt-1">Répondez aux questions et assurez le suivi de vos patients en temps réel</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="bg-indigo-50 px-6 py-3 rounded-2xl border border-indigo-100 flex items-center gap-4">
+              <div className="text-right">
+                <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Messages Non Lus</p>
+                <p className="text-2xl font-black text-indigo-700">{stats.non_lus}</p>
+              </div>
+              <div className="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-indigo-100">
+                <AlertCircle className="w-6 h-6 animate-pulse" />
+              </div>
             </div>
-
-            <button
-              onClick={ouvrirNouveauConseil}
-              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-xl transition font-medium"
+            <button 
+              onClick={() => fetchDiscussions(true)}
+              className={`p-4 rounded-2xl bg-white border border-gray-100 text-gray-400 hover:text-indigo-600 hover:border-indigo-100 shadow-sm transition-all ${refreshing ? 'animate-spin' : ''}`}
             >
-              <Plus className="w-5 h-5" />
-              Nouveau Conseil
+              <RefreshCw className="w-5 h-5" />
             </button>
           </div>
+        </div>
 
-          {/* Barre de recherche */}
-          <div className="bg-white rounded-xl shadow p-4">
-            <div className="relative">
-              <Search className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Rechercher par patient ou sujet..."
-                value={recherche}
-                onChange={(e) => setRecherche(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
-              />
+        <div className="flex-1 flex gap-6 overflow-hidden min-h-0">
+          {/* Liste des discussions (Sidebar) */}
+          <div className="w-full md:w-[400px] flex flex-col bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+            <div className="p-4 border-b border-gray-50 space-y-4">
+              <div className="flex p-1 bg-gray-50 rounded-xl border border-gray-100">
+                {['all', 'pending', 'answered'].map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all ${
+                      activeTab === tab ? 'bg-white text-indigo-600 shadow-sm border border-indigo-50' : 'text-gray-400 hover:text-gray-600'
+                    }`}
+                  >
+                    {tab === 'all' ? 'Tous' : tab === 'pending' ? 'Attente' : 'Répondus'}
+                  </button>
+                ))}
+              </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Rechercher un patient..."
+                  value={recherche}
+                  onChange={(e) => setRecherche(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-medium transition"
+                />
+              </div>
             </div>
-          </div>
 
-          {/* Liste des conseils */}
-          <div className="space-y-4">
-            {conseilsFiltres.map((conseil) => (
-              <div
-                key={conseil.id}
-                onClick={() => ouvrirModification(conseil)}
-                className="bg-white rounded-xl shadow hover:shadow-lg transition-all p-6 border-l-4 border-purple-500 cursor-pointer"
-              >
-                <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center font-bold">
-                        {conseil.patient.charAt(0)}
+            <div className="flex-1 overflow-y-auto divide-y divide-gray-50">
+              {loading ? (
+                <div className="flex flex-col items-center justify-center h-full p-8 text-gray-300">
+                  <RefreshCw className="w-10 h-10 animate-spin mb-4" />
+                  <p className="font-bold">Chargement de vos messages...</p>
+                </div>
+              ) : discussionsFiltrees.length === 0 ? (
+                <div className="p-12 text-center text-gray-400">
+                  <MessageSquare className="w-16 h-16 opacity-10 mx-auto mb-4" />
+                  <p className="font-bold">Aucune conversation trouvée</p>
+                </div>
+              ) : (
+                discussionsFiltrees.map((disc) => (
+                  <div
+                    key={disc.patient_id}
+                    onClick={() => setDiscussionSelectionnee(disc)}
+                    className={`p-5 cursor-pointer transition-all hover:bg-indigo-50/50 group relative ${
+                      discussionSelectionnee?.patient_id === disc.patient_id ? 'bg-indigo-50/50' : ''
+                    }`}
+                  >
+                    {discussionSelectionnee?.patient_id === disc.patient_id && (
+                      <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-indigo-600 rounded-r-full shadow-[2px_0_10px_rgba(79,70,229,0.4)]"></div>
+                    )}
+                    <div className="flex items-start gap-4">
+                      <div className="relative">
+                        <div className="w-14 h-14 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center font-black text-xl group-hover:scale-105 transition-transform shadow-sm">
+                          {disc.patient_nom.charAt(0)}
+                        </div>
+                        {disc.non_lus > 0 && (
+                          <div className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white animate-bounce">
+                            {disc.non_lus}
+                          </div>
+                        )}
                       </div>
-                      <div>
-                        <p className="font-semibold text-gray-900">{conseil.patient}</p>
-                        <p className="text-sm text-gray-500 flex items-center gap-1">
-                          <Clock className="w-4 h-4" /> {conseil.date}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-center mb-1">
+                          <h3 className="font-bold text-gray-900 truncate text-base">
+                            {disc.patient_prenom} {disc.patient_nom}
+                          </h3>
+                          <span className="text-[10px] font-black text-gray-400 uppercase">
+                            {formaterDate(disc.date_envoi)}
+                          </span>
+                        </div>
+                        <p className={`text-xs truncate leading-relaxed ${disc.non_lus > 0 ? 'text-indigo-900 font-black' : 'text-gray-500 font-medium'}`}>
+                          {disc.expediteur === 'medecin' ? 'Vous : ' : ''}{disc.dernier_message}
                         </p>
                       </div>
                     </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
 
-                    <h3 className="text-lg font-bold text-gray-900 mb-2">{conseil.sujet}</h3>
-                    <p className="text-gray-700 line-clamp-3 mb-4">{conseil.conseil}</p>
-
-                    <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                      <div className="flex items-center gap-1">
-                        <Eye className="w-4 h-4" /> {conseil.vues} vues
+          {/* Zone de Chat (Main) */}
+          <div className="flex-1 flex flex-col bg-white rounded-[2.5rem] shadow-2xl border border-gray-100 overflow-hidden relative">
+            {discussionSelectionnee ? (
+              <>
+                {/* Header Chat */}
+                <div className="px-8 py-6 bg-white border-b border-gray-50 flex items-center justify-between z-10 shadow-sm">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center font-black text-xl shadow-lg shadow-indigo-100">
+                      {discussionSelectionnee.patient_nom.charAt(0)}
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-black text-gray-900">
+                        {discussionSelectionnee.patient_prenom} {discussionSelectionnee.patient_nom}
+                      </h2>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                        <p className="text-[10px] font-black text-green-600 uppercase tracking-widest">Patient en ligne</p>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <MessageSquare className="w-4 h-4" /> {conseil.reponses} réponses
-                      </div>
-                      <span className="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-full">
-                        {conseil.categorie}
-                      </span>
                     </div>
                   </div>
+                </div>
 
-                  <div className="flex flex-col items-end gap-3" onClick={e => e.stopPropagation()}>
-                    <span className={`px-4 py-1 rounded-full text-xs font-semibold ${getStatutBadge(conseil.statut)}`}>
-                      {getStatutLabel(conseil.statut)}
-                    </span>
+                {/* Messages List */}
+                <div className="flex-1 overflow-y-auto p-8 space-y-6 bg-slate-50/20">
+                  {messages.map((msg, idx) => {
+                    const isMedecin = msg.expediteur === 'medecin';
+                    return (
+                      <div key={msg.id || idx} className={`flex ${isMedecin ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
+                        <div className={`max-w-[75%] rounded-[2rem] px-6 py-4 shadow-sm relative ${
+                          isMedecin 
+                            ? 'bg-indigo-600 text-white rounded-tr-none' 
+                            : 'bg-white text-gray-800 border border-gray-100 rounded-tl-none'
+                        }`}>
+                          <p className="text-sm leading-relaxed font-medium">{msg.message}</p>
+                          <div className={`flex items-center justify-end gap-2 mt-2 text-[9px] font-black uppercase tracking-widest ${isMedecin ? 'text-indigo-200' : 'text-gray-400'}`}>
+                            {new Date(msg.date_envoi).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {isMedecin && (
+                              <CheckCircle2 className={`w-3.5 h-3.5 ${msg.lu ? 'text-green-300' : 'opacity-40'}`} />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div ref={messagesEndRef} />
+                </div>
 
+                {/* Input Area */}
+                <div className="p-6 bg-white border-t border-gray-50">
+                  <form onSubmit={envoyerReponse} className="flex items-end gap-4 bg-gray-50 p-3 rounded-3xl border border-gray-100 focus-within:border-indigo-300 focus-within:bg-white transition-all">
+                    <textarea
+                      rows="1"
+                      value={nouveauMessage}
+                      onChange={(e) => setNouveauMessage(e.target.value)}
+                      placeholder="Donnez un conseil médical à votre patient..."
+                      className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-medium p-3 resize-none max-h-32"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          envoyerReponse(e);
+                        }
+                      }}
+                    />
                     <button
-                      onClick={(e) => { e.stopPropagation(); voirDiscussion(conseil.id); }}
-                      className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded-lg transition"
+                      type="submit"
+                      disabled={!nouveauMessage.trim()}
+                      className="w-14 h-14 flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-200 text-white rounded-[1.25rem] shadow-xl shadow-indigo-100 transition-all shrink-0 active:scale-95"
                     >
-                      <MessageSquare className="w-4 h-4" />
-                      Discuter
+                      <Send className="w-6 h-6" />
                     </button>
-
-                    <button
-                      onClick={(e) => { e.stopPropagation(); supprimerConseil(conseil.id); }}
-                      className="flex items-center gap-2 text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg transition"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Supprimer
-                    </button>
+                  </form>
+                </div>
+              </>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
+                <div className="w-32 h-32 bg-indigo-50 rounded-[3rem] flex items-center justify-center mb-8 animate-bounce duration-[4000ms]">
+                  <MessageSquare className="w-16 h-16 text-indigo-600 opacity-50" />
+                </div>
+                <h2 className="text-3xl font-black text-gray-900">Messagerie Médicale</h2>
+                <p className="text-gray-500 mt-4 max-w-sm text-lg font-medium">
+                  Sélectionnez un patient sur la gauche pour commencer à lui donner des conseils médicaux professionnels.
+                </p>
+                <div className="mt-12 flex gap-4 w-full max-w-md">
+                  <div className="flex-1 bg-indigo-50/50 p-6 rounded-3xl border border-indigo-100">
+                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">À Répondre</p>
+                    <p className="text-3xl font-black text-indigo-700">{stats.en_attente}</p>
+                  </div>
+                  <div className="flex-1 bg-indigo-600 p-6 rounded-3xl shadow-xl shadow-indigo-100 text-white">
+                    <p className="text-[10px] font-black text-indigo-200 uppercase tracking-widest mb-1">Non lus</p>
+                    <p className="text-3xl font-black">{stats.non_lus}</p>
                   </div>
                 </div>
-              </div>
-            ))}
-
-            {conseilsFiltres.length === 0 && (
-              <div className="text-center py-16 bg-white rounded-xl shadow">
-                <MessageSquare className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500">Aucun conseil trouvé</p>
               </div>
             )}
           </div>
         </div>
-      ) : (
-        /* ==================== FORMULAIRE ==================== */
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-2xl shadow p-8">
-            <div className="flex items-center gap-4 mb-8">
-              <button
-                onClick={() => setShowForm(false)}
-                className="p-2 hover:bg-gray-100 rounded-xl transition"
-              >
-                <ArrowLeft className="w-6 h-6" />
-              </button>
-              <h1 className="text-3xl font-bold text-gray-900">
-                {conseilSelectionne ? 'Modifier le Conseil' : 'Nouveau Conseil Médical'}
-              </h1>
-            </div>
-
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Patient</label>
-                <input
-                  type="text"
-                  value={formData.patient}
-                  onChange={(e) => setFormData({ ...formData, patient: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
-                  placeholder="Nom du patient"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Sujet / Titre</label>
-                <input
-                  type="text"
-                  value={formData.sujet}
-                  onChange={(e) => setFormData({ ...formData, sujet: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
-                  placeholder="Ex: Gestion de la tension artérielle"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Catégorie</label>
-                  <select
-                    value={formData.categorie}
-                    onChange={(e) => setFormData({ ...formData, categorie: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
-                  >
-                    <option>Prévention</option>
-                    <option>Nutrition</option>
-                    <option>Exercice</option>
-                    <option>Bien-être</option>
-                    <option>Hygiène</option>
-                    <option>Autre</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Statut</label>
-                  <select
-                    value={formData.statut}
-                    onChange={(e) => setFormData({ ...formData, statut: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
-                  >
-                    <option value="pending">En attente</option>
-                    <option value="responded">Répondu</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Conseil Médical</label>
-                <textarea
-                  value={formData.conseil}
-                  onChange={(e) => setFormData({ ...formData, conseil: e.target.value })}
-                  rows={8}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none resize-y"
-                  placeholder="Écrivez le conseil détaillé ici..."
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Date</label>
-                <input
-                  type="date"
-                  value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-4 mt-10">
-              <button
-                onClick={sauvegarderConseil}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3.5 rounded-xl font-semibold flex items-center justify-center gap-2 transition"
-              >
-                <Save className="w-5 h-5" />
-                Enregistrer le Conseil
-              </button>
-              <button
-                onClick={() => setShowForm(false)}
-                className="flex-1 border-2 border-gray-300 hover:bg-gray-50 py-3.5 rounded-xl font-semibold transition"
-              >
-                Annuler
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      </div>
     </Layout>
   );
 }

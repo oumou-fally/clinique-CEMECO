@@ -12,9 +12,10 @@ router.get('/notifications/:medecinId', async (req, res) => {
       SELECT n.id, n.type, n.message, n.lu, n.created_at,
              n.id_reservation,
              r.date_rendez_vous, r.heure_rendez_vous, r.motif,
-             p.nom AS patient_nom, p.prenom AS patient_prenom
+             p.nom AS patient_nom, p.prenom AS patient_prenom,
+             p.telephone AS patient_telephone, p.date_naissance AS patient_date_naissance
       FROM notifications n
-      LEFT JOIN reservation r ON n.id_reservation = r.id
+      LEFT JOIN reservation r ON n.id_reservation = r.id_reservation
       LEFT JOIN patient p ON r.patient_id = p.id
       WHERE n.id_medecin = ?
       ORDER BY n.created_at DESC

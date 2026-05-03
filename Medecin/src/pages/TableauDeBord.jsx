@@ -32,7 +32,7 @@ export default function TableauDeBord() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/consultations/reservations/${medecinId}`);
+      const res = await fetch(`/api/medecin/consultations/reservations/${medecinId}`);
       const data = await res.json();
       
       if (data.success) {
@@ -55,7 +55,7 @@ export default function TableauDeBord() {
 
   const fetchRecentReports = async () => {
     try {
-      const res = await fetch(`/api/consultations/historique/${medecinId}`);
+      const res = await fetch(`/api/medecin/consultations/historique/${medecinId}`);
       const data = await res.json();
       if (data.success) {
         setRapportsRecents(data.consultations.slice(0, 5));
@@ -203,7 +203,7 @@ export default function TableauDeBord() {
                             <User className="w-7 h-7 text-blue-600" />
                           </div>
                           <div>
-                            <p className="text-xl font-bold text-gray-900 capitalize">{consult.prenom} {consult.nom}</p>
+                            <p className="text-xl font-bold text-gray-900 capitalize">{consult.nom} {consult.prenom}</p>
                             <div className="flex items-center gap-3 mt-1">
                               <span className="text-sm font-medium text-gray-500">{consult.motif}</span>
                               <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ${getStatutBadge(consult.statut)}`}>
@@ -249,7 +249,7 @@ export default function TableauDeBord() {
                     <div key={rapport.id} className="p-5 bg-gray-50 rounded-2xl hover:bg-blue-50 hover:scale-[1.02] transition cursor-pointer border border-transparent hover:border-blue-100">
                       <div className="flex justify-between items-start">
                         <div>
-                          <p className="font-bold text-gray-900 capitalize">{rapport.patient_prenom} {rapport.patient_nom}</p>
+                          <p className="font-bold text-gray-900 capitalize">{rapport.patient_nom} {rapport.patient_prenom}</p>
                           <p className="text-sm font-semibold text-blue-600 mt-1">Consultation terminée</p>
                           <div className="flex items-center gap-2 mt-3 text-xs text-gray-400 font-bold">
                             <Calendar className="w-3 h-3" />

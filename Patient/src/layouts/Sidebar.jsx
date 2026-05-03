@@ -72,10 +72,10 @@ export default function Sidebar() {
               <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${
                 user?.role === 'admin' ? 'bg-blue-400' : 'bg-teal-400'
               }`}>
-                {user?.name?.charAt(0)}
+                {user?.prenom?.charAt(0) || user?.nomComplet?.charAt(0) || 'P'}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold truncate">{user?.name}</p>
+                <p className="text-sm font-semibold truncate">{user?.nomComplet || `${user?.prenom} ${user?.nom}`}</p>
                 <p className="text-xs text-white text-opacity-70 truncate">Patient</p>
               </div>
             </div>

@@ -1,5 +1,5 @@
 import Layout from '../layouts/Layout'
-import { Search, Filter, Plus, Eye, Phone, Calendar, FileText, Edit, Trash2, X, Stethoscope, Pill } from 'lucide-react'
+import { Search, Filter, Plus, Eye, Phone, Calendar, FileText, Edit, Trash2, X, Stethoscope, Pill, Users } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import OrdonnanceModal from '../components/OrdonnanceModal'
@@ -23,7 +23,7 @@ export default function Patients() {
   const fetchReservations = async () => {
     try {
       setLoading(true)
-      const res = await fetch(`/api/consultations/reservations/${medecinId}`)
+      const res = await fetch(`/api/medecin/consultations/reservations/${medecinId}`)
       const data = await res.json()
       if (data.success) {
         setReservations(data.reservations)
@@ -35,12 +35,19 @@ export default function Patients() {
     }
   }
 
-  const filteredReservations = reservations.filter(rdv => {
-    const fullName = `${rdv.prenom} ${rdv.nom}`.toLowerCase()
-    const matchesSearch = fullName.includes(searchTerm.toLowerCase()) || rdv.telephone.includes(searchTerm)
-    const matchesDate = !dateFilter || rdv.date_rendez_vous.split('T')[0] === dateFilter
-    
-    return matchesSearch && matchesDate
+  // Grouper par patient pour n'afficher chaque personne qu'une seule fois
+  const uniquePatients = reservations.reduce((acc, current) => {
+    const x = acc.find(item => item.patient_id === current.patient_id)
+    if (!x) {
+      return acc.concat([current])
+    } else {
+      return acc
+    }
+  }, [])
+
+  const filteredPatients = uniquePatients.filter(p => {
+    const fullName = `${p.prenom} ${p.nom}`.toLowerCase()
+    return fullName.includes(searchTerm.toLowerCase()) || (p.telephone && p.telephone.includes(searchTerm))
   })
 
   const handleViewDetail = async (rdv) => {
@@ -49,7 +56,7 @@ export default function Patients() {
     
     if (rdv.statut === 'termine') {
       try {
-        const res = await fetch(`/api/consultations/detail/${rdv.id}`)
+        const res = await fetch(`/api/medecin/consultations/detail/${rdv.id}`)
         const data = await res.json()
         if (data.success) {
           setConsultationData(data.consultation)
@@ -71,9 +78,23 @@ export default function Patients() {
   }
   return (
     <Layout>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Mes Patients Assignés</h1>
-        <p className="text-gray-600 mt-2">Liste des patients ayant un rendez-vous confirmé avec vous</p>
+      <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-black text-gray-900 flex items-center gap-3">
+            <Users className="w-8 h-8 text-blue-600" />
+            Ma Patientèle
+          </h1>
+          <p className="text-gray-500 mt-1 font-medium">Historique complet des patients que vous avez consultés</p>
+        </div>
+        <div className="bg-white px-6 py-4 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 animate-in fade-in slide-in-from-right-4 duration-500">
+          <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center">
+            <Users className="w-6 h-6 text-blue-600" />
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Patients Consultés</p>
+            <p className="text-2xl font-black text-gray-900">{uniquePatients.length}</p>
+          </div>
+        </div>
       </div>
 
       <div className="mb-6 flex flex-col md:flex-row gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
@@ -81,28 +102,11 @@ export default function Patients() {
           <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
           <input
             type="text"
-            placeholder="Rechercher par nom ou téléphone..."
+            placeholder="Rechercher un patient par nom ou téléphone..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 font-medium"
           />
-        </div>
-        <div className="flex items-center gap-3">
-          <Calendar className="w-5 h-5 text-gray-400" />
-          <input 
-            type="date"
-            value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-          />
-          {dateFilter && (
-            <button 
-              onClick={() => setDateFilter('')}
-              className="text-sm text-red-600 font-bold hover:underline"
-            >
-              Effacer
-            </button>
-          )}
         </div>
       </div>
 
@@ -116,69 +120,66 @@ export default function Patients() {
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/50">
                   <th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-widest">Patient</th>
-                  <th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-widest">Date & Heure</th>
-                  <th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-widest">Téléphone</th>
-                  <th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-widest">Statut</th>
-                  <th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-widest">Actions</th>
+                  <th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-widest">Dernière Visite</th>
+                  <th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-widest">Contact</th>
+                  <th className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-widest text-center">Statut</th>
+                  <th className="px-6 py-4 text-right text-xs font-black text-gray-400 uppercase tracking-widest">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {filteredReservations.map((rdv) => (
-                  <tr key={rdv.id} className="hover:bg-blue-50/30 transition-all group">
+                {filteredPatients.map((p) => (
+                  <tr key={p.id} className="hover:bg-blue-50/30 transition-all group">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center font-bold text-blue-600 group-hover:scale-110 transition">
-                          {rdv.nom.charAt(0)}
+                          {p.nom ? p.nom.charAt(0) : '?'}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="font-bold text-gray-900 capitalize">{rdv.prenom} {rdv.nom}</p>
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-black border ${rdv.sexe === 'Masculin' ? 'border-blue-200 text-blue-500' : 'border-pink-200 text-pink-500'}`}>
-                              {rdv.sexe === 'Masculin' ? 'M' : 'F'}
+                            <p className="font-bold text-gray-900 capitalize">{p.prenom || ''} {p.nom || 'Patient'}</p>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded font-black border ${p.sexe === 'Masculin' ? 'border-blue-200 text-blue-500' : 'border-pink-200 text-pink-500'}`}>
+                              {p.sexe === 'Masculin' ? 'M' : 'F'}
                             </span>
                           </div>
                           <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
-                            {rdv.date_naissance ? Math.floor((new Date() - new Date(rdv.date_naissance)) / 31557600000) + ' ans' : 'Âge inconnu'}
+                            {p.date_naissance ? Math.floor((new Date() - new Date(p.date_naissance)) / 31557600000) + ' ans' : 'Âge inconnu'}
                           </p>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <p className="text-sm font-bold text-gray-700">{new Date(rdv.date_rendez_vous).toLocaleDateString()}</p>
-                      <p className="text-xs text-gray-400 font-medium">{rdv.heure_rendez_vous.substring(0, 5)}</p>
+                      <div className="flex flex-col">
+                        <p className="text-sm font-bold text-gray-700">{p.date_rendez_vous ? new Date(p.date_rendez_vous).toLocaleDateString() : 'N/A'}</p>
+                        <p className="text-[10px] text-gray-400 font-medium uppercase tracking-tighter">Dernier passage</p>
+                      </div>
                     </td>
                     <td className="px-6 py-4">
-                      <a 
-                        href={`tel:${rdv.telephone}`}
-                        className="text-sm font-medium text-blue-600 hover:underline flex items-center gap-2"
-                      >
+                      <a href={`tel:${p.telephone}`} className="text-sm font-bold text-blue-600 hover:underline flex items-center gap-2">
                         <Phone className="w-3 h-3" />
-                        {rdv.telephone}
+                        {p.telephone}
                       </a>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ${getStatusColor(rdv.statut)}`}>
-                        {rdv.statut}
+                    <td className="px-6 py-4 text-center">
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ${p.statut === 'termine' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
+                        {p.statut === 'termine' ? 'Suivi' : 'Consulté'}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
                         <button 
-                          onClick={() => handleViewDetail(rdv)}
-                          className="p-2 hover:bg-white hover:shadow-sm rounded-xl text-gray-400 hover:text-blue-600 transition-all" 
-                          title="Voir Détails"
+                          onClick={() => handleViewDetail(p)}
+                          className="p-2 hover:bg-blue-50 rounded-xl text-gray-400 hover:text-blue-600 transition-all" 
+                          title="Fiche Patient"
                         >
                           <Eye className="w-5 h-5" />
                         </button>
-                        {rdv.statut === 'confirme' && (
-                          <button 
-                            onClick={() => window.location.href = `/consultations?rdv=${rdv.id}`}
-                            className="p-2 bg-blue-600 text-white rounded-xl shadow-md shadow-blue-200 hover:bg-blue-700 transition-all" 
-                            title="Lancer Consultation"
-                          >
-                            <Stethoscope className="w-5 h-5" />
-                          </button>
-                        )}
+                        <button 
+                          onClick={() => window.location.href = `/dashboard/consultations`}
+                          className="p-2 hover:bg-purple-50 rounded-xl text-gray-400 hover:text-purple-600 transition-all" 
+                          title="Historique des soins"
+                        >
+                          <FileText className="w-5 h-5" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -188,7 +189,7 @@ export default function Patients() {
           </div>
         )}
 
-        {!loading && filteredReservations.length === 0 && (
+        {!loading && filteredPatients.length === 0 && (
           <div className="text-center py-20 bg-gray-50/50">
             <Calendar className="w-16 h-16 text-gray-200 mx-auto mb-4" />
             <p className="text-gray-400 font-bold">Aucun patient trouvé pour ces critères.</p>
@@ -397,7 +398,7 @@ export default function Patients() {
 
                 {consultationData && (
                   <button
-                    onClick={() => window.location.href = `/consultations?rdv=${selectedRdvDetail.id}`}
+                    onClick={() => window.location.href = `/dashboard/consultations?rdv=${selectedRdvDetail.id}`}
                     className="px-6 py-4 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-2xl font-bold transition-all flex items-center justify-center gap-2"
                   >
                     <Edit className="w-5 h-5" />
@@ -415,7 +416,7 @@ export default function Patients() {
                 )}
                 {selectedRdvDetail.statut === 'confirme' && (
                   <button
-                    onClick={() => window.location.href = `/consultations?rdv=${selectedRdvDetail.id}`}
+                    onClick={() => window.location.href = `/dashboard/consultations?rdv=${selectedRdvDetail.id}`}
                     className="flex-1 px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold shadow-xl shadow-blue-100 transition-all flex items-center justify-center gap-3"
                   >
                     <Stethoscope className="w-5 h-5" />

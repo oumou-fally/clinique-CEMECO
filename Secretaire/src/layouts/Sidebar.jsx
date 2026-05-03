@@ -34,7 +34,9 @@ export default function Sidebar() {
       const data = await res.json()
 
       if (data.success) {
-        setNotifCount(data.notifications.length)
+        const rendezvousCount = data.notifications.rendezvous?.length || 0
+        const planningCount = data.notifications.planning?.length || 0
+        setNotifCount(rendezvousCount + planningCount)
       }
 
     } catch (error) {

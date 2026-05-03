@@ -11,8 +11,8 @@ export default function ParametresCompte() {
 
   // État du formulaire des informations personnelles
   const [formData, setFormData] = useState({
-    firstName: user?.name?.split(' ')[0] || '',
-    lastName: user?.name?.split(' ')[1] || '',
+    firstName: user?.prenom || '',
+    lastName: user?.nom || '',
     email: user?.email || '',
     phone: user?.phone || '',
     dateOfBirth: user?.dateOfBirth || '',
