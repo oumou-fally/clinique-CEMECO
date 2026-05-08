@@ -5,8 +5,8 @@ import Connexion from './pages/Connexion'
 import TableauDeBordSecretaire from './pages/TableauDeBordSecretaire'
 import GestionRendezVous from './pages/GestionRendezVous'
 import EmploiDuTempsMedecins from './pages/EmploiDuTempsMedecins'
-import ComposantFacturation from './pages/ComposantFacturation'
-import RenseignementMedecin from './pages/renseignement_medecin'
+import NouvelleFacture from './pages/nouvelle_facture'
+import Medecins from './pages/Medecins'
 import Notifications from './pages/Notifications'
 import Parametres from './pages/parametres'
 import DisponibilitesMedecins from './pages/DisponibilitesMedecins'
@@ -53,7 +53,7 @@ function App() {
           path="/dashboard/facturation"
           element={
             <ProtectedRoute>
-              <ComposantFacturation />
+              <NouvelleFacture />
             </ProtectedRoute>
           }
         />
@@ -61,7 +61,7 @@ function App() {
           path="/dashboard/doctors"
           element={
             <ProtectedRoute>
-              <RenseignementMedecin />
+              <Medecins />
             </ProtectedRoute>
           }
         />

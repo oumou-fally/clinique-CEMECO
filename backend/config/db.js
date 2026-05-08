@@ -39,7 +39,7 @@ pool.getConnection()
       });
   })
   .catch(err => {
-    console.error('❌ Erreur de connexion au pool MySQL :', err.message);
+    console.error('❌ Erreur de connexion au pool MySQL :', err);
     console.error('   Vérifiez: DB_HOST, DB_USER, DB_PASSWORD, DB_NAME');
     process.exit(1);
   });

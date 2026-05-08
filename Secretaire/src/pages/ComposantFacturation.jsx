@@ -1,468 +1,384 @@
-import { useMemo, useState } from 'react'
-import { Download, Eye, Search, Check, AlertCircle, Plus, X, TrendingUp } from 'lucide-react'
+import { useMemo, useState, useEffect } from 'react'
+import { Download, Eye, Search, Check, AlertCircle, Plus, X, TrendingUp, Printer } from 'lucide-react'
 import Layout from '../layouts/Layout'
+import ComposantFormulaireFacture from './ComposantFormulaire'
 
-const FACTURES_INITIALES = [
-  {
-    id: 'FAC-2026-001',
-    patient: 'Aminata Diallo',
-    amount: 125000,
-    status: 'paid',
-    patientType: 'insured',
-    insuranceProvider: 'CNAM',
-    paymentMethod: 'banque',
-    bankName: 'Banque Malienne de Solidarité',
-    date: '2026-04-09'
-  },
-  {
-    id: 'FAC-2026-002',
-    patient: 'Sekou Cissé',
-    amount: 87000,
-    status: 'pending',
-    patientType: 'non-insured',
-    paymentMethod: 'orange-money',
-    date: '2026-04-10'
-  },
-  {
-    id: 'FAC-2026-003',
-    patient: 'Fatoumata Bah',
-    amount: 91000,
-    status: 'overdue',
-    patientType: 'insured',
-    insuranceProvider: 'NSR Banque',
-    paymentMethod: 'banque',
-    bankName: 'Banque Commerciale du Sénégal',
-    date: '2026-04-08'
-  }
-]
-
-const BANQUES_ASSUREURS = [
-  'UGAR_ACTIVA',
-  'NSIA',
-  'LANALA',
-  'ASK',
-  'VISTA_ASSURANCE'
-]
-
-const TYPES_PAIEMENT_NON_ASSURE = [
-  'orange-money',
-  'carte-bancaire',
-  'cheque',
-  'especes'
-]
-
-const TYPES_PAIEMENT_LABELS = {
-  'orange-money': 'Orange Money',
-  'carte-bancaire': 'Carte bancaire',
-  'cheque': 'Chèque',
-  'especes': 'Espèces'
-}
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 const STATUTS_LABEL = {
-  paid: 'Payée',
-  pending: 'En attente',
-  overdue: 'Retard'
+  'en_attente': 'En attente',
+  'payee': 'Payée',
+  'annulee': 'Annulée'
 }
 
 const STATUTS_CLASSES = {
-  paid: 'bg-emerald-100 text-emerald-800',
-  pending: 'bg-amber-100 text-amber-800',
-  overdue: 'bg-rose-100 text-rose-800'
+  'en_attente': 'bg-amber-50 text-amber-600 border-amber-100',
+  'payee': 'bg-emerald-50 text-emerald-600 border-emerald-100',
+  'annulee': 'bg-rose-50 text-rose-600 border-rose-100'
 }
-
-const STATUTS_ICONE = {
-  paid: <Check className="w-5 h-5 text-emerald-600" />,
-  pending: <AlertCircle className="w-5 h-5 text-amber-600" />,
-  overdue: <AlertCircle className="w-5 h-5 text-rose-600" />
-}
-
-const FILTRES = [
-  { key: 'all', label: 'Tous' },
-  { key: 'paid', label: 'Payées' },
-  { key: 'pending', label: 'En attente' },
-  { key: 'overdue', label: 'Retard' }
-]
 
 const FORMULAIRE_INITIAL = {
-  patient: '',
-  service: 'Consultation cardiaque',
-  amount: '',
-  date: '',
-  patientType: '',
+  patient_id: '',
+  type_consultation_id: '',
+  patient_nom: '',
+  service: '',
+  montant: '',
+  date: new Date().toISOString().split('T')[0],
+  patientType: 'non-insured',
+  paymentMethod: 'cash',
   insuranceProvider: '',
-  bankPercentage: 10,
-  paymentMethod: '',
   bankName: '',
+  bank_account_number: '',
   orangeNumber: '',
-  orangeName: '',
-  cardNumber: '',
-  cardName: ''
+  orange_transaction_id: ''
 }
 
 export default function ComposantFacturation() {
-  const [factures, setFactures] = useState(FACTURES_INITIALES)
-  const [filtre, setFiltre] = useState('all')
+  const [factures, setFactures] = useState([])
+  const [patients, setPatients] = useState([])
+  const [typesConsultation, setTypesConsultation] = useState([])
   const [recherche, setRecherche] = useState('')
+  const [filtre, setFiltre] = useState('tous')
   const [modalVisible, setModalVisible] = useState(false)
+  const [modalDetailsVisible, setModalDetailsVisible] = useState(false)
+  const [selectedFacture, setSelectedFacture] = useState(null)
   const [factureForm, setFactureForm] = useState(FORMULAIRE_INITIAL)
   const [erreur, setErreur] = useState('')
+  const [loading, setLoading] = useState(true)
 
-  const facturesAffichees = useMemo(
-    () =>
-      factures.filter((invoice) => {
-        const matchesFilter = filtre === 'all' || invoice.status === filtre
-        const matchesSearch =
-          invoice.patient.toLowerCase().includes(recherche.toLowerCase()) ||
-          invoice.id.toLowerCase().includes(recherche.toLowerCase())
-        return matchesFilter && matchesSearch
-      }),
-    [factures, filtre, recherche]
-  )
+  useEffect(() => {
+    fetchData()
+  }, [])
 
-  const montantTotal = facturesAffichees.reduce((sum, invoice) => sum + invoice.amount, 0)
-  const montantPayee = facturesAffichees
-    .filter((invoice) => invoice.status === 'paid')
-    .reduce((sum, invoice) => sum + invoice.amount, 0)
-  const montantAttente = facturesAffichees
-    .filter((invoice) => invoice.status === 'pending' || invoice.status === 'overdue')
-    .reduce((sum, invoice) => sum + invoice.amount, 0)
+  const fetchData = async () => {
+    setLoading(true)
+    try {
+      const [fRes, pRes, tRes] = await Promise.all([
+        fetch(`${API_URL}/api/secretaire/factures`),
+        fetch(`${API_URL}/api/secretaire/patients`),
+        fetch(`${API_URL}/api/secretaire/types-consultation`)
+      ])
+      
+      const [fData, pData, tData] = await Promise.all([
+        fRes.json(), pRes.json(), tRes.json()
+      ])
+
+      if (fData.success) setFactures(fData.factures || [])
+      if (pData.success) setPatients(pData.patients || [])
+      if (tData.success) setTypesConsultation(tData.types || [])
+    } catch (err) {
+      console.error("Erreur fetch:", err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const facturesAffichees = useMemo(() => {
+    return factures.filter(f => {
+      const searchStr = `${f.patient_nom} ${f.id}`.toLowerCase()
+      const matchRecherche = searchStr.includes(recherche.toLowerCase())
+      const matchFiltre = filtre === 'tous' || f.statut === filtre
+      return matchRecherche && matchFiltre
+    })
+  }, [factures, recherche, filtre])
+
+  const stats = useMemo(() => {
+    const total = factures.reduce((acc, f) => acc + Number(f.montant || 0), 0)
+    const payee = factures.filter(f => f.statut === 'payee').reduce((acc, f) => acc + Number(f.montant || 0), 0)
+    const attente = factures.filter(f => f.statut === 'en_attente').reduce((acc, f) => acc + Number(f.montant || 0), 0)
+    return { total, payee, attente }
+  }, [factures])
 
   const gererChangement = (e) => {
     const { name, value } = e.target
-    setFactureForm((prev) => ({ ...prev, [name]: value }))
-    if (name === 'patientType' && value === 'non-insured') {
-      setFactureForm((prev) => ({ ...prev, paymentMethod: 'orange-money' }))
+    setFactureForm(prev => {
+      const updated = { ...prev, [name]: value }
+      if (name === 'patient_id') {
+        const p = patients.find(item => item.id == value)
+        updated.patient_nom = p ? `${p.prenom} ${p.nom}` : ''
+      }
+      if (name === 'type_consultation_id') {
+        const t = typesConsultation.find(item => item.id == value)
+        updated.service = t ? t.nom : ''
+        updated.montant = t ? t.prix : ''
+      }
+      return updated
+    })
+  }
+
+  const enregistrerFacture = async () => {
+    if (!factureForm.patient_id || !factureForm.type_consultation_id) {
+      setErreur('Informations manquantes')
+      return
+    }
+    try {
+      const res = await fetch(`${API_URL}/api/secretaire/factures`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...factureForm, statut: 'en_attente' })
+      })
+      const data = await res.json()
+      if (data.success) {
+        fetchData()
+        setModalVisible(false)
+        setFactureForm(FORMULAIRE_INITIAL)
+      } else {
+        setErreur(data.message)
+      }
+    } catch (err) {
+      setErreur('Erreur serveur')
     }
   }
 
-  const ouvrirModal = () => {
-    setModalVisible(true)
-    setErreur('')
+  const marquerPayee = async (id) => {
+    if (!window.confirm("Valider le paiement de cette facture ?")) return
+    try {
+      const res = await fetch(`${API_URL}/api/secretaire/factures/${id}/statut`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ statut: 'payee' })
+      })
+      const data = await res.json()
+      if (data.success) fetchData()
+    } catch (err) {
+      alert("Erreur de mise à jour")
+    }
   }
 
-  const fermerModal = () => {
-    setModalVisible(false)
-    setFactureForm(FORMULAIRE_INITIAL)
-    setErreur('')
-  }
-
-  const enregistrerFacture = () => {
-    if (!factureForm.patient || !factureForm.amount || !factureForm.date || !factureForm.patientType) {
-      setErreur('Veuillez renseigner tous les champs obligatoires.')
-      return
-    }
-
-    if (factureForm.patientType === 'insured' && (!factureForm.insuranceProvider || !factureForm.bankName)) {
-      setErreur('Veuillez sélectionner l\'assureur et la banque.')
-      return
-    }
-
-    if (factureForm.patientType === 'non-insured' && !factureForm.paymentMethod) {
-      setErreur('Veuillez sélectionner un mode de paiement.')
-      return
-    }
-
-    if (factureForm.patientType === 'non-insured' && factureForm.paymentMethod === 'orange-money' && !factureForm.orangeNumber) {
-      setErreur('Veuillez renseigner le numéro Orange Money.')
-      return
-    }
-
-    if (factureForm.patientType === 'non-insured' && factureForm.paymentMethod === 'carte-bancaire' && (!factureForm.cardNumber || !factureForm.cardName)) {
-      setErreur('Veuillez renseigner les informations de la carte bancaire.')
-      return
-    }
-
-    const nouvelleFacture = {
-      id: `FAC-${Date.now()}`,
-      patient: factureForm.patient,
-      service: factureForm.service,
-      amount: Number(factureForm.amount),
-      date: factureForm.date,
-      status: 'pending',
-      patientType: factureForm.patientType,
-      insuranceProvider: factureForm.insuranceProvider,
-      bankPercentage: factureForm.patientType === 'insured' ? factureForm.bankPercentage : null,
-      paymentMethod: factureForm.paymentMethod,
-      bankName: factureForm.bankName,
-      orangeNumber: factureForm.orangeNumber,
-      orangeName: factureForm.orangeName,
-      cardNumber: factureForm.cardNumber,
-      cardName: factureForm.cardName
-    }
-
-    setFactures((prev) => [nouvelleFacture, ...prev])
-    fermerModal()
-  }
-
-  const marquerPayee = (id) => {
-    setFactures((prev) => prev.map((invoice) => (invoice.id === id ? { ...invoice, status: 'paid' } : invoice)))
+  const imprimerRecu = () => {
+    window.print()
   }
 
   return (
     <Layout>
-      <div className="p-8 space-y-8 bg-linear-to-br from-blue-50 via-emerald-50 to-teal-50 min-h-screen">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="p-8 space-y-8 bg-slate-50 min-h-screen">
+        
+        {/* TOP BAR */}
+        <div className="flex justify-between items-center bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
           <div>
-            <h1 className="text-4xl font-bold text-slate-900">Facturation</h1>
-            <p className="text-slate-600 mt-2">Gérez les factures, paiements et traitements d'assurance</p>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Tableau de Facturation</h1>
+            <p className="text-sm text-slate-500 font-medium italic">Gestion des règlements patients</p>
           </div>
-          <button onClick={ouvrirModal} className="inline-flex items-center gap-3 rounded-2xl bg-linear-to-r from-emerald-600 to-teal-600 px-6 py-3 text-white font-semibold shadow-lg hover:shadow-xl transition">
-            <Plus className="w-5 h-5" /> Nouvelle facture
+          <button 
+            onClick={() => setModalVisible(true)}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 shadow-lg shadow-emerald-200 transition"
+          >
+            <Plus className="w-5 h-5" /> Créer Facture
           </button>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="card bg-white p-6 border-l-4 border-slate-400 shadow-md">
-            <div className="flex items-center justify-between">
+        {/* STATS */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-600"><TrendingUp /></div>
               <div>
-                <p className="text-sm text-slate-600 font-medium">Total des factures</p>
-                <p className="mt-3 text-3xl font-bold text-slate-900">{montantTotal.toLocaleString('fr-FR')} GNF</p>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total Émis</p>
+                <p className="text-xl font-black">{stats.total.toLocaleString()} GNF</p>
               </div>
-              <TrendingUp className="w-12 h-12 text-slate-300" />
             </div>
           </div>
-          <div className="card bg-white p-6 border-l-4 border-emerald-500 shadow-md">
-            <div className="flex items-center justify-between">
+          <div className="bg-emerald-50 p-6 rounded-3xl border border-emerald-100 shadow-sm">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-emerald-600 rounded-2xl flex items-center justify-center text-white"><Check /></div>
               <div>
-                <p className="text-sm text-emerald-700 font-medium">Montant payé</p>
-                <p className="mt-3 text-3xl font-bold text-emerald-600">{montantPayee.toLocaleString('fr-FR')} GNF</p>
+                <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest">Total Encaissé</p>
+                <p className="text-xl font-black text-emerald-700">{stats.payee.toLocaleString()} GNF</p>
               </div>
-              <Check className="w-12 h-12 text-emerald-300" />
             </div>
           </div>
-          <div className="card bg-white p-6 border-l-4 border-amber-500 shadow-md">
-            <div className="flex items-center justify-between">
+          <div className="bg-amber-50 p-6 rounded-3xl border border-amber-100 shadow-sm">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-amber-600 rounded-2xl flex items-center justify-center text-white"><AlertCircle /></div>
               <div>
-                <p className="text-sm text-amber-700 font-medium">À percevoir</p>
-                <p className="mt-3 text-3xl font-bold text-amber-600">{montantAttente.toLocaleString('fr-FR')} GNF</p>
+                <p className="text-xs font-bold text-amber-600 uppercase tracking-widest">En Attente</p>
+                <p className="text-xl font-black text-amber-700">{stats.attente.toLocaleString()} GNF</p>
               </div>
-              <AlertCircle className="w-12 h-12 text-amber-300" />
             </div>
           </div>
         </div>
 
-        <div className="rounded-2xl bg-white p-5 shadow-md border border-slate-200">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="relative flex-1">
-              <Search className="absolute left-4 top-4 w-5 h-5 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Rechercher patient ou facture..."
+        {/* LISTE DES FACTURES */}
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+          <div className="p-6 border-b flex flex-col md:flex-row gap-4 justify-between bg-slate-50/30">
+            <div className="relative w-full md:w-96">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input 
+                type="text" 
+                placeholder="Chercher un patient..." 
+                className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 transition"
                 value={recherche}
                 onChange={(e) => setRecherche(e.target.value)}
-                className="w-full rounded-xl border-2 border-slate-200 bg-slate-50 py-3 pl-12 pr-4"
               />
             </div>
-            <div className="flex flex-wrap gap-2">
-              {FILTRES.map((option) => (
-                <button
-                  key={option.key}
-                  onClick={() => setFiltre(option.key)}
-                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${filtre === option.key ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}
+            <div className="flex gap-2 p-1 bg-slate-100 rounded-xl overflow-x-auto">
+              {['tous', 'en_attente', 'payee'].map(k => (
+                <button 
+                  key={k} 
+                  onClick={() => setFiltre(k)}
+                  className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition ${filtre === k ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'}`}
                 >
-                  {option.label}
+                  {k === 'tous' ? 'Toutes' : k === 'payee' ? 'Payées' : 'En attente'}
                 </button>
               ))}
             </div>
           </div>
-        </div>
 
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-md">
-          <table className="w-full text-left">
-            <thead className="bg-slate-100 text-slate-700 border-b border-slate-200">
-              <tr>
-                <th className="px-6 py-4 font-semibold">Facture</th>
-                <th className="px-6 py-4 font-semibold">Patient</th>
-                <th className="px-6 py-4 font-semibold">Montant</th>
-                <th className="px-6 py-4 font-semibold">Statut</th>
-                <th className="px-6 py-4 font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {facturesAffichees.length === 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-slate-50 text-[10px] font-black uppercase text-slate-400 tracking-widest border-b border-slate-100">
                 <tr>
-                  <td colSpan="5" className="px-6 py-8 text-center text-slate-500">
-                    Aucune facture trouvée
-                  </td>
+                  <th className="px-6 py-4">ID Facture</th>
+                  <th className="px-6 py-4">Patient & Service</th>
+                  <th className="px-6 py-4">Montant</th>
+                  <th className="px-6 py-4 text-center">Statut</th>
+                  <th className="px-6 py-4 text-center">Actions</th>
                 </tr>
-              ) : (
-                facturesAffichees.map((invoice) => (
-                  <tr key={invoice.id} className="border-b border-slate-200 hover:bg-slate-50 transition">
-                    <td className="px-6 py-4 font-semibold text-slate-900">{invoice.id}</td>
-                    <td className="px-6 py-4 text-slate-700">{invoice.patient}</td>
-                    <td className="px-6 py-4 font-semibold text-slate-900">{invoice.amount.toLocaleString('fr-FR')} GNF</td>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {loading ? (
+                  <tr><td colSpan="5" className="px-6 py-12 text-center text-slate-400 italic">Chargement...</td></tr>
+                ) : facturesAffichees.map(f => (
+                  <tr key={f.id} className="hover:bg-slate-50/50 transition group">
+                    <td className="px-6 py-4 font-mono text-sm font-bold text-slate-400">#FAC-{f.id}</td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-2 badge ${STATUTS_CLASSES[invoice.status]} px-3 py-1 rounded-full`}>
-                        {STATUTS_ICONE[invoice.status]} {STATUTS_LABEL[invoice.status]}
+                      <p className="font-bold text-slate-900">{f.patient_prenom} {f.patient_nom_db || f.patient_nom}</p>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{f.service}</p>
+                    </td>
+                    <td className="px-6 py-4 font-black text-slate-900">{Number(f.montant).toLocaleString()} GNF</td>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${STATUTS_CLASSES[f.statut]}`}>
+                        {STATUTS_LABEL[f.statut]}
                       </span>
                     </td>
-                    <td className="px-6 py-4 flex flex-wrap gap-2">
-                      <button className="rounded-lg bg-slate-200 p-2 text-slate-700 hover:bg-slate-300 transition">
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      <button className="rounded-lg bg-slate-200 p-2 text-slate-700 hover:bg-slate-300 transition">
-                        <Download className="w-4 h-4" />
-                      </button>
-                      {invoice.status !== 'paid' && (
-                        <button onClick={() => marquerPayee(invoice.id)} className="rounded-lg bg-emerald-600 p-2 text-white hover:bg-emerald-700 transition">
-                          <Check className="w-4 h-4" />
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => { setSelectedFacture(f); setModalDetailsVisible(true); }} className="p-2 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition">
+                          <Eye className="w-4 h-4" />
                         </button>
-                      )}
+                        {f.statut === 'en_attente' && (
+                          <button onClick={() => marquerPayee(f.id)} className="p-2 bg-emerald-100 text-emerald-600 rounded-xl hover:bg-emerald-600 hover:text-white transition shadow-sm">
+                            <Check className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        {modalVisible && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between gap-4 p-6 border-b border-slate-200 bg-linear-to-r from-emerald-50 to-teal-50">
-                <div>
-                  <h2 className="text-2xl font-bold text-slate-900">Nouvelle facture</h2>
-                  <p className="text-sm text-slate-600 mt-1">Créez une facture pour le patient</p>
+        {/* MODALS */}
+        <ComposantFormulaireFacture 
+          showModal={modalVisible}
+          onClose={() => setModalVisible(false)}
+          formData={factureForm}
+          onFormChange={gererChangement}
+          onAddInvoice={enregistrerFacture}
+          patients={patients}
+          typesConsultation={typesConsultation}
+        />
+
+        {modalDetailsVisible && selectedFacture && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 print:p-0">
+            <div className="bg-white rounded-[2.5rem] shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto print:max-h-full print:shadow-none print:rounded-none">
+              
+              {/* Actions Header (Caché à l'impression) */}
+              <div className="p-6 border-b flex justify-between items-center print:hidden">
+                <h2 className="text-xl font-bold">Reçu de paiement</h2>
+                <div className="flex gap-2">
+                  <button onClick={imprimerRecu} className="flex items-center gap-2 bg-slate-800 text-white px-4 py-2 rounded-xl font-bold text-sm"><Printer className="w-4 h-4" /> Imprimer</button>
+                  <button onClick={() => setModalDetailsVisible(false)} className="p-2 hover:bg-slate-100 rounded-xl transition"><X /></button>
                 </div>
-                <button onClick={fermerModal} className="text-slate-400 hover:text-slate-600">
-                  <X className="w-6 h-6" />
-                </button>
               </div>
 
-              {erreur && <div className="m-6 rounded-2xl bg-rose-50 p-4 text-sm text-rose-700 border border-rose-200">⚠️ {erreur}</div>}
-
-              <div className="p-6 space-y-5">
-                <div className="grid gap-4 md:grid-cols-2">
+              {/* CONTENU DU REÇU (ZONE IMPRIMABLE) */}
+              <div id="print-area" className="p-10 space-y-8">
+                
+                {/* Logo & Clinique */}
+                <div className="flex justify-between items-start border-b-2 border-slate-100 pb-8">
                   <div>
-                    <label className="text-sm font-semibold text-slate-700">Patient *</label>
-                    <input name="patient" value={factureForm.patient} onChange={gererChangement} placeholder="Nom du patient" className="mt-2" />
+                    <h1 className="text-4xl font-black text-emerald-600 tracking-tighter">CEMECO</h1>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Clinique Médico-Chirurgicale</p>
+                    <p className="text-[10px] text-slate-400 mt-2 font-medium">Conakry, République de Guinée<br/>Tél: +224 622 00 00 00</p>
                   </div>
-                  <div>
-                    <label className="text-sm font-semibold text-slate-700">Service *</label>
-                    <select name="service" value={factureForm.service} onChange={gererChangement} className="mt-2">
-                      <option value="Consultation cardiaque">Consultation cardiaque</option>
-                      <option value="Électrocardiogramme">Électrocardiogramme</option>
-                      <option value="Échocardiogramme">Échocardiogramme</option>
-                      <option value="Holter">Holter</option>
-                      <option value="IRM cardiaque">IRM cardiaque</option>
-                    </select>
+                  <div className="text-right">
+                    <h3 className="text-2xl font-black uppercase text-slate-900">REÇU</h3>
+                    <p className="font-mono text-sm text-slate-500 font-bold mt-1">N° FAC-{selectedFacture.id}</p>
+                    <p className="text-xs font-bold text-slate-400 mt-2 uppercase tracking-tighter">Date: {new Date(selectedFacture.created_at).toLocaleDateString('fr-FR')}</p>
                   </div>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-3">
+                {/* Infos Client */}
+                <div className="grid grid-cols-2 gap-8 py-4">
                   <div>
-                    <label className="text-sm font-semibold text-slate-700">Montant (GNF) *</label>
-                    <input type="number" name="amount" value={factureForm.amount} onChange={gererChangement} placeholder="Montant" className="mt-2" />
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Facturé à :</p>
+                    <p className="text-xl font-black text-slate-900">{selectedFacture.patient_prenom} {selectedFacture.patient_nom_db || selectedFacture.patient_nom}</p>
+                    <p className="text-xs text-slate-500 font-bold mt-1">Patient {selectedFacture.patient_type === 'insured' ? 'Assuré' : 'Non Assuré'}</p>
                   </div>
-                  <div>
-                    <label className="text-sm font-semibold text-slate-700">Date *</label>
-                    <input type="date" name="date" value={factureForm.date} onChange={gererChangement} className="mt-2" />
-                  </div>
-                  <div>
-                    <label className="text-sm font-semibold text-slate-700">Type de patient *</label>
-                    <select name="patientType" value={factureForm.patientType} onChange={gererChangement} className="mt-2">
-                      <option value="">Sélectionner</option>
-                      <option value="insured">Patient assuré</option>
-                      <option value="non-insured">Patient non assuré</option>
-                    </select>
+                  <div className="text-right">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Statut de règlement :</p>
+                    <span className={`px-4 py-1.5 rounded-full text-xs font-black uppercase border ${STATUTS_CLASSES[selectedFacture.statut]}`}>
+                      {STATUTS_LABEL[selectedFacture.statut]}
+                    </span>
                   </div>
                 </div>
 
-                {factureForm.patientType === 'insured' && (
-                  <>
-                    <div className="rounded-2xl bg-emerald-50 p-4 border border-emerald-200">
-                      <p className="text-sm font-semibold text-emerald-900">🏥 Patient Assuré</p>
-                      <p className="text-xs text-emerald-700 mt-1">La banque prend un pourcentage de la facture (10% à 100%) et envoie un chèque à l'administrateur.</p>
-                    </div>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div>
-                        <label className="text-sm font-semibold text-slate-700">Assureur *</label>
-                        <select name="insuranceProvider" value={factureForm.insuranceProvider} onChange={gererChangement} className="mt-2">
-                          <option value="">Sélectionner un assureur</option>
-                          {BANQUES_ASSUREURS.map((assureur) => (
-                            <option key={assureur} value={assureur}>
-                              {assureur}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-sm font-semibold text-slate-700">Pourcentage pris par la banque *</label>
-                        <select name="bankPercentage" value={factureForm.bankPercentage} onChange={gererChangement} className="mt-2">
-                          <option value={10}>10%</option>
-                          <option value={20}>20%</option>
-                          <option value={30}>30%</option>
-                          <option value={40}>40%</option>
-                          <option value={50}>50%</option>
-                          <option value={60}>60%</option>
-                          <option value={70}>70%</option>
-                          <option value={80}>80%</option>
-                          <option value={90}>90%</option>
-                          <option value={100}>100%</option>
-                        </select>
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                {factureForm.patientType === 'non-insured' && (
-                  <>
-                    <div className="rounded-2xl bg-amber-50 p-4 border border-amber-200">
-                      <p className="text-sm font-semibold text-amber-900">💳 Patient Non Assuré</p>
-                      <p className="text-xs text-amber-700 mt-1">Choisissez le mode de paiement souhaité.</p>
-                    </div>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div>
-                        <label className="text-sm font-semibold text-slate-700">Mode de paiement *</label>
-                        <select name="paymentMethod" value={factureForm.paymentMethod} onChange={gererChangement} className="mt-2">
-                          <option value="">Sélectionner un mode</option>
-                          {TYPES_PAIEMENT_NON_ASSURE.map((type) => (
-                            <option key={type} value={type}>
-                              {TYPES_PAIEMENT_LABELS[type]}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      {factureForm.paymentMethod === 'orange-money' && (
-                        <div>
-                          <label className="text-sm font-semibold text-slate-700">Numéro Orange Money *</label>
-                          <input name="orangeNumber" value={factureForm.orangeNumber} onChange={gererChangement} placeholder="+224 6XX XX XX XX" className="mt-2" />
-                        </div>
-                      )}
-                      {factureForm.paymentMethod === 'carte-bancaire' && (
-                        <>
-                          <div>
-                            <label className="text-sm font-semibold text-slate-700">Numéro de carte *</label>
-                            <input name="cardNumber" value={factureForm.cardNumber} onChange={gererChangement} placeholder="XXXX XXXX XXXX XXXX" className="mt-2" />
-                          </div>
-                          <div>
-                            <label className="text-sm font-semibold text-slate-700">Titulaire de la carte *</label>
-                            <input name="cardName" value={factureForm.cardName} onChange={gererChangement} placeholder="Nom du titulaire" className="mt-2" />
-                          </div>
-                        </>
-                      )}
-                    </div>
-                    {factureForm.paymentMethod === 'orange-money' && (
-                      <div>
-                        <label className="text-sm font-semibold text-slate-700">Titulaire Orange Money</label>
-                        <input name="orangeName" value={factureForm.orangeName} onChange={gererChangement} placeholder="Nom du titulaire" className="mt-2" />
-                      </div>
-                    )}
-                  </>
-                )}
-
-                <div className="flex justify-end gap-3 pt-4">
-                  <button onClick={fermerModal} className="rounded-xl border-2 border-slate-300 px-5 py-2 text-slate-700 font-semibold hover:bg-slate-50 transition">
-                    Annuler
-                  </button>
-                  <button onClick={enregistrerFacture} className="rounded-xl bg-emerald-600 px-5 py-2 text-white font-semibold hover:bg-emerald-700 transition">
-                    Créer facture
-                  </button>
+                {/* Table des Services */}
+                <div className="border-2 border-slate-50 rounded-3xl overflow-hidden shadow-sm">
+                  <table className="w-full text-left">
+                    <thead className="bg-slate-50 text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                      <tr>
+                        <th className="px-6 py-4">Désignation de l'acte médical</th>
+                        <th className="px-6 py-4 text-right">Montant (GNF)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      <tr>
+                        <td className="px-6 py-6 font-bold text-slate-800">
+                          {selectedFacture.service}
+                          <p className="text-[10px] text-slate-400 font-medium uppercase mt-1">Prestation réalisée à la Clinique CEMECO</p>
+                        </td>
+                        <td className="px-6 py-6 text-right font-black text-xl text-slate-900">
+                          {Number(selectedFacture.montant).toLocaleString()} GNF
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
+
+                {/* Totaux & Paiement */}
+                <div className="flex flex-col md:flex-row justify-between items-end gap-6 bg-slate-50 p-8 rounded-[2rem]">
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Mode de paiement utilisé :</p>
+                    <p className="text-sm font-black text-slate-900 uppercase tracking-tighter">{selectedFacture.payment_method?.replace('-', ' ')}</p>
+                    {selectedFacture.insurance_provider && <p className="text-xs font-bold text-emerald-600">Assurance : {selectedFacture.insurance_provider}</p>}
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Total Net Payé :</p>
+                    <p className="text-4xl font-black text-emerald-600">{Number(selectedFacture.montant).toLocaleString()} <span className="text-lg">GNF</span></p>
+                  </div>
+                </div>
+
+                {/* Signature / Cachet */}
+                <div className="pt-12 grid grid-cols-2 gap-12 text-center border-t border-dashed border-slate-200">
+                  <div className="space-y-8">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest underline decoration-2 decoration-emerald-100 underline-offset-4">Signature Patient</p>
+                    <div className="h-20"></div>
+                  </div>
+                  <div className="space-y-8">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest underline decoration-2 decoration-emerald-100 underline-offset-4">Cachet Secrétariat</p>
+                    <div className="h-20 flex items-center justify-center italic text-slate-300 font-black text-4xl opacity-10 rotate-12">CEMECO</div>
+                  </div>
+                </div>
+
               </div>
             </div>
           </div>
         )}
+
       </div>
     </Layout>
   )

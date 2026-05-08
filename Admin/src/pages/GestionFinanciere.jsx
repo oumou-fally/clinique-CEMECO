@@ -1,255 +1,268 @@
 import Layout from '../layouts/Layout'
-import { CreditCard, TrendingUp, FileText, Download, DollarSign, Calendar, Search } from 'lucide-react'
-import { useState } from 'react'
+import { 
+  CreditCard, TrendingUp, FileText, Download, 
+  DollarSign, Calendar, Search, ArrowUpRight, 
+  ArrowDownRight, PieChart, Activity, Wallet,
+  Smartphone, Building, Banknote, User
+} from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
 
 export default function GestionFinanciere() {
   const [recherche, setRecherche] = useState('')
   const [filterStatut, setFilterStatut] = useState('tous')
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
 
-  const paiements = [
-    { id: 1, patient: 'Aminata Diallo', montant: 50000, date: '2026-04-08', statut: 'Payé', methode: 'Espèces' },
-    { id: 2, patient: 'Fatoumata Bah', montant: 75000, date: '2026-04-07', statut: 'En attente', methode: 'Cheque' },
-    { id: 3, patient: 'Mariama Traoré', montant: 120000, date: '2026-04-06', statut: 'Payé', methode: 'Virement' },
-    { id: 4, patient: 'Mmady Sacko', montant: 45000, date: '2026-04-05', statut: 'Retard', methode: 'Espèces' },
-    { id: 5, patient: 'Sekou Cisse', montant: 95000, date: '2026-04-04', statut: 'Payé', methode: 'Carte' },
-  ]
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
-  const revenus = [
-    { mois: 'Janvier', montant: 2450000, consultations: 89 },
-    { mois: 'Février', montant: 2680000, consultations: 96 },
-    { mois: 'Mars', montant: 2890000, consultations: 104 },
-    { mois: 'Avril (partiel)', montant: 1250000, consultations: 45 },
-  ]
+  useEffect(() => {
+    fetchFinances()
+  }, [])
 
-  const paiementsFiltres = paiements.filter(p => {
-    const matchSearch = p.patient.toLowerCase().includes(recherche.toLowerCase())
-    const matchStatut = filterStatut === 'tous' || p.statut === filterStatut
-    return matchSearch && matchStatut
-  })
-
-  const getStatutColor = (statut) => {
-    switch (statut) {
-      case 'Payé':
-        return 'bg-green-100 text-green-800'
-      case 'En attente':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'Retard':
-        return 'bg-red-100 text-red-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
+  const getHeaders = () => {
+    const adminData = JSON.parse(localStorage.getItem('admin_user') || '{}')
+    return {
+      'Content-Type': 'application/json',
+      'x-admin-role': adminData.role || ''
     }
   }
 
-  const totalRevenu = paiements
-    .filter(p => p.statut === 'Payé')
-    .reduce((sum, p) => sum + p.montant, 0)
+  const fetchFinances = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/admin/finances`, {
+        headers: getHeaders()
+      })
+      const result = await res.json()
+      if (result.success) {
+        setData(result)
+      }
+    } catch (error) {
+      console.error('Erreur finances:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
-  const totalEnAttente = paiements
-    .filter(p => p.statut === 'En attente')
-    .reduce((sum, p) => sum + p.montant, 0)
+  const transactionsFiltrees = useMemo(() => {
+    if (!data?.paiements) return []
+    return data.paiements.filter(p => {
+      const matchSearch = p.patient.toLowerCase().includes(recherche.toLowerCase()) || 
+                          p.service.toLowerCase().includes(recherche.toLowerCase())
+      const matchStatut = filterStatut === 'tous' || p.statut === filterStatut
+      return matchSearch && matchStatut
+    })
+  }, [data, recherche, filterStatut])
 
-  const totalRetard = paiements
-    .filter(p => p.statut === 'Retard')
-    .reduce((sum, p) => sum + p.montant, 0)
+  const getStatutColor = (statut) => {
+    switch (statut) {
+      case 'payee': return 'bg-emerald-100 text-emerald-700 border-emerald-200'
+      case 'en_attente': return 'bg-amber-100 text-amber-700 border-amber-200'
+      case 'annulee': return 'bg-rose-100 text-rose-700 border-rose-200'
+      default: return 'bg-gray-100 text-gray-700'
+    }
+  }
+
+  const getMethodeIcon = (methode) => {
+    switch (methode) {
+      case 'cash': return <Banknote className="w-4 h-4" />
+      case 'orange-money': return <Smartphone className="w-4 h-4 text-orange-500" />
+      case 'banque': return <Building className="w-4 h-4 text-blue-500" />
+      case 'cheque': return <FileText className="w-4 h-4 text-purple-500" />
+      default: return <Wallet className="w-4 h-4" />
+    }
+  }
 
   const formatMontant = (montant) => {
-    return montant.toLocaleString('fr-GN', { style: 'currency', currency: 'GNF', minimumFractionDigits: 0 })
+    return new Intl.NumberFormat('fr-GN', { 
+      style: 'currency', 
+      currency: 'GNF', 
+      minimumFractionDigits: 0 
+    }).format(montant || 0)
   }
 
   return (
     <Layout>
-      <div className="space-y-8">
-        {/* En-tête */}
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Gestion Financière</h1>
-          <p className="text-gray-600 mt-1">Suivi des paiements et génération de rapports financiers</p>
-        </div>
-
-        {/* KPIs Financiers */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl shadow border-l-4 border-green-500 p-6">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-gray-600 text-sm font-medium">Montant Payé</p>
-                <p className="text-3xl font-bold text-green-600 mt-2">{formatMontant(totalRevenu)}</p>
-                <p className="text-xs text-gray-600 mt-2">{paiements.filter(p => p.statut === 'Payé').length} paiements</p>
-              </div>
-              <DollarSign className="w-10 h-10 text-green-200" />
-            </div>
+      <div className="space-y-10 pb-20 bg-slate-50 min-h-screen p-8 rounded-[3rem]">
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div>
+            <h1 className="text-4xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+              <Activity className="text-blue-600 w-10 h-10" />
+              Pilotage Financier
+            </h1>
+            <p className="text-slate-500 font-medium mt-1">Supervision des encaissements et analyses budgétaires en temps réel.</p>
           </div>
-
-          <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl shadow border-l-4 border-yellow-500 p-6">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-gray-600 text-sm font-medium">En Attente</p>
-                <p className="text-3xl font-bold text-yellow-600 mt-2">{formatMontant(totalEnAttente)}</p>
-                <p className="text-xs text-gray-600 mt-2">{paiements.filter(p => p.statut === 'En attente').length} paiements</p>
-              </div>
-              <CreditCard className="w-10 h-10 text-yellow-200" />
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-xl shadow border-l-4 border-red-500 p-6">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-gray-600 text-sm font-medium">En Retard</p>
-                <p className="text-3xl font-bold text-red-600 mt-2">{formatMontant(totalRetard)}</p>
-                <p className="text-xs text-gray-600 mt-2">{paiements.filter(p => p.statut === 'Retard').length} paiements</p>
-              </div>
-              <TrendingUp className="w-10 h-10 text-red-200" />
-            </div>
+          <div className="flex gap-4">
+            <button className="flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-6 py-4 rounded-2xl transition-all font-black text-sm shadow-sm">
+              <Download className="w-5 h-5" /> Export PDF
+            </button>
+            <button className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-6 py-4 rounded-2xl transition-all font-black text-sm shadow-xl shadow-slate-200">
+              <Calendar className="w-5 h-5" /> Rapport Périodique
+            </button>
           </div>
         </div>
 
-        {/* Tableau des paiements */}
-        <div className="bg-white rounded-xl shadow overflow-hidden">
-          <div className="border-b bg-gradient-to-r from-blue-50 to-blue-100 p-6">
-            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <CreditCard className="w-5 h-5 text-blue-600" />
-              Gestion des Paiements
-            </h2>
+        {/* Global Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-150 transition-transform">
+              <DollarSign className="w-20 h-20" />
+            </div>
+            <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Chiffre d'Affaires</p>
+            <h3 className="text-2xl font-black text-slate-900">{loading ? '...' : formatMontant(data?.kpis?.totalRevenus)}</h3>
+            <div className="mt-4 flex items-center gap-2">
+              <span className="text-emerald-500 text-xs font-black flex items-center">
+                <ArrowUpRight className="w-4 h-4" /> +15.4%
+              </span>
+              <span className="text-[10px] text-slate-400 font-bold">vs mois dernier</span>
+            </div>
           </div>
 
-          <div className="p-6 space-y-4">
-            {/* Filtres */}
-            <div className="flex gap-4 items-center">
-              <div className="relative flex-1">
-                <Search className="absolute left-4 top-3 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Rechercher par patient..."
-                  value={recherche}
-                  onChange={(e) => setRecherche(e.target.value)}
-                  className="w-full pl-11 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                />
-              </div>
+          <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm relative overflow-hidden group">
+            <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Recettes du Jour</p>
+            <h3 className="text-2xl font-black text-blue-600">{loading ? '...' : formatMontant(data?.kpis?.revenusJour)}</h3>
+            <p className="mt-4 text-[10px] text-slate-400 font-bold italic">{data?.kpis?.nbVentesJour} transactions aujourd'hui</p>
+          </div>
 
-              <select
-                value={filterStatut}
-                onChange={(e) => setFilterStatut(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-              >
-                <option value="tous">Tous les statuts</option>
-                <option value="Payé">Payés</option>
-                <option value="En attente">En attente</option>
-                <option value="Retard">En retard</option>
-              </select>
+          <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm relative overflow-hidden group">
+            <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Recouvrement Attendu</p>
+            <h3 className="text-2xl font-black text-amber-600">{loading ? '...' : formatMontant(data?.kpis?.totalEnAttente)}</h3>
+            <p className="mt-4 text-[10px] text-slate-400 font-bold italic">{data?.kpis?.nbFacturesAttente} factures en attente</p>
+          </div>
+
+          <div className="bg-blue-600 p-6 rounded-[2rem] shadow-xl shadow-blue-100 relative overflow-hidden">
+            <div className="absolute -bottom-4 -right-4 opacity-20">
+              <TrendingUp className="w-24 h-24 text-white" />
             </div>
-
-            {/* Tableau */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-700">Patient</th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-700">Montant</th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-700">Date</th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-700">Méthode</th>
-                    <th className="px-4 py-3 text-left font-semibold text-gray-700">Statut</th>
-                    <th className="px-4 py-3 text-right font-semibold text-gray-700">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {paiementsFiltres.map((p) => (
-                    <tr key={p.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-4 font-medium text-gray-900">{p.patient}</td>
-                      <td className="px-4 py-4 text-gray-600 font-semibold">{formatMontant(p.montant)}</td>
-                      <td className="px-4 py-4 text-gray-600">{p.date}</td>
-                      <td className="px-4 py-4 text-gray-600">{p.methode}</td>
-                      <td className="px-4 py-4">
-                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatutColor(p.statut)}`}>
-                          {p.statut}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4 text-right">
-                        <button className="text-blue-600 hover:text-blue-700 flex items-center gap-1 ml-auto">
-                          <FileText className="w-4 h-4" />
-                          Détails
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {paiementsFiltres.length === 0 && (
-              <div className="text-center py-8">
-                <p className="text-gray-500">Aucun paiement trouvé</p>
-              </div>
-            )}
+            <p className="text-xs font-black text-white/70 uppercase tracking-widest mb-4">Taux de Paiement</p>
+            <h3 className="text-2xl font-black text-white">
+              {data?.kpis ? Math.round((data.kpis.nbFacturesPayees / (data.kpis.nbFacturesPayees + data.kpis.nbFacturesAttente)) * 100) : 0}%
+            </h3>
+            <p className="mt-4 text-[10px] text-white/70 font-bold">Performance de collecte</p>
           </div>
         </div>
 
-        {/* Rapports Financiers */}
-        <div className="bg-white rounded-xl shadow overflow-hidden">
-          <div className="border-b bg-gradient-to-r from-purple-50 to-purple-100 p-6">
-            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <FileText className="w-5 h-5 text-purple-600" />
-              Rapports Financiers par Mois
-            </h2>
-          </div>
-
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {revenus.map((revenu, index) => (
-                <div key={index} className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-6 border border-gray-200">
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <p className="text-gray-600 text-sm font-medium flex items-center gap-2">
-                        <Calendar className="w-4 h-4" />
-                        {revenu.mois}
-                      </p>
-                      <p className="text-2xl font-bold text-gray-900 mt-2">{formatMontant(revenu.montant)}</p>
-                    </div>
-                    <button className="text-purple-600 hover:text-purple-700 p-2 bg-purple-100 rounded-lg transition">
-                      <Download className="w-5 h-5" />
-                    </button>
+        {/* Charts and Details Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Recent Transactions List */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm p-8">
+              <div className="flex flex-col md:flex-row justify-between gap-4 mb-8">
+                <h2 className="text-2xl font-black text-slate-900">Flux de Trésorerie</h2>
+                <div className="flex gap-2">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                    <input 
+                      type="text" 
+                      placeholder="Patient, service..." 
+                      className="pl-10 pr-4 py-2 bg-slate-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none font-bold"
+                      value={recherche}
+                      onChange={(e) => setRecherche(e.target.value)}
+                    />
                   </div>
-                  <div className="text-sm text-gray-600">
-                    <p>Consultations : <span className="font-semibold text-gray-900">{revenu.consultations}</span></p>
-                    <p className="mt-1">Montant/consultation : <span className="font-semibold text-gray-900">{formatMontant(revenu.montant / revenu.consultations)}</span></p>
-                  </div>
+                  <select 
+                    className="bg-slate-50 border-none rounded-xl px-4 py-2 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none"
+                    value={filterStatut}
+                    onChange={(e) => setFilterStatut(e.target.value)}
+                  >
+                    <option value="tous">Tous les statuts</option>
+                    <option value="payee">Payées</option>
+                    <option value="en_attente">En attente</option>
+                    <option value="annulee">Annulées</option>
+                  </select>
                 </div>
-              ))}
-            </div>
+              </div>
 
-            {/* Actions d'export */}
-            <div className="mt-8 pt-6 border-t flex gap-4">
-              <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition">
-                <Download className="w-4 h-4" />
-                Exporter en PDF
-              </button>
-              <button className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium transition">
-                <Download className="w-4 h-4" />
-                Exporter en Excel
-              </button>
-              <button className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg font-medium transition">
-                <Download className="w-4 h-4" />
-                Exporter en CSV
-              </button>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50">
+                      <th className="pb-4 pl-2">Patient / Service</th>
+                      <th className="pb-4">Date</th>
+                      <th className="pb-4">Méthode</th>
+                      <th className="pb-4">Montant</th>
+                      <th className="pb-4">Statut</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {loading ? (
+                      [1,2,3,4,5].map(i => <tr key={i} className="animate-pulse"><td colSpan="5" className="py-4 h-12 bg-slate-50 rounded-lg"></td></tr>)
+                    ) : transactionsFiltrees.map((p) => (
+                      <tr key={p.id} className="group hover:bg-slate-50/50 transition-colors">
+                        <td className="py-5 pl-2">
+                          <div>
+                            <p className="font-black text-slate-900 group-hover:text-blue-600 transition-colors">{p.patient}</p>
+                            <p className="text-xs text-slate-400 font-bold">{p.service}</p>
+                          </div>
+                        </td>
+                        <td className="py-5">
+                          <p className="text-xs font-bold text-slate-600">{new Date(p.date).toLocaleDateString('fr-FR')}</p>
+                        </td>
+                        <td className="py-5">
+                          <div className="flex items-center gap-2 text-slate-500 text-xs font-bold">
+                            {getMethodeIcon(p.methode)}
+                            <span className="capitalize">{p.methode?.replace('-', ' ')}</span>
+                          </div>
+                        </td>
+                        <td className="py-5">
+                          <p className="font-black text-slate-900">{formatMontant(p.montant)}</p>
+                        </td>
+                        <td className="py-5">
+                          <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase border ${getStatutColor(p.statut)}`}>
+                            {p.statut?.replace('_', ' ')}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Résumé annuel */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl shadow p-8 text-white">
-          <h2 className="text-2xl font-bold mb-6">Résumé Annuel</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div>
-              <p className="text-blue-200 text-sm mb-2">Revenu Total</p>
-              <p className="text-3xl font-bold">9,270,000 GNF</p>
-              <p className="text-blue-200 text-sm mt-2">↑ 15% par rapport à l'année dernière</p>
+          {/* Side Analytics */}
+          <div className="space-y-8">
+            {/* Revenue per Month (Visual Mini Chart) */}
+            <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm p-8">
+              <h3 className="text-xl font-black text-slate-900 mb-6 flex items-center gap-2">
+                <TrendingUp className="text-blue-600" /> Tendance
+              </h3>
+              <div className="space-y-4">
+                {data?.revenus?.map((r, i) => (
+                  <div key={i} className="space-y-2">
+                    <div className="flex justify-between text-xs font-bold">
+                      <span className="text-slate-500">{r.mois}</span>
+                      <span className="text-slate-900">{formatMontant(r.montant)}</span>
+                    </div>
+                    <div className="h-2 bg-slate-50 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-blue-600 rounded-full" 
+                        style={{ width: `${(r.montant / data.kpis.totalRevenus) * 100 * 2}%` }} 
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div>
-              <p className="text-blue-200 text-sm mb-2">Consultations Totales</p>
-              <p className="text-3xl font-bold">334</p>
-              <p className="text-blue-200 text-sm mt-2">Moyenne : 27,8 par mois</p>
-            </div>
-            <div>
-              <p className="text-blue-200 text-sm mb-2">Taux de Recouvrement</p>
-              <p className="text-3xl font-bold">89.2%</p>
-              <p className="text-blue-200 text-sm mt-2">↓ 2% par rapport à 2025</p>
+
+            {/* Payment Methods Distribution */}
+            <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white">
+              <h3 className="text-xl font-black mb-6 flex items-center gap-2">
+                <PieChart className="text-blue-400" /> Méthodes
+              </h3>
+              <div className="space-y-6">
+                {data?.methodes?.map((m, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-white/10 rounded-lg">
+                        {getMethodeIcon(m.methode)}
+                      </div>
+                      <span className="text-sm font-bold capitalize">{m.methode?.replace('-', ' ')}</span>
+                    </div>
+                    <span className="text-sm font-black">{Math.round((m.total / data.kpis.totalRevenus) * 100)}%</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>

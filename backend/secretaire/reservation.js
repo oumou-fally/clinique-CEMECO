@@ -281,41 +281,53 @@ router.put('/:id/auto-assign', async (req, res) => {
 // ======================================================
 router.put('/:id/report', async (req, res) => {
   const { id } = req.params
-  const { date_rendez_vous, heure_rendez_vous } = req.body
+  const { date_rendez_vous, heure_rendez_vous, motif_report } = req.body
 
   try {
+    // 1. Mettre à jour la réservation
     await pool.execute(`
       UPDATE reservation
       SET 
         date_rendez_vous = ?,
         heure_rendez_vous = ?,
+        motif_report = ?,
         statut = 'reporte',
         notif_secretaire = 0,
         notif_patient = 1,
         notif_medecin = IF(id_medecin IS NOT NULL, 1, notif_medecin)
       WHERE id_reservation = ?
-    `, [date_rendez_vous, heure_rendez_vous, id])
+    `, [date_rendez_vous, heure_rendez_vous, motif_report, id])
 
-    const [updatedRows] = await pool.execute(`
-      SELECT id_medecin, date_rendez_vous, heure_rendez_vous
-      FROM reservation
-      WHERE id_reservation = ?
+    // 2. Récupérer les détails pour les notifications
+    const [rdvRows] = await pool.execute(`
+      SELECT r.*, p.nom AS patient_nom, p.prenom AS patient_prenom
+      FROM reservation r
+      JOIN patient p ON r.patient_id = p.id
+      WHERE r.id_reservation = ?
     `, [id])
 
-    if (updatedRows.length > 0 && updatedRows[0].id_medecin) {
-      const rdv = updatedRows[0]
-      const msg = `⏳ Le rendez-vous a été reporté au ${new Date(rdv.date_rendez_vous).toLocaleDateString('fr-FR')} à ${rdv.heure_rendez_vous?.substring(0,5)}.`
-      await pool.execute(`
-        INSERT INTO notifications (type, message, id_medecin, id_reservation, lu)
-        VALUES ('report', ?, ?, ?, 0)
-      `, [msg, updatedRows[0].id_medecin, id])
+    if (rdvRows.length > 0) {
+      const rdv = rdvRows[0]
+      const dateFormatee = new Date(rdv.date_rendez_vous).toLocaleDateString('fr-FR', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+      })
+      const heureFormatee = rdv.heure_rendez_vous?.substring(0, 5)
+
+      // Notification pour le médecin (si assigné)
+      if (rdv.id_medecin) {
+        const msgMedecin = `⏳ Rendez-vous reporté — Patient : ${rdv.patient_prenom} ${rdv.patient_nom} | Nouvelle date : ${dateFormatee} à ${heureFormatee} | Motif du report : ${motif_report || 'Non précisé'}`
+        await pool.execute(`
+          INSERT INTO notifications (type, message, id_medecin, id_reservation, lu)
+          VALUES ('report', ?, ?, ?, 0)
+        `, [msgMedecin, rdv.id_medecin, id])
+      }
     }
 
-    res.json({ success: true })
+    res.json({ success: true, message: 'Rendez-vous reporté avec succès' })
 
   } catch (error) {
-    console.error(error)
-    res.status(500).json({ success: false })
+    console.error('🔴 Erreur lors du report:', error)
+    res.status(500).json({ success: false, message: 'Erreur serveur' })
   }
 })
 
@@ -382,7 +394,7 @@ router.get('/notifications/patient/:patientId', async (req, res) => {
           WHEN r.statut = 'termine' THEN CONCAT('Votre consultation du ', DATE_FORMAT(r.date_rendez_vous, '%d/%m/%Y'), ' à ', TIME_FORMAT(r.heure_rendez_vous, '%H:%i'), ' a été enregistrée. Consultez votre dossier médical.')
           WHEN r.statut = 'confirme' THEN CONCAT('Votre rendez-vous du ', DATE_FORMAT(r.date_rendez_vous, '%d/%m/%Y'), ' à ', TIME_FORMAT(r.heure_rendez_vous, '%H:%i'), ' a été confirmé par la secrétaire.')
           WHEN r.statut = 'annule' THEN CONCAT('Votre rendez-vous du ', DATE_FORMAT(r.date_rendez_vous, '%d/%m/%Y'), ' à ', TIME_FORMAT(r.heure_rendez_vous, '%H:%i'), ' a été annulé par la secrétaire.')
-          WHEN r.statut = 'reporte' THEN CONCAT('Votre rendez-vous a été reporté au ', DATE_FORMAT(r.date_rendez_vous, '%d/%m/%Y'), ' à ', TIME_FORMAT(r.heure_rendez_vous, '%H:%i'), ' par la secrétaire.')
+          WHEN r.statut = 'reporte' THEN CONCAT('Votre rendez-vous a été reporté au ', DATE_FORMAT(r.date_rendez_vous, '%d/%m/%Y'), ' à ', TIME_FORMAT(r.heure_rendez_vous, '%H:%i'), ' par la secrétaire. Motif : ', IFNULL(r.motif_report, 'Non précisé'))
           ELSE CONCAT('Votre demande de rendez-vous du ', DATE_FORMAT(r.date_rendez_vous, '%d/%m/%Y'), ' à ', TIME_FORMAT(r.heure_rendez_vous, '%H:%i'), ' est bien enregistrée. La secrétaire vous contactera bientôt.')
         END AS message
       FROM reservation r
@@ -426,9 +438,9 @@ router.get('/notifications/secretaire', async (req, res) => {
     `)
 
     const [planningRows] = await pool.execute(`
-      SELECT id, type, message, created_at, 'planning' AS type_notif
+      SELECT id, type, message, created_at, id_medecin, 'planning' AS type_notif
       FROM notifications
-      WHERE type = 'planning' AND lu = 0
+      WHERE type IN ('planning', 'planning_jour') AND lu = 0
       ORDER BY created_at DESC
     `)
 
@@ -467,7 +479,56 @@ router.put('/notifications/secretaire/:id/lu', async (req, res) => {
 router.put('/notifications/systeme/:id/lu', async (req, res) => {
   const { id } = req.params
   try {
+    // Marquer comme lu
     await pool.execute('UPDATE notifications SET lu = 1 WHERE id = ?', [id])
+
+    // Tenter de récupérer la notification pour créer un créneau temporaire
+    const [rows] = await pool.execute('SELECT * FROM notifications WHERE id = ?', [id])
+    const notif = rows && rows[0]
+
+    if (notif && notif.id_medecin) {
+      // Essayer d'extraire une date YYYY-MM-DD depuis le message
+      const msg = notif.message || ''
+      const dateMatch = msg.match(/(20\d{2}-\d{2}-\d{2})/)
+      const today = new Date()
+      const date_planning = dateMatch ? dateMatch[1] : today.toISOString().split('T')[0]
+
+      // Définir début = maintenant, fin = maintenant + 24h
+      const now = new Date()
+      const in24 = new Date(now.getTime() + 24 * 3600 * 1000)
+
+      const pad = (n) => String(n).padStart(2, '0')
+      const timeStr = (d) => `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+
+      const startDate = now.toISOString().split('T')[0]
+      const endDate = in24.toISOString().split('T')[0]
+      const heure_debut = timeStr(now)
+      const heure_fin_in24 = timeStr(in24)
+
+      try {
+        if (startDate === endDate) {
+          // même jour : un seul créneau
+          await pool.execute(`
+            INSERT INTO planning_medecin (id_medecin, date_planning, heure_debut, heure_fin, statut, commentaire)
+            VALUES (?, ?, ?, ?, 'disponible', ?)
+          `, [notif.id_medecin, startDate, heure_debut, heure_fin_in24, `temp_from_notification_${id}`])
+        } else {
+          // créneau sur deux jours : insérer deux lignes (aujourd'hui jusqu'à minuit, puis minuit->heure_fin)
+          await pool.execute(`
+            INSERT INTO planning_medecin (id_medecin, date_planning, heure_debut, heure_fin, statut, commentaire)
+            VALUES (?, ?, ?, ?, 'disponible', ?)
+          `, [notif.id_medecin, startDate, heure_debut, '23:59:59', `temp_from_notification_${id}`])
+
+          await pool.execute(`
+            INSERT INTO planning_medecin (id_medecin, date_planning, heure_debut, heure_fin, statut, commentaire)
+            VALUES (?, ?, ?, ?, 'disponible', ?)
+          `, [notif.id_medecin, endDate, '00:00:00', heure_fin_in24, `temp_from_notification_${id}`])
+        }
+      } catch (err) {
+        console.error('Erreur insertion planning temporaire:', err)
+      }
+    }
+
     res.json({ success: true })
   } catch (error) {
     console.error(error)

@@ -13,6 +13,7 @@ export default function Notifications() {
   const [showModal, setShowModal] = useState(false)
   const [filter, setFilter] = useState('all') // 'all' | 'unread'
 
+
   const API_URL = 'http://localhost:3000'
 
   // ======================================================
@@ -82,7 +83,7 @@ export default function Notifications() {
     setModalLoading(true)
 
     try {
-      const res = await fetch(`/api/medecin/consultations/detail/${notification.id_reservation}`)
+      const res = await fetch(`${API_URL}/api/medecin/consultations/detail/${notification.id_reservation}`)
       const data = await res.json()
 
       if (data.success) {
@@ -150,6 +151,7 @@ export default function Notifications() {
   return (
     <Layout>
       <div className="space-y-8">
+
 
         {/* HEADER */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -319,8 +321,8 @@ export default function Notifications() {
             })}
           </div>
         )}
-
       </div>
+
 
       {showModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm">
@@ -385,7 +387,7 @@ export default function Notifications() {
                     notes: formData.notes
                   }
 
-                  const res = await fetch('/api/medecin/consultations', {
+                  const res = await fetch(`${API_URL}/api/medecin/consultations`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)

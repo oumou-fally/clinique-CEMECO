@@ -8,7 +8,8 @@ import {
   Award,
   Star,
   Calendar,
-  User
+  User,
+  X
 } from 'lucide-react'
 import Layout from '../layouts/Layout'
 import { DOCTORS, CLINIC_INFO } from '../data/clinicData'

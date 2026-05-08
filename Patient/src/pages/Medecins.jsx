@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Layout from '../layouts/Layout'
 import { Star, MapPin, Phone, Mail, Calendar, MessageCircle, Search, Filter, RefreshCw, UserPlus } from 'lucide-react'
 import AskDoctorForm from '../components/AskDoctorForm'
 import AppointmentForm from '../components/AppointmentForm'
 
 export default function Medecins() {
+  const navigate = useNavigate()
   const [showAskForm, setShowAskForm] = useState(false)
   const [showAppointmentForm, setShowAppointmentForm] = useState(false)
   const [selectedDoctor, setSelectedDoctor] = useState(null)
@@ -18,7 +20,7 @@ export default function Medecins() {
     if (!patientId) return;
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:3000/api/patient/medecins/${patientId}/mes-medecins`);
+      const response = await fetch(`/api/patient/medecins/${patientId}/mes-medecins`);
       const data = await response.json();
       if (data.success) {
         setMesMedecins(data.data);
@@ -180,23 +182,15 @@ export default function Medecins() {
           setSelectedDoctor(null)
         }}
         selectedDoctorId={selectedDoctor?.id}
-        onSubmit={async (formData) => {
+        onSubmit={async (submissionData) => {
           try {
-            const response = await fetch('http://localhost:3000/api/messagerie/envoyer', {
+            const response = await fetch('/api/messagerie/envoyer', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                id_medecin: selectedDoctor?.id || formData.doctor,
-                id_patient: patientId,
-                expediteur: 'patient',
-                sujet: formData.subject,
-                priorite: formData.priority,
-                message: formData.message
-              })
+              body: submissionData
             });
             const data = await response.json();
             if (data.success) {
-              alert('Votre question a été envoyée avec succès.');
+              navigate(`/dashboard/consultations/${selectedDoctor?.id || data.data.id_medecin}`);
             }
           } catch (error) {
             console.error('Erreur envoi:', error);

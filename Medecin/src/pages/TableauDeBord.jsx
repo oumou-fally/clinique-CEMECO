@@ -94,7 +94,9 @@ export default function TableauDeBord() {
         <div className="flex justify-between items-center bg-white p-8 rounded-3xl shadow-sm">
           <div>
             <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">
-              Bonjour, <span className="text-blue-600">Dr. {user?.nomComplet}</span> 👋
+              Bonjour, <span className="text-blue-600">
+                {user?.nomComplet?.toLowerCase().includes('yaya baldé') ? 'Professeur' : 'Dr.'} {user?.nomComplet}
+              </span> 👋
             </h1>
             <p className="text-gray-500 mt-2 text-lg">Prêt pour vos consultations du jour ?</p>
           </div>

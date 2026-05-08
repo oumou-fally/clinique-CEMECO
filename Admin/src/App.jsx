@@ -7,6 +7,7 @@ import GestionUtilisateurs from './pages/GestionUtilisateurs'
 import GestionSysteme from './pages/GestionSysteme'
 import Supervision from './pages/Supervision'
 import GestionFinanciere from './pages/GestionFinanciere'
+import GestionTarifs from './pages/GestionTarifs'
 import './App.css'
 
 function App() {
@@ -56,6 +57,14 @@ function App() {
           element={
             <RouteProtegee>
               <GestionFinanciere />
+            </RouteProtegee>
+          }
+        />
+        <Route
+          path="/dashboard/tarifs"
+          element={
+            <RouteProtegee>
+              <GestionTarifs />
             </RouteProtegee>
           }
         />

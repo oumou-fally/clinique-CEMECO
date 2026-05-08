@@ -19,7 +19,7 @@ router.post('/login', async (req, res) => {
     }
 
     const [rows] = await pool.execute(
-      'SELECT id, nom, prenom, email, mot_de_passe, actif FROM administrateur WHERE email = ? LIMIT 1',
+      'SELECT id, nom, prenom, email, mot_de_passe, role, actif FROM administrateur WHERE email = ? LIMIT 1',
       [email]
     );
 
@@ -56,6 +56,7 @@ router.post('/login', async (req, res) => {
       nom: admin.nom,
       prenom: admin.prenom,
       email: admin.email,
+      role: admin.role, // <-- Ajout du rôle
       nomComplet: `${admin.prenom} ${admin.nom}`
     };
 

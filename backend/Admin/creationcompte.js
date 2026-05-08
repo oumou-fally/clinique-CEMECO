@@ -1,5 +1,6 @@
 const express = require('express');
 const pool = require('../config/db');
+const { checkRole } = require('../middleware/authRole');
 
 const router = express.Router();
 
@@ -29,7 +30,8 @@ function generatePassword(length = 10) {
 // ========================
 
 // POST /api/personnel - Ajouter un médecin ou secrétaire
-router.post('/', async (req, res) => {
+// Uniquement pour Super Admin
+router.post('/', checkRole(['super_admin', 'admin']), async (req, res) => {
   try {
     const { prenom, nom, email, telephone, role, id_admin } = req.body;
 
@@ -66,7 +68,14 @@ router.post('/', async (req, res) => {
     const [result] = await pool.execute(
       `INSERT INTO ${table} (prenom, nom, email, telephone, mot_de_passe, id_admin) 
        VALUES (?, ?, ?, ?, ?, ?)`,
-      [prenom, nom, email, telephone, plainPassword, adminId]
+      [
+        prenom || null, 
+        nom || null, 
+        email || null, 
+        telephone || null, 
+        plainPassword || null, 
+        adminId || null
+      ]
     );
 
     console.log(`✅ ${role} créé avec succès - ID: ${result.insertId}`);
@@ -77,9 +86,9 @@ router.post('/', async (req, res) => {
       message: `${role === 'medecin' ? 'Médecin' : 'Secrétaire'} ajouté avec succès`,
       personnel: {
         id: result.insertId,
-        prenom,
-        nom,
-        nomComplet: `${prenom} ${nom}`,
+        prenom: prenom.trim(),
+        nom: nom.trim(),
+        nomComplet: `${prenom.trim()} ${nom.trim()}`,
         email,
         telephone,
         role,
@@ -90,7 +99,7 @@ router.post('/', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Erreur création personnel:', error);
+    console.error('❌ Erreur création personnel:', error);
     res.status(500).json({
       success: false,
       message: 'Erreur serveur lors de la création'
@@ -126,7 +135,9 @@ router.get('/', async (req, res) => {
 
     allPersonnel = allPersonnel.map(p => ({
       ...p,
-      nomComplet: `${p.prenom} ${p.nom}`
+      prenom: (p.prenom || '').trim(),
+      nom: (p.nom || '').trim(),
+      nomComplet: `${(p.prenom || '').trim()} ${(p.nom || '').trim()}`
     }));
 
     res.json({
@@ -141,7 +152,58 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Les autres routes (GET /:id, PUT, DELETE) restent les mêmes que précédemment
-// Je peux te les remettre si besoin.
+// DELETE /api/personnel/:id - Supprimer un médecin ou secrétaire
+router.delete('/:id', checkRole(['super_admin', 'admin']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.query; // 'medecin' ou 'secretaire'
+
+    if (!id || !role) {
+      return res.status(400).json({ success: false, message: 'ID et rôle requis' });
+    }
+
+    const table = role === 'medecin' ? 'medecin' : 'secretaire';
+
+    // 1. Vérifier les dépendances (ex: rendez-vous pour les médecins)
+    if (role === 'medecin') {
+      const [appts] = await pool.execute('SELECT id_reservation FROM reservation WHERE id_medecin = ? LIMIT 1', [id]);
+      if (appts.length > 0) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Impossible de supprimer ce médecin car il a des rendez-vous enregistrés.' 
+        });
+      }
+    }
+
+    // 2. Supprimer
+    await pool.execute(`DELETE FROM ${table} WHERE id = ?`, [id]);
+
+    res.json({ success: true, message: 'Membre supprimé avec succès' });
+
+  } catch (error) {
+    console.error('Erreur suppression personnel:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur lors de la suppression' });
+  }
+});
+
+// PUT /api/personnel/:id - Modifier un membre
+router.put('/:id', checkRole(['super_admin', 'admin']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { prenom, nom, email, telephone, role } = req.body;
+
+    const table = role === 'medecin' ? 'medecin' : 'secretaire';
+
+    await pool.execute(
+      `UPDATE ${table} SET prenom = ?, nom = ?, email = ?, telephone = ? WHERE id = ?`,
+      [prenom, nom, email, telephone, id]
+    );
+
+    res.json({ success: true, message: 'Informations mises à jour' });
+  } catch (error) {
+    console.error('Erreur modification personnel:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
 
 module.exports = router;

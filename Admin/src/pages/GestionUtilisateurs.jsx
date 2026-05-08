@@ -1,5 +1,5 @@
 import Layout from '../layouts/Layout'
-import { Plus, Search, Trash2, Edit2, User, Mail, Copy, Check } from 'lucide-react'
+import { Plus, Search, Trash2, Edit2, User, Mail, Phone, Shield, Activity, Save, X, Key } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
@@ -14,7 +14,6 @@ export default function GestionUtilisateurs() {
 
   const [utilisateurs, setUtilisateurs] = useState([])
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
 
   const [formData, setFormData] = useState({ 
     prenom: '', 
@@ -24,19 +23,19 @@ export default function GestionUtilisateurs() {
     telephone: '' 
   })
 
-  // Charger les utilisateurs depuis l'API
   const fetchUtilisateurs = async () => {
     setLoading(true)
     try {
-      const res = await fetch(`${API_URL}/api/personnel?role=${filtreRole}&search=${recherche}`)
+      const adminData = JSON.parse(localStorage.getItem('admin_user') || '{}')
+      const res = await fetch(`${API_URL}/api/personnel?role=${filtreRole}&search=${recherche}`, {
+        headers: { 'x-admin-role': adminData.role || '' }
+      })
       const data = await res.json()
-      
       if (data.success) {
         setUtilisateurs(data.personnel)
       }
     } catch (err) {
       console.error(err)
-      setError('Impossible de charger les données')
     } finally {
       setLoading(false)
     }
@@ -46,300 +45,207 @@ export default function GestionUtilisateurs() {
     fetchUtilisateurs()
   }, [filtreRole, recherche])
 
-  const handleAddUser = async () => {
-    if (!formData.prenom.trim() || !formData.nom.trim() || !formData.email.trim()) {
-      alert("Prénom, nom et email sont obligatoires")
-      return
-    }
-
+  const handleAddUser = async (e) => {
+    e.preventDefault()
+    if (!formData.prenom.trim() || !formData.nom.trim() || !formData.email.trim()) return
+    
     try {
-      // Récupérer l'ID admin depuis le localStorage
       const adminData = JSON.parse(localStorage.getItem('admin_user') || '{}')
-      const adminId = adminData.id || null
-
       const res = await fetch(`${API_URL}/api/personnel`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, id_admin: adminId })
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-admin-role': adminData.role || ''
+        },
+        body: JSON.stringify({ ...formData, id_admin: adminData.id })
       })
-
       const data = await res.json()
-
       if (data.success) {
         setNewPassword(data.password)
         setNewUserName(`${formData.prenom} ${formData.nom}`)
         setShowPasswordModal(true)
-        
-        // Réinitialiser le formulaire
         setFormData({ prenom: '', nom: '', email: '', role: 'medecin', telephone: '' })
         setShowForm(false)
-        
-        // Rafraîchir la liste
         fetchUtilisateurs()
       } else {
-        alert(data.message || "Erreur lors de l'ajout")
+        alert(data.message)
       }
     } catch (err) {
-      console.error(err)
-      alert("Erreur de connexion au serveur")
+      alert("Erreur de connexion")
     }
   }
 
   const handleDelete = async (id, role) => {
-    if (!confirm(`Supprimer ce ${role === 'medecin' ? 'médecin' : 'secrétaire'} ?`)) return
-
+    if (!confirm(`Supprimer ce membre ?`)) return
     try {
-      const res = await fetch(`${API_URL}/api/personnel/${id}?role=${role}`, {
-        method: 'DELETE'
+      const adminData = JSON.parse(localStorage.getItem('admin_user') || '{}')
+      const res = await fetch(`${API_URL}/api/personnel/${id}?role=${role}`, { 
+        method: 'DELETE',
+        headers: { 'x-admin-role': adminData.role || '' }
       })
       const data = await res.json()
-
       if (data.success) {
         fetchUtilisateurs()
       } else {
         alert(data.message)
       }
     } catch (err) {
-      alert("Erreur lors de la suppression")
+      alert("Erreur de suppression")
     }
   }
-
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text)
-    alert('Mot de passe copié !')
-  }
-
-  const getRoleColor = (role) => {
-    switch (role) {
-      case 'medecin': return 'bg-emerald-100 text-emerald-700 border-emerald-200'
-      case 'secretaire': return 'bg-violet-100 text-violet-700 border-violet-200'
-      default: return 'bg-gray-100 text-gray-700 border-gray-200'
-    }
-  }
-
-  const getRoleLabel = (role) => {
-    return role === 'medecin' ? 'Médecin' : 'Secrétaire'
-  }
-
-  const RoleSelector = () => (
-    <div className="flex bg-gray-100 rounded-2xl p-1 gap-1">
-      {[
-        { value: 'medecin', label: 'Médecin', icon: User },
-        { value: 'secretaire', label: 'Secrétaire', icon: Mail }
-      ].map(({ value, label, icon: Icon }) => (
-        <button
-          key={value}
-          type="button"
-          onClick={() => setFormData({ ...formData, role: value })}
-          className={`flex-1 flex items-center justify-center gap-3 py-4 px-6 rounded-xl text-sm font-semibold transition-all ${
-            formData.role === value 
-              ? getRoleColor(value) + ' shadow-sm' 
-              : 'text-gray-600 hover:bg-white hover:text-gray-900'
-          }`}
-        >
-          <Icon className="w-5 h-5" />
-          {label}
-        </button>
-      ))}
-    </div>
-  )
 
   return (
     <Layout>
-      <div className="space-y-8">
-        {/* En-tête */}
-        <div className="flex items-center justify-between">
+      <div className="space-y-8 pb-20">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Gestion du Personnel</h1>
-            <p className="text-gray-600 mt-1">Gérez les médecins et secrétaires de la clinique</p>
+            <h1 className="text-4xl font-black text-gray-900 tracking-tight">Gestion du Personnel</h1>
+            <p className="text-gray-500 font-medium">Administration des comptes médecins et secrétariat</p>
           </div>
-
           <button 
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3.5 rounded-2xl transition-all font-semibold shadow-sm hover:shadow"
+            onClick={() => setShowForm(!showForm)}
+            className={`flex items-center gap-2 px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-xl ${showForm ? 'bg-rose-500 text-white shadow-rose-100' : 'bg-blue-600 text-white shadow-blue-100'}`}
           >
-            <Plus className="w-5 h-5" />
-            Nouveau membre
+            {showForm ? <><X className="w-5 h-5" /> Fermer</> : <><Plus className="w-5 h-5" /> Nouveau Membre</>}
           </button>
         </div>
 
-        {/* Modal d'ajout */}
+        {/* Formulaire Dynamique d'ajout */}
         {showForm && (
-          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden">
-              <div className="px-8 pt-8 pb-6">
-                <h2 className="text-2xl font-semibold text-gray-900">Ajouter un membre</h2>
-                <p className="text-gray-500 mt-1">Le mot de passe sera généré automatiquement</p>
+          <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-gray-100 border border-blue-100 overflow-hidden animate-in slide-in-from-top duration-300">
+            <div className="p-8 bg-blue-50/50 border-b border-blue-50 flex items-center gap-4">
+              <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white">
+                <Plus className="w-6 h-6" />
               </div>
-
-              <div className="px-8 pb-8 space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Prénom</label>
-                    <input
-                      type="text"
-                      value={formData.prenom}
-                      onChange={(e) => setFormData({ ...formData, prenom: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none"
-                      placeholder="Ex: Aminata"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Nom</label>
-                    <input
-                      type="text"
-                      value={formData.nom}
-                      onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none"
-                      placeholder="Ex: Diallo"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Adresse email</label>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none"
-                    placeholder="exemple@clinic.com"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Téléphone</label>
-                  <input
-                    type="tel"
-                    value={formData.telephone}
-                    onChange={(e) => setFormData({ ...formData, telephone: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none"
-                    placeholder="07 XX XX XX XX"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">Type de compte</label>
-                  <RoleSelector />
-                </div>
-
-                <div className="flex gap-4 pt-6">
-                  <button
-                    onClick={handleAddUser}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-2xl font-semibold transition"
-                  >
-                    Ajouter le membre
-                  </button>
-                  <button
-                    onClick={() => setShowForm(false)}
-                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3.5 rounded-2xl font-semibold transition"
-                  >
-                    Annuler
-                  </button>
-                </div>
-              </div>
+              <h2 className="text-xl font-black text-gray-900 uppercase tracking-tighter">Inscription Immédiate</h2>
             </div>
+            <form onSubmit={handleAddUser} className="p-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Prénom</label>
+                <input required type="text" value={formData.prenom} onChange={e=>setFormData({...formData, prenom: e.target.value})} className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 font-bold" placeholder="Prénom" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Nom</label>
+                <input required type="text" value={formData.nom} onChange={e=>setFormData({...formData, nom: e.target.value})} className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 font-bold" placeholder="Nom" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Email</label>
+                <input required type="email" value={formData.email} onChange={e=>setFormData({...formData, email: e.target.value})} className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 font-bold" placeholder="email@clinique.com" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Téléphone</label>
+                <input type="tel" value={formData.telephone} onChange={e=>setFormData({...formData, telephone: e.target.value})} className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 font-bold" placeholder="06..." />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Rôle</label>
+                <select value={formData.role} onChange={e=>setFormData({...formData, role: e.target.value})} className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 font-bold">
+                  <option value="medecin">Médecin</option>
+                  <option value="secretaire">Secrétaire</option>
+                </select>
+              </div>
+              <div className="flex items-end">
+                <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-lg shadow-blue-100 transition-all flex items-center justify-center gap-2">
+                  <Save className="w-5 h-5" /> Enregistrer en Base
+                </button>
+              </div>
+            </form>
           </div>
         )}
 
-        {/* Modal du mot de passe généré */}
+        {/* Password Modal */}
         {showPasswordModal && (
-          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60] p-4">
-            <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 text-center">
-              <Check className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
-              <h2 className="text-2xl font-semibold mb-2">Membre ajouté avec succès !</h2>
-              <p className="text-gray-600 mb-6">
-                {newUserName} a été ajouté.<br />
-                Voici son mot de passe temporaire :
-              </p>
-
-              <div className="bg-gray-100 p-4 rounded-2xl font-mono text-lg mb-6 flex items-center justify-between">
-                <span>{newPassword}</span>
-                <button 
-                  onClick={() => copyToClipboard(newPassword)}
-                  className="text-blue-600 hover:text-blue-700"
-                >
-                  <Copy className="w-5 h-5" />
-                </button>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-[3rem] shadow-2xl max-w-md w-full p-10 text-center border border-emerald-100">
+              <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Key className="w-10 h-10 text-emerald-500" />
+              </div>
+              <h2 className="text-2xl font-black text-gray-900 mb-2">Compte Créé !</h2>
+              <p className="text-gray-500 font-medium mb-8">Mot de passe généré pour <br/><span className="text-gray-900 font-black">{newUserName}</span></p>
+              
+              <div className="bg-gray-100 p-6 rounded-3xl font-mono text-2xl font-black text-blue-600 mb-8 tracking-widest flex items-center justify-center gap-4">
+                {newPassword}
               </div>
 
-              <p className="text-sm text-amber-600 mb-6">
-                ⚠️ Donnez ce mot de passe à la personne. Elle pourra le modifier ultérieurement.
-              </p>
-
-              <button
+              <button 
                 onClick={() => setShowPasswordModal(false)}
-                className="w-full bg-blue-600 text-white py-3.5 rounded-2xl font-semibold hover:bg-blue-700"
+                className="w-full bg-gray-900 text-white py-5 rounded-2xl font-black uppercase tracking-widest hover:bg-black transition-all"
               >
-                Fermer
+                Terminer
               </button>
             </div>
           </div>
         )}
 
-        {/* Filtres + Recherche */}
-        <div className="bg-white rounded-3xl shadow p-6 flex flex-col md:flex-row gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-5 top-4 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Rechercher par nom ou prénom..."
-              value={recherche}
-              onChange={(e) => setRecherche(e.target.value)}
-              className="w-full pl-12 pr-5 py-4 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none"
-            />
+        {/* Liste Dynamic */}
+        <div className="bg-white rounded-[2.5rem] shadow-xl shadow-gray-100 border border-gray-100 overflow-hidden">
+          <div className="p-8 border-b border-gray-50 bg-gray-50/30 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div className="relative w-full md:w-96">
+              <Search className="absolute left-6 top-4 w-5 h-5 text-gray-400" />
+              <input 
+                type="text" 
+                placeholder="Rechercher un nom..." 
+                value={recherche}
+                onChange={e=>setRecherche(e.target.value)}
+                className="w-full pl-14 pr-6 py-4 bg-white border-none rounded-2xl focus:ring-2 focus:ring-blue-500 font-bold shadow-sm"
+              />
+            </div>
+            <div className="flex gap-2 p-1.5 bg-white rounded-2xl shadow-sm border border-gray-100">
+              {['tous', 'medecin', 'secretaire'].map(r => (
+                <button 
+                  key={r} 
+                  onClick={() => setFiltreRole(r)}
+                  className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filtreRole === r ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400 hover:text-gray-600'}`}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <select
-            value={filtreRole}
-            onChange={(e) => setFiltreRole(e.target.value)}
-            className="px-6 py-4 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500 bg-white"
-          >
-            <option value="tous">Tous les membres</option>
-            <option value="medecin">Médecins</option>
-            <option value="secretaire">Secrétaires</option>
-          </select>
-        </div>
-
-        {/* Tableau */}
-        <div className="bg-white rounded-3xl shadow overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b">
-                <tr>
-                  <th className="px-8 py-5 text-left font-semibold text-gray-700">Nom complet</th>
-                  <th className="px-8 py-5 text-left font-semibold text-gray-700">Email</th>
-                  <th className="px-8 py-5 text-left font-semibold text-gray-700">Type de compte</th>
-                  <th className="px-8 py-5 text-left font-semibold text-gray-700">Téléphone</th>
-                  <th className="px-8 py-5 text-left font-semibold text-gray-700">Statut</th>
-                  <th className="px-8 py-5 text-right font-semibold text-gray-700">Actions</th>
+              <thead>
+                <tr className="text-left bg-gray-50/50">
+                  <th className="px-10 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Membre du Personnel</th>
+                  <th className="px-10 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Contact</th>
+                  <th className="px-10 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Rôle</th>
+                  <th className="px-10 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
-                {utilisateurs.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50">
-                    <td className="px-8 py-6 font-medium text-gray-900">
-                      {user.nomComplet || `${user.prenom} ${user.nom}`}
+              <tbody className="divide-y divide-gray-50">
+                {loading ? (
+                  [1,2,3].map(i => <tr key={i} className="animate-pulse"><td colSpan="4" className="h-24 px-10 bg-gray-50/50"></td></tr>)
+                ) : utilisateurs.map(user => (
+                  <tr key={user.id} className="hover:bg-blue-50/20 transition-all group">
+                    <td className="px-10 py-8">
+                      <p className="font-black text-gray-900 text-lg uppercase tracking-tighter">
+                        {user.prenom} {user.nom}
+                      </p>
                     </td>
-                    <td className="px-8 py-6 text-gray-600">{user.email}</td>
-                    <td className="px-8 py-6">
-                      <span className={`inline-block px-5 py-2 rounded-2xl text-sm font-semibold ${getRoleColor(user.role)}`}>
-                        {getRoleLabel(user.role)}
-                      </span>
+                    <td className="px-10 py-8">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-sm font-bold text-gray-600">
+                          <Mail className="w-4 h-4 text-blue-500" /> {user.email}
+                        </div>
+                        {user.telephone && (
+                          <div className="flex items-center gap-2 text-[10px] font-black text-gray-400">
+                            <Phone className="w-3 h-3" /> {user.telephone}
+                          </div>
+                        )}
+                      </div>
                     </td>
-                    <td className="px-8 py-6 text-gray-600">{user.telephone || '-'}</td>
-                    <td className="px-8 py-6">
-                      <span className="inline-block px-5 py-2 rounded-2xl text-sm font-semibold bg-emerald-100 text-emerald-700">
-                        Actif
-                      </span>
+                    <td className="px-10 py-8">
+                      <div className="flex justify-center">
+                        <span className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border ${user.role === 'medecin' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-purple-50 text-purple-600 border-purple-100'}`}>
+                          {user.role}
+                        </span>
+                      </div>
                     </td>
-                    <td className="px-8 py-6 text-right space-x-4">
-                      <button className="text-blue-600 hover:text-blue-700 transition">
-                        <Edit2 className="w-5 h-5" />
-                      </button>
+                    <td className="px-10 py-8 text-right">
                       <button 
                         onClick={() => handleDelete(user.id, user.role)}
-                        className="text-red-600 hover:text-red-700 transition"
+                        className="p-4 bg-gray-50 text-gray-400 rounded-2xl hover:bg-rose-500 hover:text-white transition-all shadow-sm group-hover:shadow-rose-100"
                       >
                         <Trash2 className="w-5 h-5" />
                       </button>
@@ -350,10 +256,6 @@ export default function GestionUtilisateurs() {
             </table>
           </div>
         </div>
-
-        {utilisateurs.length === 0 && !loading && (
-          <p className="text-center text-gray-500 py-10">Aucun membre trouvé</p>
-        )}
       </div>
     </Layout>
   )

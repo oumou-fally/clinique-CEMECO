@@ -1,28 +1,50 @@
 const express = require('express');
 const pool = require('../config/db');
 const router = express.Router();
+const multer = require('multer');
+const path = require('path');
+
+// Configuration Multer
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'uploads/');
+    },
+    filename: (req, file, cb) => {
+        cb(null, Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname));
+    }
+});
+
+const upload = multer({ storage: storage });
 
 /**
  * @route   POST /api/messagerie/envoyer
  * @desc    Envoyer un message (Patient vers Médecin ou vice-versa)
  */
-router.post('/envoyer', async (req, res) => {
-    const { id_medecin, id_patient, expediteur, message, sujet, priorite } = req.body;
+router.post('/envoyer', upload.single('fichier'), async (req, res) => {
+    const { id_medecin, id_patient, expediteur, message, sujet, priorite, type } = req.body;
+    const fichier_url = req.file ? `/uploads/${req.file.filename}` : null;
     
-    console.log('📩 Tentative d\'envoi de message:', { id_medecin, id_patient, expediteur, message });
+    let messageType = type || 'text';
+    if (req.file) {
+        if (req.file.mimetype.startsWith('image/')) messageType = 'image';
+        else if (req.file.mimetype.startsWith('audio/')) messageType = 'vocal';
+        else messageType = 'file';
+    }
+    
+    console.log('📩 Tentative d\'envoi de message:', { id_medecin, id_patient, expediteur, messageType });
 
-    if (!id_medecin || !id_patient || !expediteur || !message) {
+    if (!id_medecin || !id_patient || !expediteur || (!message && !fichier_url)) {
         console.warn('⚠️ Champs manquants pour l\'envoi du message');
         return res.status(400).json({ 
             success: false, 
-            message: 'Tous les champs sont obligatoires (id_medecin, id_patient, expediteur, message).' 
+            message: 'Tous les champs sont obligatoires.' 
         });
     }
 
     try {
         const [result] = await pool.execute(
-            'INSERT INTO messagerie (id_medecin, id_patient, expediteur, message, sujet, priorite) VALUES (?, ?, ?, ?, ?, ?)',
-            [id_medecin, id_patient, expediteur, message, sujet || null, priorite || 'normal']
+            'INSERT INTO messagerie (id_medecin, id_patient, expediteur, message, sujet, priorite, type, fichier_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [id_medecin, id_patient, expediteur, message || '', sujet || null, priorite || 'normal', messageType, fichier_url]
         );
 
         res.status(201).json({
@@ -36,6 +58,8 @@ router.post('/envoyer', async (req, res) => {
                 message,
                 sujet,
                 priorite,
+                type: messageType,
+                fichier_url,
                 date_envoi: new Date()
             }
         });

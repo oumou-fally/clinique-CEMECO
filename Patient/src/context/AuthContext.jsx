@@ -140,6 +140,64 @@ export function AuthProvider({ children }) {
     }
   }
 
+  // Fonction d'inscription
+  const register = async (formData) => {
+    console.log('📝 Inscription patient avec les données:', formData)
+    setLoading(true)
+
+    try {
+      const response = await fetch('http://localhost:3000/api/patient/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+      })
+
+      const data = await response.json()
+
+      if (!data.success) {
+        setLoading(false)
+        return {
+          success: false,
+          message: data.message
+        }
+      }
+
+      // Inscription réussie -> Stockage et Authentification
+      const patientData = {
+        id: data.patient.id,
+        nom: data.patient.nom,
+        prenom: data.patient.prenom,
+        email: data.patient.email,
+        nomComplet: data.patient.nomComplet
+      }
+
+      localStorage.setItem('patient', JSON.stringify(patientData))
+      localStorage.setItem('patientId', String(data.patient.id))
+      localStorage.setItem('isAuthenticatedPatient', 'true')
+
+      setUser(patientData)
+      setPatientId(String(data.patient.id))
+      setIsAuthenticated(true)
+
+      setLoading(false)
+      return {
+        success: true,
+        message: 'Inscription réussie',
+        patient: patientData
+      }
+
+    } catch (error) {
+      console.error('🔴 Erreur serveur lors de l\'inscription:', error)
+      setLoading(false)
+      return {
+        success: false,
+        message: 'Erreur serveur'
+      }
+    }
+  }
+
   const logout = () => {
     console.log('🚪 Déconnexion du patient ID:', patientId)
     setIsAuthenticated(false)
@@ -157,6 +215,7 @@ export function AuthProvider({ children }) {
     patientId,
     loading,
     login,
+    register,
     logout,
     loadFromStorage
   }

@@ -73,10 +73,10 @@ router.post('/login', async (req, res) => {
       message: 'Connexion réussie',
       medecin: {
         id: medecin.id,
-        nom: medecin.nom,
-        prenom: medecin.prenom,
+        nom: medecin.nom.trim(),
+        prenom: medecin.prenom.trim(),
         email: medecin.email,
-        nomComplet: `${medecin.nom} ${medecin.prenom}`
+        nomComplet: `${medecin.prenom.trim()} ${medecin.nom.trim()}`
       }
     });
 

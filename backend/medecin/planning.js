@@ -1,226 +1,201 @@
-const express = require('express')
-const router = express.Router()
-const pool = require('../config/db')
-
-
-// ======================================================
-// 🌍 PLANNING GLOBAL (SECRÉTAIRE)
-// ======================================================
-router.get('/all/global', async (req, res) => {
-    try {
-        const [rows] = await pool.execute(`
-            SELECT 
-                p.*,
-                m.nom AS medecin_nom,
-                m.prenom AS medecin_prenom,
-                m.specialite
-            FROM planning_medecin p
-            JOIN medecin m ON p.id_medecin = m.id
-            ORDER BY p.date_planning ASC, p.heure_debut ASC
-        `)
-
-        res.json({ success: true, planning: rows })
-
-    } catch (error) {
-        console.error(error)
-        res.status(500).json({ success: false })
-    }
-})
-
+const express = require('express');
+const router = express.Router();
+const pool = require('../config/db');
 
 // ======================================================
 // 👨‍⚕️ PLANNING D'UN MÉDECIN
 // ======================================================
 router.get('/medecin/:medecinId', async (req, res) => {
-    const { medecinId } = req.params
+    const { medecinId } = req.params;
 
     try {
+        await cleanupOldPlanning();
+
         const [rows] = await pool.execute(`
             SELECT * 
             FROM planning_medecin
             WHERE id_medecin = ?
             ORDER BY date_planning ASC, heure_debut ASC
-        `, [medecinId])
-
-        res.json({ success: true, planning: rows })
-
-    } catch (error) {
-        console.error(error)
-        res.status(500).json({ success: false })
-    }
-})
-
-
-// ======================================================
-// 🔎 CHECK DISPONIBILITÉ MÉDECINS (IMPORTANT RDV)
-// ======================================================
-router.get('/check/:date/:heure', async (req, res) => {
-    const { date, heure } = req.params
-
-    try {
-        const [rows] = await pool.execute(`
-            SELECT DISTINCT
-                m.id,
-                m.nom,
-                m.prenom,
-                m.specialite
-            FROM medecin m
-            JOIN planning_medecin p ON m.id = p.id_medecin
-            WHERE p.date_planning = ?
-            AND p.statut = 'disponible'
-            AND ? BETWEEN p.heure_debut AND p.heure_fin
-        `, [date, heure])
+        `, [medecinId]);
 
         res.json({
             success: true,
-            medecins: rows
-        })
+            planning: rows
+        });
 
     } catch (error) {
-        console.error(error)
-        res.status(500).json({ success: false })
+        console.error('Erreur fetch planning:', error);
+        res.status(500).json({ success: false, message: 'Erreur serveur' });
     }
-})
-
+});
 
 // ======================================================
-// 📝 AJOUT / UPDATE PLANNING
+// 🌍 PLANNING GLOBAL
+// ======================================================
+router.get('/all/global', async (req, res) => {
+    try {
+        await cleanupOldPlanning();
+
+        const [rows] = await pool.execute(`
+            SELECT p.*, m.nom AS medecin_nom, m.prenom AS medecin_prenom, m.specialite
+            FROM planning_medecin p
+            JOIN medecin m ON p.id_medecin = m.id
+            ORDER BY p.date_planning ASC, p.heure_debut ASC
+        `);
+
+        res.json({ success: true, planning: rows });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: 'Erreur serveur' });
+    }
+});
+
+// ======================================================
+// 🧹 NETTOYAGE AUTOMATIQUE (après 24h)
+// ======================================================
+const cleanupOldPlanning = async () => {
+    try {
+        const [result] = await pool.execute(`
+            DELETE FROM planning_medecin 
+            WHERE TIMESTAMP(date_planning, heure_fin) < NOW() - INTERVAL 24 HOUR
+        `);
+
+        if (result.affectedRows > 0) {
+            console.log(`🧹 ${result.affectedRows} anciens créneaux supprimés (plus de 24h)`);
+        }
+    } catch (err) {
+        console.error('Erreur lors du cleanup planning:', err);
+    }
+};
+
+// ======================================================
+// 📝 AJOUT / MODIFICATION
 // ======================================================
 router.post('/', async (req, res) => {
-
-    const {
-        id,
-        id_medecin,
-        date_planning,
-        heure_debut,
-        heure_fin,
-        statut,
-        commentaire
-    } = req.body
+    const { id, id_medecin, date_planning, heure_debut, heure_fin, statut, commentaire } = req.body;
 
     if (!id_medecin || !date_planning || !heure_debut || !heure_fin) {
-        return res.status(400).json({
-            success: false,
-            message: 'Données manquantes'
-        })
+        return res.status(400).json({ success: false, message: 'Données manquantes' });
     }
 
     try {
+        await cleanupOldPlanning();
 
-        // ======================================================
-        // 🚨 CHECK CHEVAUCHEMENT
-        // ======================================================
+        // Vérification chevauchement
         const [overlaps] = await pool.execute(`
             SELECT id FROM planning_medecin
             WHERE id_medecin = ?
-            AND date_planning = ?
-            AND id != ?
-            AND (heure_debut < ? AND heure_fin > ?)
-        `, [
-            id_medecin,
-            date_planning,
-            id || 0,
-            heure_fin,
-            heure_debut
-        ])
+              AND date_planning = ?
+              AND id != ?
+              AND (
+                    (heure_debut < ? AND heure_fin > ?)
+                 OR (heure_debut >= ? AND heure_debut < ?)
+              )
+        `, [id_medecin, date_planning, id || 0, heure_fin, heure_debut, heure_debut, heure_fin]);
 
         if (overlaps.length > 0) {
             return res.status(400).json({
                 success: false,
-                message: 'Créneau déjà occupé'
-            })
+                message: 'Ce créneau chevauche un autre existant'
+            });
         }
 
-        // ======================================================
-        // UPDATE
-        // ======================================================
         if (id) {
+            // UPDATE
             await pool.execute(`
-                UPDATE planning_medecin
+                UPDATE planning_medecin 
                 SET date_planning = ?, heure_debut = ?, heure_fin = ?, statut = ?, commentaire = ?
                 WHERE id = ?
-            `, [
-                date_planning,
-                heure_debut,
-                heure_fin,
-                statut,
-                commentaire,
-                id
-            ])
+            `, [date_planning, heure_debut, heure_fin, statut, commentaire, id]);
 
-            // NOTIFICATION SECRETAIRE
-            const [med] = await pool.execute('SELECT nom, prenom FROM medecin WHERE id = ?', [id_medecin])
-            const msg = `Dr. ${med[0].prenom} ${med[0].nom} a modifié son planning du ${date_planning}`
+            return res.json({ success: true, message: 'Créneau mis à jour' });
+        } else {
+            // INSERT
             await pool.execute(`
-                INSERT INTO notifications (type, message, id_medecin, lu)
-                VALUES ('planning', ?, ?, 0)
-            `, [msg, id_medecin])
+                INSERT INTO planning_medecin 
+                (id_medecin, date_planning, heure_debut, heure_fin, statut, commentaire)
+                VALUES (?, ?, ?, ?, ?, ?)
+            `, [id_medecin, date_planning, heure_debut, heure_fin, statut || 'disponible', commentaire]);
 
-            return res.json({
-                success: true,
-                message: 'Planning mis à jour'
-            })
+            return res.json({ success: true, message: 'Créneau ajouté' });
         }
 
-        // ======================================================
-        // INSERT
-        // ======================================================
-        await pool.execute(`
-            INSERT INTO planning_medecin
-            (id_medecin, date_planning, heure_debut, heure_fin, statut, commentaire)
-            VALUES (?, ?, ?, ?, ?, ?)
-        `, [
-            id_medecin,
-            date_planning,
-            heure_debut,
-            heure_fin,
-            statut || 'disponible',
-            commentaire
-        ])
-
-        // NOTIFICATION SECRETAIRE
-        const [med2] = await pool.execute('SELECT nom, prenom FROM medecin WHERE id = ?', [id_medecin])
-        const msg2 = `Dr. ${med2[0].prenom} ${med2[0].nom} a ajouté un planning pour le ${date_planning}`
-        await pool.execute(`
-            INSERT INTO notifications (type, message, id_medecin, lu)
-            VALUES ('planning', ?, ?, 0)
-        `, [msg2, id_medecin])
-
-        res.json({
-            success: true,
-            message: 'Planning ajouté'
-        })
-
     } catch (error) {
-        console.error(error)
-        res.status(500).json({ success: false })
+        console.error(error);
+        res.status(500).json({ success: false, message: 'Erreur serveur' });
     }
-})
-
+});
 
 // ======================================================
 // 🗑 SUPPRESSION
 // ======================================================
 router.delete('/:id', async (req, res) => {
+    try {
+        await pool.execute('DELETE FROM planning_medecin WHERE id = ?', [req.params.id]);
+        res.json({ success: true, message: 'Créneau supprimé' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false });
+    }
+});
 
-    const { id } = req.params
+// ======================================================
+// 🔄 CLEANUP MANUEL
+// ======================================================
+router.post('/cleanup', async (req, res) => {
+    await cleanupOldPlanning();
+    res.json({ success: true, message: 'Nettoyage effectué' });
+});
+
+// ======================================================
+// 📤 ENVOYER LE PLANNING DU JOUR À LA SECRÉTAIRE
+// ======================================================
+router.post('/envoyer-jour', async (req, res) => {
+    const { id_medecin } = req.body;
+
+    if (!id_medecin) {
+        return res.status(400).json({ success: false, message: 'ID médecin requis' });
+    }
 
     try {
-        await pool.execute(
-            'DELETE FROM planning_medecin WHERE id = ?',
-            [id]
-        )
+        const today = new Date().toISOString().split('T')[0];
+
+        const [creneaux] = await pool.execute(`
+            SELECT * FROM planning_medecin 
+            WHERE id_medecin = ? 
+            AND date_planning = ?
+            ORDER BY heure_debut ASC
+        `, [id_medecin, today]);
+
+        if (creneaux.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Vous n'avez aucun créneau aujourd'hui"
+            });
+        }
+
+        let message = `📅 Planning du jour (${today}) :\n\n`;
+
+        creneaux.forEach(c => {
+            message += `• ${c.heure_debut.slice(0, 5)} - ${c.heure_fin.slice(0, 5)} (${c.statut})\n`;
+            if (c.commentaire) message += `  → ${c.commentaire}\n`;
+        });
+
+        await pool.execute(`
+            INSERT INTO notifications (type, message, id_medecin, lu)
+            VALUES ('planning_jour', ?, ?, 0)
+        `, [message, id_medecin]);
 
         res.json({
             success: true,
-            message: 'Planning supprimé'
-        })
+            message: 'Planning du jour envoyé à la secrétaire avec succès !',
+            creneauxCount: creneaux.length
+        });
 
     } catch (error) {
-        console.error(error)
-        res.status(500).json({ success: false })
+        console.error(error);
+        res.status(500).json({ success: false, message: 'Erreur serveur' });
     }
-})
+});
 
-
-module.exports = router
+module.exports = router;

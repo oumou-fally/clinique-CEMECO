@@ -9,6 +9,7 @@ import Medecins from './pages/Medecins'
 import Consultations from './pages/Consultations'
 import Notifications from './pages/Notifications'
 import ParametresCompte from './pages/ParametresCompte'
+import MotDePasseOublie from './pages/MotDePasseOublie'
 import './App.css'
 
 function App() {
@@ -20,6 +21,10 @@ function App() {
         <Route
           path="/login"
           element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Connexion />}
+        />
+        <Route
+          path="/forgot-password"
+          element={<MotDePasseOublie />}
         />
         <Route
           path="/dashboard"
@@ -56,6 +61,14 @@ function App() {
         />
         <Route
           path="/dashboard/consultations"
+          element={
+            <ProtectedRoute>
+              <Consultations />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/consultations/:medecinId"
           element={
             <ProtectedRoute>
               <Consultations />

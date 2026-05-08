@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { X, Send, User, MessageCircle, AlertCircle, FileText } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { X, Send, User, MessageCircle, AlertCircle, FileText, Image, Mic, Paperclip, Trash2 } from 'lucide-react'
 import { DOCTORS } from '../data/clinicData'
 
 export default function AskDoctorForm({ isOpen, onClose, onSubmit, selectedDoctorId, allowedDoctors = null }) {
@@ -8,8 +8,16 @@ export default function AskDoctorForm({ isOpen, onClose, onSubmit, selectedDocto
     subject: '',
     message: '',
     priority: 'normal',
-    attachments: []
+    fichier: null,
+    preview: null,
+    type: 'text'
   })
+
+  const [isRecording, setIsRecording] = useState(false)
+  const [audioBlob, setAudioBlob] = useState(null)
+  const mediaRecorderRef = useRef(null)
+  const fileInputRef = useRef(null)
+  const imageInputRef = useRef(null)
 
   useEffect(() => {
     setFormData(prev => ({
@@ -39,6 +47,55 @@ export default function AskDoctorForm({ isOpen, onClose, onSubmit, selectedDocto
     }
   }
 
+  const handleFileChange = (e, type) => {
+    const file = e.target.files[0]
+    if (file) {
+      setFormData(prev => ({
+        ...prev,
+        fichier: file,
+        type: type,
+        preview: type === 'image' ? URL.createObjectURL(file) : null
+      }))
+    }
+  }
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      mediaRecorderRef.current = new MediaRecorder(stream)
+      const chunks = []
+      mediaRecorderRef.current.ondataavailable = (e) => chunks.push(e.data)
+      mediaRecorderRef.current.onstop = () => {
+        const blob = new Blob(chunks, { type: 'audio/webm' })
+        setAudioBlob(blob)
+        setFormData(prev => ({
+          ...prev,
+          fichier: new File([blob], "vocal.webm", { type: 'audio/webm' }),
+          type: 'vocal',
+          preview: 'vocal'
+        }))
+      }
+      mediaRecorderRef.current.start()
+      setIsRecording(true)
+    } catch (err) {
+      console.error("Erreur micro:", err)
+      alert("Accès micro refusé ou non supporté")
+    }
+  }
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop()
+      setIsRecording(false)
+      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop())
+    }
+  }
+
+  const removeAttachment = () => {
+    setFormData(prev => ({ ...prev, fichier: null, preview: null, type: 'text' }))
+    setAudioBlob(null)
+  }
+
   const validateForm = () => {
     const newErrors = {}
     if (!selectedDoctorId && !formData.doctor) newErrors.doctor = 'Veuillez sélectionner un médecin'
@@ -53,13 +110,27 @@ export default function AskDoctorForm({ isOpen, onClose, onSubmit, selectedDocto
   const handleSubmit = (e) => {
     e.preventDefault()
     if (validateForm()) {
-      onSubmit(formData)
+      const submissionData = new FormData()
+      submissionData.append('id_medecin', formData.doctor)
+      submissionData.append('id_patient', localStorage.getItem('patientId'))
+      submissionData.append('expediteur', 'patient')
+      submissionData.append('sujet', formData.subject)
+      submissionData.append('priorite', formData.priority)
+      submissionData.append('message', formData.message)
+      submissionData.append('type', formData.type)
+      if (formData.fichier) {
+        submissionData.append('fichier', formData.fichier)
+      }
+      
+      onSubmit(submissionData)
       setFormData({
         doctor: selectedDoctorId || '',
         subject: '',
         message: '',
         priority: 'normal',
-        attachments: []
+        fichier: null,
+        preview: null,
+        type: 'text'
       })
       onClose()
     }
@@ -175,13 +246,102 @@ export default function AskDoctorForm({ isOpen, onClose, onSubmit, selectedDocto
               value={formData.message}
               onChange={handleChange}
               placeholder="Décrivez votre problème de santé ou posez votre question en détail..."
-              rows="6"
+              rows="4"
               className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none resize-none ${
                 errors.message ? 'border-red-500' : 'border-gray-300'
               }`}
             />
             {errors.message && <p className="text-red-500 text-sm mt-1">{errors.message}</p>}
             <p className="text-xs text-gray-500 mt-1">Minimum 10 caractères</p>
+          </div>
+
+          {/* Attachments UI */}
+          <div className="space-y-4">
+            <label className="flex text-sm font-semibold text-gray-700 mb-2 items-center gap-2">
+              <Paperclip className="w-4 h-4 text-purple-600" />
+              Pièces jointes (Optionnel)
+            </label>
+            
+            <div className="flex flex-wrap gap-3">
+              {/* Image Button */}
+              <button
+                type="button"
+                onClick={() => imageInputRef.current.click()}
+                className="flex items-center gap-2 px-4 py-2 bg-pink-50 text-pink-600 rounded-xl hover:bg-pink-100 transition border border-pink-100"
+              >
+                <Image className="w-4 h-4" />
+                <span className="text-xs font-bold">Image</span>
+              </button>
+              
+              {/* File Button */}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current.click()}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition border border-blue-100"
+              >
+                <FileText className="w-4 h-4" />
+                <span className="text-xs font-bold">Document</span>
+              </button>
+
+              {/* Vocal Button */}
+              <button
+                type="button"
+                onClick={isRecording ? stopRecording : startRecording}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl transition border ${
+                  isRecording 
+                    ? 'bg-red-100 text-red-600 border-red-200 animate-pulse' 
+                    : 'bg-indigo-50 text-indigo-600 border-indigo-100 hover:bg-indigo-100'
+                }`}
+              >
+                <Mic className="w-4 h-4" />
+                <span className="text-xs font-bold">{isRecording ? 'Arrêter' : 'Vocal'}</span>
+              </button>
+            </div>
+
+            {/* Hidden Inputs */}
+            <input 
+              type="file" 
+              ref={imageInputRef} 
+              hidden 
+              accept="image/*" 
+              onChange={(e) => handleFileChange(e, 'image')} 
+            />
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              hidden 
+              onChange={(e) => handleFileChange(e, 'file')} 
+            />
+
+            {/* Preview Area */}
+            {formData.fichier && (
+              <div className="relative mt-4 p-4 bg-gray-50 rounded-2xl border border-dashed border-gray-300 flex items-center gap-4 animate-in fade-in slide-in-from-top-2">
+                {formData.type === 'image' && (
+                  <img src={formData.preview} alt="Preview" className="w-20 h-20 object-cover rounded-lg shadow-sm" />
+                )}
+                {formData.type === 'file' && (
+                  <div className="w-20 h-20 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center">
+                    <FileText className="w-10 h-10" />
+                  </div>
+                )}
+                {formData.type === 'vocal' && (
+                  <div className="w-20 h-20 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center">
+                    <Mic className="w-10 h-10" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-gray-700 truncate">{formData.fichier.name || 'Message Vocal'}</p>
+                  <p className="text-xs text-gray-500 uppercase font-black tracking-widest">{formData.type}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={removeAttachment}
+                  className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Important Information */}

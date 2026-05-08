@@ -1,27 +1,40 @@
-import { useState } from 'react'
-import { X, Calendar, Clock, Stethoscope, FileText } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { X, Calendar, Clock, Stethoscope, FileText, CreditCard } from 'lucide-react'
 
 export default function AppointmentForm({ isOpen, onClose, onSubmit }) {
   const [formData, setFormData] = useState({
     date: '',
     time: '',
     reason: '',
-    notes: ''
+    notes: '',
+    price: ''
   })
 
   const [errors, setErrors] = useState({})
+  const [consultationTypes, setConsultationTypes] = useState([])
+  const [loadingTypes, setLoadingTypes] = useState(true)
 
-  const consultationTypes = [
-    'Consultation',
-    'Électrocardiogramme',
-    'Électrocardiographie (cardiaque et vasculaire)',
-    'Mesure Ambulatoire de la Pression Artérielle (MAPA)',
-    'Polygraphie ventilatoire',
-    'Contrôle des pacemakers',
-    'Implantation des stimulateurs cardiaques (pacemaker)',
-    'Consultation pédiatrique (dossiers de prise en charge : mécénat France)',
-    'Chirurgie cardiaque'
-  ]
+  const API_URL = 'http://localhost:3000'
+
+  useEffect(() => {
+    const fetchTypes = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/patient/types-consultation`)
+        const data = await response.json()
+        if (data.success) {
+          setConsultationTypes(data.data)
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des types de consultation:', error)
+      } finally {
+        setLoadingTypes(false)
+      }
+    }
+
+    if (isOpen) {
+      fetchTypes()
+    }
+  }, [isOpen])
 
   const timeSlots = [
     '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
@@ -56,10 +69,21 @@ export default function AppointmentForm({ isOpen, onClose, onSubmit }) {
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
+    
+    if (name === 'reason') {
+      const selectedType = consultationTypes.find(t => t.nom === value)
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+        price: selectedType ? selectedType.prix : ''
+      }))
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }))
+    }
+
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -80,7 +104,8 @@ export default function AppointmentForm({ isOpen, onClose, onSubmit }) {
       date: '',
       time: '',
       reason: '',
-      notes: ''
+      notes: '',
+      price: ''
     })
   }
 
@@ -176,19 +201,35 @@ export default function AppointmentForm({ isOpen, onClose, onSubmit }) {
               name="reason"
               value={formData.reason}
               onChange={handleChange}
+              disabled={loadingTypes}
               className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 errors.reason ? 'border-red-500' : 'border-gray-300'
-              }`}
+              } ${loadingTypes ? 'bg-gray-50' : ''}`}
             >
-              <option value="">-- Sélectionner un type --</option>
+              <option value="">{loadingTypes ? 'Chargement...' : '-- Sélectionner un type --'}</option>
               {consultationTypes.map(type => (
-                <option key={type} value={type}>
-                  {type}
+                <option key={type.nom} value={type.nom}>
+                  {type.nom}
                 </option>
               ))}
             </select>
             {errors.reason && <p className="text-red-500 text-sm mt-1">{errors.reason}</p>}
           </div>
+
+          {/* Price Field (Dynamic) */}
+          {formData.price && (
+            <div className="bg-teal-50 border border-teal-200 rounded-xl p-4 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2 text-teal-700">
+                  <CreditCard className="w-5 h-5" />
+                  <span className="font-bold">Prix de la consultation</span>
+                </div>
+                <div className="text-xl font-black text-teal-800">
+                  {new Intl.NumberFormat('fr-GN', { style: 'currency', currency: 'GNF' }).format(formData.price)}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Notes Field */}
           <div>

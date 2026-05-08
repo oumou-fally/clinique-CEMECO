@@ -6,12 +6,17 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
-
 // ======================================================
 // 🧠 MIDDLEWARES
 // ======================================================
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use('/uploads', express.static('uploads'));
+
+const fs = require('fs');
+if (!fs.existsSync('uploads')) {
+  fs.mkdirSync('uploads');
+}
 
 // LOG REQUESTS
 app.use((req, res, next) => {
@@ -22,67 +27,69 @@ app.use((req, res, next) => {
 // CORS (DEV)
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-admin-role');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
 
   if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
 
-
 // ======================================================
 // 🔐 ROUTES AUTH / ADMIN
 // ======================================================
 app.use('/api/admin', require('./Admin/connexionAdmin'));
+app.use('/api/admin/dashboard', require('./Admin/tableaubord'));
+app.use('/api/admin/stats', require('./Admin/statsAdmin'));
+app.use('/api/admin/tarifs', require('./Admin/tarifs'));
+app.use('/api/admin/finances', require('./Admin/finances'));
 app.use('/api/personnel', require('./Admin/creationcompte'));
-
+app.use('/api/admin/parametres', require('./Admin/parametres'));
 
 // ======================================================
 // 👨‍⚕️ MÉDECIN
 // ======================================================
 app.use('/api/medecin', require('./medecin/connexionMedecin'));
 app.use('/api/medecin/disponibilites', require('./medecin/disponibilite'));
+app.use('/api/disponibilites', require('./medecin/disponibilite'));
 app.use('/api/medecin/consultations', require('./medecin/consultation'));
-app.use('/api/consultations', require('./medecin/consultation')); // alias compatible pour les anciens chemins
+app.use('/api/consultations', require('./medecin/consultation'));
 app.use('/api/medecin/planning', require('./medecin/planning'));
-
 
 // ======================================================
 // 🧑 PATIENT
 // ======================================================
-app.use('/api/patient', require('./patient/connexionPatient'));
-app.use('/api/patient/dossier', require('./patient/dossiermedical'));
+app.use('/api/patient', require('./Patient/connexionPatient'));
+app.use('/api/patient/dossier', require('./Patient/dossiermedical'));
 app.use('/api/patient/medecins', require('./Patient/medecins'));
 app.use('/api/patient/dashboard', require('./Patient/dashboard'));
 app.use('/api/messagerie', require('./Patient/messagerie'));
-
+app.use('/api/patient/types-consultation', require('./Patient/typesConsultation'));
 
 // ======================================================
-// 🧑‍💼 SECRÉTAIRE
+// 🧑‍💼 SECRÉTAIRE - ROUTES CORRIGÉES
 // ======================================================
+// Note: L'ordre est important - les routes spécifiques doivent venir avant les routes génériques
 app.use('/api/secretaire', require('./secretaire/connexionSecretaire'));
-
+app.use('/api/secretaire/medecins', require('./medecin/medecin'));
+app.use('/api/secretaire/factures', require('./secretaire/factures')); // Route principale des factures
 
 // ======================================================
-// 📅 RÉSERVATIONS (CŒUR DU SYSTÈME)
+// 📅 RÉSERVATIONS
 // ======================================================
 app.use('/api/reservations', require('./secretaire/reservation'));
 
-
 // ======================================================
-// 🔔 NOUVEAU : NOTIFICATIONS SYSTEM (AJOUT IMPORTANT)
+// 🔔 NOTIFICATIONS
 // ======================================================
 app.use('/api/notifications', require('./notifications/notifications'));
 
-
 // ======================================================
-// 📊 NOUVEAU : STATISTIQUES RENDEZ-VOUS
+// 📊 STATISTIQUES RENDEZ-VOUS
 // ======================================================
 app.use('/api/stats/rendezvous', require('./stats/rendezvousStats'));
 
-
 // ======================================================
-// ❤️ HEALTH CHECK
+// 🏥 HEALTH CHECK
 // ======================================================
 app.get('/api/health', async (req, res) => {
   try {
@@ -96,7 +103,6 @@ app.get('/api/health', async (req, res) => {
       environment: NODE_ENV,
       timestamp: new Date().toISOString()
     });
-
   } catch (error) {
     res.status(503).json({
       status: 'error',
@@ -105,7 +111,6 @@ app.get('/api/health', async (req, res) => {
     });
   }
 });
-
 
 // ======================================================
 // 🧪 TEST DB
@@ -120,14 +125,12 @@ app.get('/api/test-db', async (req, res) => {
       message: 'Connexion DB OK',
       result: rows
     });
-
   } catch (error) {
     res.status(500).json({
       error: error.message
     });
   }
 });
-
 
 // ======================================================
 // 🏠 ROOT
@@ -141,11 +144,11 @@ app.get('/', (req, res) => {
       auth: '/api/admin, /api/patient, /api/medecin, /api/secretaire',
       reservations: '/api/reservations',
       notifications: '/api/notifications',
-      stats: '/api/stats/rendezvous'
+      stats: '/api/stats/rendezvous',
+      billing: '/api/secretaire/factures'
     }
   });
 });
-
 
 // ======================================================
 // ❌ 404
@@ -156,7 +159,6 @@ app.use((req, res) => {
     path: req.originalUrl
   });
 });
-
 
 // ======================================================
 // ⚠️ ERROR HANDLER
@@ -169,7 +171,6 @@ app.use((err, req, res, next) => {
   });
 });
 
-
 // ======================================================
 // 🚀 START SERVER
 // ======================================================
@@ -181,18 +182,17 @@ const server = app.listen(PORT, () => {
 ║   Port: ${PORT}                        ║
 ╚════════════════════════════════════════╝
   `);
-
   console.log(`✅ http://localhost:${PORT}`);
   console.log(`❤️  /api/health`);
+  console.log(`📊 Factures: /api/secretaire/factures`);
 });
-
 
 // ======================================================
 // 🧯 SHUTDOWN SAFE
 // ======================================================
 const shutdown = async (signal) => {
   console.log(`\n⏹️  ${signal} reçu`);
-
+  
   server.close(async () => {
     try {
       await pool.end();
@@ -203,8 +203,11 @@ const shutdown = async (signal) => {
       process.exit(1);
     }
   });
-
-  setTimeout(() => process.exit(1), 10000);
+  
+  setTimeout(() => {
+    console.error('⏰ Timeout, fermeture forcée');
+    process.exit(1);
+  }, 10000);
 };
 
 process.on('SIGINT', () => shutdown('SIGINT'));

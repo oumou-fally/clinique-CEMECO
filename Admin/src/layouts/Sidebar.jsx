@@ -9,7 +9,8 @@ import {
   Activity,
   Home,
   Eye,
-  DollarSign
+  DollarSign,
+  Tag
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
@@ -17,14 +18,20 @@ export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(true)
   const location = useLocation()
   const { logout, user } = useAuth()
+  const isAdmin = user?.role === 'admin'
+  const isSuperAdmin = user?.role === 'super_admin'
 
   const menuItems = [
-    { icon: Home, label: 'Tableau de Bord', path: '/dashboard' },
-    { icon: Users, label: 'Gestion Utilisateurs', path: '/dashboard/users' },
-    { icon: Settings, label: 'Gestion Système', path: '/dashboard/system' },
-    { icon: Eye, label: 'Supervision', path: '/dashboard/supervision' },
-    { icon: DollarSign, label: 'Finances', path: '/dashboard/finance' }
+    { icon: Home, label: 'Tableau de Bord', path: '/dashboard', roles: ['admin', 'super_admin'] },
+    { icon: Users, label: 'Gestion Utilisateurs', path: '/dashboard/users', roles: ['super_admin'] }, // Uniquement Super Admin
+    { icon: Eye, label: 'Supervision', path: '/dashboard/supervision', roles: ['admin', 'super_admin'] },
+    { icon: DollarSign, label: 'Finances', path: '/dashboard/finance', roles: ['super_admin'] },
+    { icon: Tag, label: 'Gestion Tarifs', path: '/dashboard/tarifs', roles: ['super_admin'] },
+    { icon: Settings, label: 'Gestion Système', path: '/dashboard/system', roles: ['super_admin'] },
   ]
+
+  // Filtrer les menus selon le rôle
+  const filteredMenuItems = menuItems.filter(item => item.roles.includes(user?.role))
 
   const isActive = (path) => location.pathname === path
 
@@ -67,8 +74,15 @@ export default function Sidebar() {
                 {user?.name?.charAt(0)}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold truncate">{user?.name}</p>
-                <p className="text-xs text-blue-200 truncate">{user?.email}</p>
+                <p className="text-sm font-semibold truncate">
+                  {(user?.nomComplet || user?.name)?.toLowerCase().includes('yaya') ? 'Pr.' : 'Dr.'} {user?.nomComplet || user?.name}
+                </p>
+                <div className="flex items-center gap-1.5">
+                  <span className={`w-2 h-2 rounded-full ${isSuperAdmin ? 'bg-amber-400' : 'bg-green-400'}`}></span>
+                  <p className="text-[10px] font-black uppercase tracking-wider text-blue-200">
+                    {isSuperAdmin ? 'Super Admin' : 'Admin'}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -76,7 +90,7 @@ export default function Sidebar() {
 
         {/* Menu Items */}
         <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-          {menuItems.map((item) => (
+          {filteredMenuItems.map((item) => (
             <Link
               key={item.path}
               to={item.path}
