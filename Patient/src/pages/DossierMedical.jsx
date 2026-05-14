@@ -1,33 +1,35 @@
 import { useState, useEffect, useRef } from 'react'
 import Layout from '../layouts/Layout'
-import { FileText, Download, Eye, Filter, Search, Loader2, X, Printer, Activity, ClipboardList, Beaker, Pill } from 'lucide-react'
+import { FileText, Download, Eye, Search, Loader2, X, Printer, Activity, ClipboardList, Beaker, Pill } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
-// Composant de la page dossier médical (nom en français pour faciliter la recherche)
 export default function DossierMedical() {
   const { patientId } = useAuth()
   const [loading, setLoading] = useState(true)
   const [medicalRecords, setMedicalRecords] = useState([])
   const [prescriptions, setPrescriptions] = useState([])
   const [patientInfo, setPatientInfo] = useState(null)
-  const [activeTab, setActiveTab] = useState('examens') // 'examens', 'ordonnances', 'vaccinations'
+  const [activeTab, setActiveTab] = useState('examens')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedRecord, setSelectedRecord] = useState(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const printRef = useRef()
 
   useEffect(() => {
     const fetchDossier = async () => {
-      if (!patientId) return
+      if (!patientId) {
+        setLoading(false)
+        return
+      }
 
       try {
         const response = await fetch(`http://localhost:3000/api/patient/dossier/${patientId}`)
+        if (!response.ok) throw new Error('Erreur réseau')
         const data = await response.json()
 
-        if (data.success) {
-          setMedicalRecords(data.data.consultations)
-          setPrescriptions(data.data.ordonnances)
-          setPatientInfo(data.data.patient)
+        if (data.success && data.data) {
+          setMedicalRecords(data.data.consultations || [])
+          setPrescriptions(data.data.ordonnances || [])
+          setPatientInfo(data.data.patient || null)
         }
       } catch (error) {
         console.error('Erreur lors de la récupération du dossier:', error)
@@ -39,17 +41,17 @@ export default function DossierMedical() {
     fetchDossier()
   }, [patientId])
 
-  // Filtrage des données
-  const filteredRecords = medicalRecords.filter(record => 
+  const filteredRecords = (medicalRecords || []).filter(record =>
     (record.motif || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (record.medecin_nom || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (record.diagnostic || '').toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const filteredPrescriptions = prescriptions.filter(p => 
-    p.medicaments.some(m => m.nom.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (p.medecin_nom || '').toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredPrescriptions = (prescriptions || []).filter(p => {
+    const meds = Array.isArray(p.medicaments) ? p.medicaments : []
+    return meds.some(m => (m.nom || '').toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (p.medecin_nom || '').toLowerCase().includes(searchTerm.toLowerCase())
+  })
 
   if (loading) {
     return (
@@ -64,8 +66,7 @@ export default function DossierMedical() {
 
   return (
     <Layout>
-
-      {/* Titre de la page */}
+      {/* Titre */}
       <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Mon Dossier Médical</h1>
@@ -84,7 +85,7 @@ export default function DossierMedical() {
         )}
       </div>
 
-      {/* Résumé des dernières constantes */}
+      {/* Résumé des constantes */}
       {medicalRecords.length > 0 && (
         <div className="mb-8 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
           <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 text-center">
@@ -106,34 +107,32 @@ export default function DossierMedical() {
         </div>
       )}
 
-      {/* Onglets (navigation interne) */}
+      {/* Onglets */}
       <div className="flex gap-4 mb-6 border-b border-gray-200">
-        <button 
+        <button
           onClick={() => setActiveTab('examens')}
-          className={`pb-3 px-4 border-b-2 font-semibold transition ${
-            activeTab === 'examens' ? 'border-teal-600 text-teal-600' : 'border-transparent text-gray-600 hover:text-gray-900'
-          }`}
+          className={`pb-3 px-4 border-b-2 font-semibold transition ${activeTab === 'examens' ? 'border-teal-600 text-teal-600' : 'border-transparent text-gray-600 hover:text-gray-900'
+            }`}
         >
           Examens Médicaux
         </button>
-        <button 
+        <button
           onClick={() => setActiveTab('ordonnances')}
-          className={`pb-3 px-4 border-b-2 font-semibold transition ${
-            activeTab === 'ordonnances' ? 'border-teal-600 text-teal-600' : 'border-transparent text-gray-600 hover:text-gray-900'
-          }`}
+          className={`pb-3 px-4 border-b-2 font-semibold transition ${activeTab === 'ordonnances' ? 'border-teal-600 text-teal-600' : 'border-transparent text-gray-600 hover:text-gray-900'
+            }`}
         >
           Ordonnances
         </button>
-        <button 
+        <button
           onClick={() => setActiveTab('vaccinations')}
-          className={`pb-3 px-4 border-b-2 font-semibold transition ${
-            activeTab === 'vaccinations' ? 'border-teal-600 text-teal-600' : 'border-transparent text-gray-600 hover:text-gray-900'
-          }`}
+          className={`pb-3 px-4 border-b-2 font-semibold transition ${activeTab === 'vaccinations' ? 'border-teal-600 text-teal-600' : 'border-transparent text-gray-600 hover:text-gray-900'
+            }`}
         >
           Vaccinations
         </button>
       </div>
 
+      {/* Barre de recherche */}
       <div className="mb-6 flex gap-4">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
@@ -153,82 +152,56 @@ export default function DossierMedical() {
           {filteredRecords.length > 0 ? (
             filteredRecords.map((record) => (
               <div key={record.id} className="bg-white rounded-lg shadow hover:shadow-lg transition p-6 border-l-4 border-teal-500">
-
-                {/* En-tête de chaque examen */}
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-start gap-4">
                     <div className="p-3 bg-teal-100 rounded-lg">
                       <FileText className="w-6 h-6 text-teal-600" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold text-gray-900">{record.motif || 'Consultation de cardiologie'}</h3>
-                      <p className="text-sm text-gray-600 mt-1">Dr. {record.medecin_prenom} {record.medecin_nom} ({record.medecin_specialite})</p>
-                      <p className="text-xs text-gray-500 mt-1">{new Date(record.date_consultation).toLocaleDateString()}</p>
+                      <h3 className="text-lg font-bold text-gray-900">{record.motif || 'Consultation médicale'}</h3>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Dr. {record.medecin_prenom || ''} {record.medecin_nom}
+                        {record.medecin_specialite && ` (${record.medecin_specialite})`}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {record.date_consultation ? new Date(record.date_consultation).toLocaleDateString('fr-FR') : 'Date inconnue'}
+                      </p>
                     </div>
                   </div>
-
-                  {/* Statut */}
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800`}>
-                    Terminé
-                  </span>
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">Terminé</span>
                 </div>
 
-                {/* Résultats médicaux */}
                 <div className="mb-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <div>
-                    <p className="text-xs text-gray-500">Tension (PA)</p>
-                    <p className="text-sm font-semibold">{record.pa || '--'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Fréq. Cardiaque</p>
-                    <p className="text-sm font-semibold">{record.fc || '--'} bpm</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Température</p>
-                    <p className="text-sm font-semibold">{record.temperature || '--'} °C</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Saturation</p>
-                    <p className="text-sm font-semibold">{record.saturation || '--'} %</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Poids</p>
-                    <p className="text-sm font-semibold">{record.poids || '--'} kg</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Taille</p>
-                    <p className="text-sm font-semibold">{record.taille || '--'} cm</p>
-                  </div>
+                  <div><p className="text-xs text-gray-500">Tension</p><p className="font-semibold">{record.pa || '--'}</p></div>
+                  <div><p className="text-xs text-gray-500">FC</p><p className="font-semibold">{record.fc || '--'} bpm</p></div>
+                  <div><p className="text-xs text-gray-500">Temp.</p><p className="font-semibold">{record.temperature || '--'} °C</p></div>
+                  <div><p className="text-xs text-gray-500">Sat.</p><p className="font-semibold">{record.saturation || '--'} %</p></div>
+                  <div><p className="text-xs text-gray-500">Poids</p><p className="font-semibold">{record.poids || '--'} kg</p></div>
+                  <div><p className="text-xs text-gray-500">Taille</p><p className="font-semibold">{record.taille || '--'} cm</p></div>
                 </div>
 
                 {record.diagnostic && (
                   <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
-                    <p className="text-sm font-semibold text-blue-800 mb-1">Diagnostic:</p>
+                    <p className="text-sm font-semibold text-blue-800">Diagnostic :</p>
                     <p className="text-sm text-blue-700">{record.diagnostic}</p>
                   </div>
                 )}
 
-                {/* Actions */}
                 <div className="flex gap-2">
-                  <button 
-                    onClick={() => {
-                      setSelectedRecord(record)
-                      setIsModalOpen(true)
-                    }}
+                  <button
+                    onClick={() => { setSelectedRecord(record); setIsModalOpen(true) }}
                     className="flex-1 py-2 px-4 border border-teal-600 text-teal-600 hover:bg-teal-50 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2"
                   >
-                    <Eye className="w-4 h-4" />
-                    Voir en détail
+                    <Eye className="w-4 h-4" /> Voir en détail
                   </button>
-                  <button 
+                  <button
                     onClick={() => {
-                      setSelectedRecord(record)
-                      setTimeout(() => window.print(), 100)
+                      setSelectedRecord(record);
+                      setTimeout(() => window.print(), 100);
                     }}
                     className="flex-1 py-2 px-4 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-medium transition flex items-center justify-center gap-2"
                   >
-                    <Download className="w-4 h-4" />
-                    Télécharger
+                    <Download className="w-4 h-4" /> Télécharger PDF
                   </button>
                 </div>
               </div>
@@ -241,10 +214,11 @@ export default function DossierMedical() {
         </div>
       )}
 
-      {/* Section ordonnances */}
+      {/* Ordonnances */}
       {activeTab === 'ordonnances' && (
         <div className="mt-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Mes Ordonnances</h2>
+          {/* ... (tableau inchangé) ... */}
           <div className="bg-white rounded-lg shadow overflow-hidden">
             <table className="w-full">
               <thead>
@@ -259,63 +233,38 @@ export default function DossierMedical() {
                 {filteredPrescriptions.length > 0 ? (
                   filteredPrescriptions.map((prescription) => (
                     <tr key={prescription.id} className="border-b border-gray-200 hover:bg-gray-50">
-                      <td className="px-6 py-4 text-sm text-gray-900">{new Date(prescription.date_ordination).toLocaleDateString()}</td>
-                      <td className="px-6 py-4 text-sm text-gray-900 font-medium">
+                      <td className="px-6 py-4 text-sm">{new Date(prescription.date_ordination).toLocaleDateString('fr-FR')}</td>
+                      <td className="px-6 py-4 text-sm font-medium">
                         <ul className="space-y-1">
-                          {Array.isArray(prescription.medicaments) ? (
-                            prescription.medicaments.map((med, idx) => (
-                              <li key={idx} className="bg-teal-50 text-teal-800 px-3 py-1 rounded-md text-sm flex justify-between">
-                                <span className="font-bold">{med.nom}</span>
-                                <span className="italic">{med.dosage}</span>
-                              </li>
-                            ))
-                          ) : (
-                            <li className="text-gray-500 text-xs italic">Aucun médicament listé</li>
-                          )}
+                          {Array.isArray(prescription.medicaments) ? prescription.medicaments.map((med, idx) => (
+                            <li key={idx} className="bg-teal-50 text-teal-800 px-3 py-1 rounded-md text-sm flex justify-between">
+                              <span>{med?.nom}</span>
+                              <span className="italic">{med?.dosage}</span>
+                            </li>
+                          )) : <li className="text-gray-500">Aucun médicament</li>}
                         </ul>
-                        {prescription.dosage && (
-                          <div className="mt-2 text-xs text-teal-700 bg-teal-50 p-1 rounded inline-block">
-                            Dosage: {prescription.dosage}
-                          </div>
-                        )}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600">
                         Dr. {prescription.medecin_prenom} {prescription.medecin_nom}
-                        <div className="text-xs text-gray-400 mt-1">{prescription.medecin_specialite}</div>
                       </td>
-                      <td className="px-6 py-4 text-sm">
-                        <div className="flex flex-col gap-2">
-                          <button 
-                            onClick={() => {
-                              // Trouver la consultation associée pour afficher le détail complet
-                              const relatedConsultation = medicalRecords.find(r => r.id === prescription.id_consultation)
-                              if (relatedConsultation) {
-                                setSelectedRecord(relatedConsultation)
-                                setIsModalOpen(true)
-                              }
-                            }}
-                            className="text-teal-600 hover:text-teal-700 font-medium flex items-center gap-2"
-                          >
-                            <Eye className="w-4 h-4" />
-                            Voir détail
-                          </button>
-                          <button 
-                            onClick={() => window.print()}
-                            className="text-teal-600 hover:text-teal-700 font-medium flex items-center gap-2"
-                          >
-                            <Download className="w-4 h-4" />
-                            Télécharger
-                          </button>
-                        </div>
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => {
+                            const related = medicalRecords.find(r => r.id === prescription.id_consultation)
+                            if (related) {
+                              setSelectedRecord(related)
+                              setIsModalOpen(true)
+                            }
+                          }}
+                          className="text-teal-600 hover:text-teal-700 flex items-center gap-2"
+                        >
+                          <Eye className="w-4 h-4" /> Voir
+                        </button>
                       </td>
                     </tr>
                   ))
                 ) : (
-                  <tr>
-                    <td colSpan="4" className="px-6 py-12 text-center text-gray-500">
-                      Aucune ordonnance trouvée.
-                    </td>
-                  </tr>
+                  <tr><td colSpan="4" className="px-6 py-12 text-center text-gray-500">Aucune ordonnance trouvée.</td></tr>
                 )}
               </tbody>
             </table>
@@ -323,228 +272,208 @@ export default function DossierMedical() {
         </div>
       )}
 
-      {/* Section vaccinations (placeholder) */}
       {activeTab === 'vaccinations' && (
         <div className="bg-white p-12 text-center rounded-lg shadow">
           <p className="text-gray-500">Aucune information de vaccination disponible.</p>
         </div>
       )}
 
-      {/* MODAL DE DÉTAILS */}
+      {/* ====================== MODAL DÉTAIL (Aperçu) ====================== */}
       {isModalOpen && selectedRecord && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto relative shadow-2xl animate-in fade-in zoom-in duration-200">
-            
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center p-4 no-print">
+          <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[92vh] overflow-y-auto shadow-2xl">
             {/* Header Modal */}
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
+            <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between z-10">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-teal-100 rounded-lg">
-                  <FileText className="w-6 h-6 text-teal-600" />
-                </div>
+                <FileText className="w-6 h-6 text-teal-600" />
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900">Détail du Dossier Médical</h2>
-                  <p className="text-sm text-gray-500">Consultation du {new Date(selectedRecord.date_consultation).toLocaleDateString()}</p>
+                  <h2 className="text-xl font-bold">Détail de la Consultation</h2>
+                  <p className="text-sm text-gray-500">
+                    {new Date(selectedRecord.date_consultation).toLocaleDateString('fr-FR')}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => window.print()}
-                  className="p-2 hover:bg-gray-100 rounded-full text-gray-600 transition"
-                  title="Imprimer / PDF"
-                >
+                <button onClick={() => window.print()} className="p-2 hover:bg-gray-100 rounded-full">
                   <Printer className="w-5 h-5" />
                 </button>
-                <button 
-                  onClick={() => setIsModalOpen(false)}
-                  className="p-2 hover:bg-gray-100 rounded-full text-gray-600 transition"
-                >
+                <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-gray-100 rounded-full">
                   <X className="w-6 h-6" />
                 </button>
               </div>
             </div>
-
-            {/* Contenu Modal */}
-            <div className="p-6 space-y-8" id="printable-area">
-              
-              {/* Infos Patient & Médecin */}
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
-                  <h3 className="text-sm font-semibold text-gray-400 uppercase mb-3">Informations Médecin</h3>
-                  <p className="font-bold text-gray-900 text-lg">Dr. {selectedRecord.medecin_prenom} {selectedRecord.medecin_nom}</p>
-                  <p className="text-teal-600 font-medium">{selectedRecord.medecin_specialite}</p>
+            {/* Contenu de la modal (Similaire au print mais interactif) */}
+            <div className="p-8 space-y-6">
+              {/* Contenu simplifié pour l'aperçu écran */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-gray-50 rounded-xl">
+                  <p className="text-xs font-bold text-gray-400 uppercase mb-1">Médecin</p>
+                  <p className="font-bold">Dr. {selectedRecord.medecin_prenom} {selectedRecord.medecin_nom}</p>
                 </div>
-                <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
-                  <h3 className="text-sm font-semibold text-gray-400 uppercase mb-3">Motif de consultation</h3>
-                  <p className="font-bold text-gray-900">{selectedRecord.motif || 'Non spécifié'}</p>
+                <div className="p-4 bg-teal-50 rounded-xl text-teal-800">
+                  <p className="text-xs font-bold text-teal-600 uppercase mb-1">Motif</p>
+                  <p className="font-bold">{selectedRecord.motif}</p>
                 </div>
               </div>
-
-              {/* Constantes Vitales */}
-              <section>
-                <div className="flex items-center gap-2 mb-4">
-                  <Activity className="w-5 h-5 text-teal-600" />
-                  <h3 className="font-bold text-gray-900 text-lg">Constantes Vitales</h3>
+              <div className="bg-white border rounded-xl p-6">
+                <h3 className="font-bold mb-4 flex items-center gap-2"><Activity className="w-5 h-5 text-teal-600" /> Constantes</h3>
+                <div className="grid grid-cols-4 gap-4 text-center">
+                  <div><p className="text-xs text-gray-500">Tension</p><p className="font-bold text-lg">{selectedRecord.pa || '--'}</p></div>
+                  <div><p className="text-xs text-gray-500">FC</p><p className="font-bold text-lg">{selectedRecord.fc || '--'}</p></div>
+                  <div><p className="text-xs text-gray-500">Temp.</p><p className="font-bold text-lg">{selectedRecord.temperature || '--'}°</p></div>
+                  <div><p className="text-xs text-gray-500">Poids</p><p className="font-bold text-lg">{selectedRecord.poids || '--'}kg</p></div>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                  <div className="p-3 bg-white border border-gray-200 rounded-lg">
-                    <p className="text-xs text-gray-500">Tension (PA)</p>
-                    <p className="font-bold text-gray-900">{selectedRecord.pa || '--'}</p>
-                  </div>
-                  <div className="p-3 bg-white border border-gray-200 rounded-lg">
-                    <p className="text-xs text-gray-500">Fréq. Cardiaque</p>
-                    <p className="font-bold text-gray-900">{selectedRecord.fc || '--'} bpm</p>
-                  </div>
-                  <div className="p-3 bg-white border border-gray-200 rounded-lg">
-                    <p className="text-xs text-gray-500">Fréq. Respiratoire</p>
-                    <p className="font-bold text-gray-900">{selectedRecord.fr || '--'} cpm</p>
-                  </div>
-                  <div className="p-3 bg-white border border-gray-200 rounded-lg">
-                    <p className="text-xs text-gray-500">Température</p>
-                    <p className="font-bold text-gray-900">{selectedRecord.temperature || '--'} °C</p>
-                  </div>
-                  <div className="p-3 bg-white border border-gray-200 rounded-lg">
-                    <p className="text-xs text-gray-500">Saturation O2</p>
-                    <p className="font-bold text-gray-900">{selectedRecord.saturation || '--'} %</p>
-                  </div>
-                  <div className="p-3 bg-white border border-gray-200 rounded-lg">
-                    <p className="text-xs text-gray-500">Poids</p>
-                    <p className="font-bold text-gray-900">{selectedRecord.poids || '--'} kg</p>
-                  </div>
-                  <div className="p-3 bg-white border border-gray-200 rounded-lg">
-                    <p className="text-xs text-gray-500">Taille</p>
-                    <p className="font-bold text-gray-900">{selectedRecord.taille || '--'} cm</p>
-                  </div>
-                  <div className="p-3 bg-white border border-gray-200 rounded-lg">
-                    <p className="text-xs text-gray-500">IMC</p>
-                    <p className="font-bold text-gray-900">{selectedRecord.imc || '--'}</p>
-                  </div>
-                </div>
-              </section>
-
-              {/* Analyse Clinique */}
-              <section className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <div className="flex items-center gap-2 mb-4">
-                    <ClipboardList className="w-5 h-5 text-teal-600" />
-                    <h3 className="font-bold text-gray-900 text-lg">Analyse Clinique</h3>
-                  </div>
-                  <div className="space-y-4">
-                    <div className="p-4 bg-orange-50 rounded-lg border border-orange-100">
-                      <p className="text-xs font-bold text-orange-800 uppercase mb-1">Symptômes</p>
-                      <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedRecord.symptomes || 'Aucun symptôme renseigné'}</p>
-                    </div>
-                    <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
-                      <p className="text-xs font-bold text-blue-800 uppercase mb-1">Diagnostic</p>
-                      <p className="text-sm text-gray-700 whitespace-pre-wrap font-semibold">{selectedRecord.diagnostic || 'En attente de diagnostic'}</p>
-                    </div>
-                    <div className="p-4 bg-green-50 rounded-lg border border-green-100">
-                      <p className="text-xs font-bold text-green-800 uppercase mb-1">Traitement</p>
-                      <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedRecord.traitement || 'Aucun traitement spécifié'}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center gap-2 mb-4">
-                    <Beaker className="w-5 h-5 text-teal-600" />
-                    <h3 className="font-bold text-gray-900 text-lg">Examens & Notes</h3>
-                  </div>
-                  <div className="space-y-4">
-                    <div className="p-4 bg-white border border-gray-200 rounded-lg">
-                      <p className="text-xs font-bold text-gray-500 uppercase mb-1">Biologie</p>
-                      <p className="text-sm text-gray-700">{selectedRecord.biologie || 'N/A'}</p>
-                    </div>
-                    <div className="p-4 bg-white border border-gray-200 rounded-lg">
-                      <p className="text-xs font-bold text-gray-500 uppercase mb-1">ECG / Rythme</p>
-                      <p className="text-sm text-gray-700">{selectedRecord.ecg || 'N/A'}</p>
-                    </div>
-                    <div className="p-4 bg-white border border-gray-200 rounded-lg">
-                      <p className="text-xs font-bold text-gray-500 uppercase mb-1">Imagerie (RX/ETT)</p>
-                      <p className="text-sm text-gray-700">
-                        {selectedRecord.rx_pulmonaire ? `RX: ${selectedRecord.rx_pulmonaire}` : ''}
-                        {selectedRecord.rx_pulmonaire && selectedRecord.ett ? ' | ' : ''}
-                        {selectedRecord.ett ? `ETT: ${selectedRecord.ett}` : ''}
-                        {!selectedRecord.rx_pulmonaire && !selectedRecord.ett ? 'N/A' : ''}
-                      </p>
-                    </div>
-                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200 italic">
-                      <p className="text-xs font-bold text-gray-500 uppercase mb-1">Notes complém.</p>
-                      <p className="text-sm text-gray-600">{selectedRecord.notes || 'Aucune note particulière'}</p>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              {/* Ordonnance associée */}
-              {prescriptions.some(p => p.id_consultation === selectedRecord.id) && (
-                <section className="pt-6 border-t border-gray-200">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Pill className="w-5 h-5 text-teal-600" />
-                    <h3 className="font-bold text-gray-900 text-lg">Ordonnance Associée</h3>
-                  </div>
-                  <div className="bg-teal-50 rounded-xl p-6 border border-teal-100">
-                    <div className="grid md:grid-cols-2 gap-4">
-                      {prescriptions
-                        .filter(p => p.id_consultation === selectedRecord.id)
-                        .map(p => (
-                          <div key={p.id} className="space-y-4">
-                            <div className="space-y-2">
-                              {p.medicaments.map((med, idx) => (
-                                <div key={idx} className="flex justify-between bg-white p-3 rounded-lg shadow-sm">
-                                  <span className="font-bold text-gray-900">{med.nom}</span>
-                                  <span className="text-teal-600 italic font-medium">{med.dosage}</span>
-                                </div>
-                              ))}
-                            </div>
-                            {p.dosage && (
-                              <p className="text-sm text-teal-800 bg-white p-3 rounded-lg border border-teal-100">
-                                <span className="font-bold">Consigne globale:</span> {p.dosage}
-                              </p>
-                            )}
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                </section>
-              )}
+              </div>
+              <div className="space-y-4">
+                <div><h4 className="font-bold text-blue-800 mb-1">Diagnostic</h4><p className="p-4 bg-blue-50 rounded-lg">{selectedRecord.diagnostic || 'Non renseigné'}</p></div>
+                <div><h4 className="font-bold text-emerald-800 mb-1">Traitement</h4><p className="p-4 bg-emerald-50 rounded-lg">{selectedRecord.traitement || 'Non renseigné'}</p></div>
+              </div>
             </div>
-
             {/* Footer Modal */}
-            <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex justify-end gap-3 z-10">
-              <button 
-                onClick={() => setIsModalOpen(false)}
-                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition"
-              >
-                Fermer
-              </button>
-              <button 
-                onClick={() => window.print()}
-                className="px-6 py-2 bg-teal-600 text-white rounded-lg font-medium hover:bg-teal-700 transition flex items-center gap-2"
-              >
-                <Download className="w-4 h-4" />
-                Télécharger le Dossier
+            <div className="sticky bottom-0 bg-white border-t px-6 py-4 flex justify-end gap-3">
+              <button onClick={() => setIsModalOpen(false)} className="px-6 py-2 border rounded-lg hover:bg-gray-50">Fermer</button>
+              <button onClick={() => window.print()} className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 flex items-center gap-2">
+                <Printer className="w-4 h-4" /> Imprimer / PDF
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Style d'impression (pour le téléchargement PDF via print) */}
-      <style dangerouslySetInnerHTML={{ __html: `
+      {/* ==================== ZONE D'IMPRESSION (Invisible sur écran, Petit format) ==================== */}
+      <div className="hidden print:block fixed inset-0 bg-white z-[9999]" id="printable-area">
+        {selectedRecord && (
+          <div className="p-6 text-[10pt] leading-tight space-y-3 max-w-[19cm] mx-auto border-2 border-double border-gray-300 h-auto">
+            {/* Header Officiel Réduit */}
+            <div className="border-b-2 border-teal-800 pb-3 flex justify-between items-start">
+              <div>
+                <h1 className="text-2xl font-black text-teal-800">CLINIQUE CEMECO</h1>
+                <p className="text-sm font-bold text-teal-700">Cabinet de cardiologie</p>
+                <p className="text-[8pt] text-gray-500 mt-1">conakry, Guinée • +224 612 37 45 85 • contact@cemeco.sn</p>
+              </div>
+              <div className="text-right border-l-2 border-gray-200 pl-4">
+                <p className="text-[7pt] font-bold uppercase text-gray-400">N° Dossier</p>
+                <p className="text-xl font-black text-teal-800">#{selectedRecord.id}</p>
+                <p className="text-[8pt] font-medium mt-1">Date: {new Date(selectedRecord.date_consultation).toLocaleDateString('fr-FR')}</p>
+              </div>
+            </div>
+
+            {/* Infos Patient/Médecin Réduites */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="border border-gray-200 rounded-lg p-3">
+                <p className="uppercase text-[7pt] font-bold text-gray-400 mb-1">Identité Patient</p>
+                {patientInfo && (
+                  <>
+                    <p className="text-sm font-bold">{patientInfo.prenom} {patientInfo.nom}</p>
+                    <p className="text-[8pt] text-gray-600">{patientInfo.sexe === 'M' ? 'Homme' : 'Femme'} • {patientInfo.telephone}</p>
+                  </>
+                )}
+              </div>
+              <div className="border border-teal-100 bg-teal-50/20 rounded-lg p-3">
+                <p className="uppercase text-[7pt] font-bold text-teal-700 mb-1">Médecin Examinateur</p>
+                <p className="text-sm font-bold">Dr. {selectedRecord.medecin_prenom} {selectedRecord.medecin_nom}</p>
+                <p className="text-[8pt] text-teal-700 font-medium">{selectedRecord.medecin_specialite}</p>
+              </div>
+            </div>
+
+            {/* Constantes Réduites */}
+            <div className="border border-gray-200 rounded-lg p-3">
+              <p className="uppercase text-[7pt] font-bold text-gray-400 mb-2">Paramètres Cliniques</p>
+              <div className="grid grid-cols-4 gap-y-2 gap-x-4 text-[9pt]">
+                <div className="flex justify-between"><span>TA:</span> <b>{selectedRecord.pa || '--'}</b></div>
+                <div className="flex justify-between"><span>FC:</span> <b>{selectedRecord.fc || '--'}</b></div>
+                <div className="flex justify-between"><span>T°:</span> <b>{selectedRecord.temperature || '--'}°C</b></div>
+                <div className="flex justify-between"><span>Sat:</span> <b>{selectedRecord.saturation || '--'}%</b></div>
+                <div className="flex justify-between"><span>Poids:</span> <b>{selectedRecord.poids || '--'}kg</b></div>
+                <div className="flex justify-between"><span>Taille:</span> <b>{selectedRecord.taille || '--'}cm</b></div>
+                <div className="flex justify-between col-span-2"><span>IMC:</span> <b>{selectedRecord.imc || '--'}</b></div>
+              </div>
+            </div>
+
+            {/* Diagnostic/Traitement Réduits */}
+            <div className="space-y-3">
+              <div className="bg-gray-50 border-l-2 border-teal-600 p-3">
+                <p className="uppercase text-[7pt] font-bold text-gray-400 mb-1">Motif & Diagnostic</p>
+                <p className="text-[9pt]"><b>Motif:</b> {selectedRecord.motif || 'Consultation générale'}</p>
+                <p className="text-[9pt] mt-1 text-blue-900 font-bold"><b>Diagnostic:</b> {selectedRecord.diagnostic || 'Non renseigné'}</p>
+              </div>
+
+              <div className="p-3 border border-emerald-100 rounded-lg bg-emerald-50/10">
+                <p className="uppercase text-[7pt] font-bold text-emerald-700 mb-1">Traitement & Observations</p>
+                <p className="text-[9pt] leading-snug">{selectedRecord.traitement || 'Aucun traitement spécifié.'}</p>
+              </div>
+            </div>
+
+            {/* Examens Paracliniques Compacts */}
+            <div className="border border-gray-200 rounded-lg p-3">
+              <p className="uppercase text-[7pt] font-bold text-gray-400 mb-2">Résultats d'examens</p>
+              <div className="space-y-1 text-[8pt]">
+                <div className="flex border-b border-gray-50 pb-1"><span className="w-24 font-bold">Biologie:</span> <span>{selectedRecord.biologie || '—'}</span></div>
+                <div className="flex border-b border-gray-50 pb-1"><span className="w-24 font-bold">ECG:</span> <span>{selectedRecord.ecg || '—'}</span></div>
+                <div className="flex"><span className="w-24 font-bold">Imagerie:</span> <span>{selectedRecord.rx_pulmonaire || ''} {selectedRecord.ett ? `| ETT: ${selectedRecord.ett}` : '—'}</span></div>
+              </div>
+            </div>
+
+            {/* Ordonnance Compacte */}
+            {prescriptions.some(p => p.id_consultation === selectedRecord.id) && (
+              <div className="mt-4 border-t border-gray-300 pt-4">
+                <p className="uppercase text-[8pt] font-black text-teal-800 mb-2">Ordonnance</p>
+                <div className="border-2 border-teal-800 rounded-lg p-3 bg-white">
+                  {(prescriptions || [])
+                    .filter(p => p.id_consultation === selectedRecord.id)
+                    .map(p => (
+                      <div key={p.id}>
+                        {Array.isArray(p.medicaments) && p.medicaments.map((med, idx) => (
+                          <div key={idx} className="flex justify-between py-1 border-b border-gray-100 last:border-0 text-[9pt]">
+                            <span className="font-bold italic underline">{med?.nom}</span>
+                            <span className="text-teal-800 font-bold">{med?.dosage}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {/* Footer Signature Compact */}
+            <div className="mt-8 pt-4 border-t border-gray-200 flex justify-between text-[7pt] text-gray-400 font-medium">
+              <div>Émis par CEMECO le {new Date().toLocaleString('fr-FR')}</div>
+              <div className="text-center w-48 border-t border-gray-300 pt-2 font-bold text-gray-600">
+                Signature & Cachet du Médecin
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Styles d'impression Ajustés */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
         @media print {
-          body * { visibility: hidden; }
-          #printable-area, #printable-area * { visibility: visible; }
-          #printable-area {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            padding: 20px;
+          @page { 
+            size: A4; 
+            margin: 0; 
+          }
+          html, body { 
+            height: 100%; 
+            overflow: hidden; 
+            background: white !important; 
+            -webkit-print-color-adjust: exact; 
           }
           .no-print { display: none !important; }
+          #printable-area { 
+            visibility: visible !important; 
+            display: block !important;
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            overflow: hidden !important;
+          }
+          * { -webkit-print-color-adjust: exact; }
         }
       `}} />
-
     </Layout>
   )
 }

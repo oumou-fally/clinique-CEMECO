@@ -42,7 +42,9 @@ router.get('/', async (req, res) => {
         r.statut,
         r.id_medecin,
         m.nom AS medecin_nom,
-        m.prenom AS medecin_prenom
+        m.prenom AS medecin_prenom,
+        p.email AS patient_email,
+        p.telephone AS patient_telephone
       FROM reservation r
       JOIN patient p ON r.patient_id = p.id
       LEFT JOIN medecin m ON r.id_medecin = m.id
@@ -147,6 +149,26 @@ router.put('/:id/assign', async (req, res) => {
   const { id_medecin } = req.body
 
   try {
+    // 0. Vérifier la disponibilité du médecin
+    const [rdvCheck] = await pool.execute('SELECT date_rendez_vous, heure_rendez_vous FROM reservation WHERE id_reservation = ?', [id]);
+    if (rdvCheck.length === 0) return res.status(404).json({ success: false, message: 'Rendez-vous introuvable' });
+    
+    const { date_rendez_vous, heure_rendez_vous } = rdvCheck[0];
+    const [dispo] = await pool.execute(`
+      SELECT id FROM planning_medecin 
+      WHERE id_medecin = ? 
+      AND date_planning = ? 
+      AND ? BETWEEN heure_debut AND heure_fin
+      AND statut = 'disponible'
+    `, [id_medecin, date_rendez_vous, heure_rendez_vous]);
+
+    if (dispo.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Le médecin n\'est pas disponible sur ce créneau (créneau inexistant, annulé ou occupé)' 
+      });
+    }
+
     // 1. Mettre à jour la réservation
     await pool.execute(`
       UPDATE reservation

@@ -58,7 +58,7 @@ export default function ComposantFacturation() {
         fetch(`${API_URL}/api/secretaire/patients`),
         fetch(`${API_URL}/api/secretaire/types-consultation`)
       ])
-      
+
       const [fData, pData, tData] = await Promise.all([
         fRes.json(), pRes.json(), tRes.json()
       ])
@@ -152,14 +152,14 @@ export default function ComposantFacturation() {
   return (
     <Layout>
       <div className="p-8 space-y-8 bg-slate-50 min-h-screen">
-        
+
         {/* TOP BAR */}
         <div className="flex justify-between items-center bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
           <div>
             <h1 className="text-2xl font-black text-slate-900 tracking-tight">Tableau de Facturation</h1>
             <p className="text-sm text-slate-500 font-medium italic">Gestion des règlements patients</p>
           </div>
-          <button 
+          <button
             onClick={() => setModalVisible(true)}
             className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 shadow-lg shadow-emerald-200 transition"
           >
@@ -203,9 +203,9 @@ export default function ComposantFacturation() {
           <div className="p-6 border-b flex flex-col md:flex-row gap-4 justify-between bg-slate-50/30">
             <div className="relative w-full md:w-96">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input 
-                type="text" 
-                placeholder="Chercher un patient..." 
+              <input
+                type="text"
+                placeholder="Chercher un patient..."
                 className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-emerald-500 transition"
                 value={recherche}
                 onChange={(e) => setRecherche(e.target.value)}
@@ -213,8 +213,8 @@ export default function ComposantFacturation() {
             </div>
             <div className="flex gap-2 p-1 bg-slate-100 rounded-xl overflow-x-auto">
               {['tous', 'en_attente', 'payee'].map(k => (
-                <button 
-                  key={k} 
+                <button
+                  key={k}
                   onClick={() => setFiltre(k)}
                   className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition ${filtre === k ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'}`}
                 >
@@ -271,7 +271,7 @@ export default function ComposantFacturation() {
         </div>
 
         {/* MODALS */}
-        <ComposantFormulaireFacture 
+        <ComposantFormulaireFacture
           showModal={modalVisible}
           onClose={() => setModalVisible(false)}
           formData={factureForm}
@@ -284,7 +284,7 @@ export default function ComposantFacturation() {
         {modalDetailsVisible && selectedFacture && (
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 print:p-0">
             <div className="bg-white rounded-[2.5rem] shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto print:max-h-full print:shadow-none print:rounded-none">
-              
+
               {/* Actions Header (Caché à l'impression) */}
               <div className="p-6 border-b flex justify-between items-center print:hidden">
                 <h2 className="text-xl font-bold">Reçu de paiement</h2>
@@ -296,13 +296,13 @@ export default function ComposantFacturation() {
 
               {/* CONTENU DU REÇU (ZONE IMPRIMABLE) */}
               <div id="print-area" className="p-10 space-y-8">
-                
+
                 {/* Logo & Clinique */}
                 <div className="flex justify-between items-start border-b-2 border-slate-100 pb-8">
                   <div>
                     <h1 className="text-4xl font-black text-emerald-600 tracking-tighter">CEMECO</h1>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Clinique Médico-Chirurgicale</p>
-                    <p className="text-[10px] text-slate-400 mt-2 font-medium">Conakry, République de Guinée<br/>Tél: +224 622 00 00 00</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Cabinet De Cardiologie</p>
+                    <p className="text-[10px] text-slate-400 mt-2 font-medium">Conakry, République de Guinée<br />Tél: +224 622 00 00 00</p>
                   </div>
                   <div className="text-right">
                     <h3 className="text-2xl font-black uppercase text-slate-900">REÇU</h3>

@@ -26,19 +26,16 @@ router.get('/:patientId', async (req, res) => {
             LEFT JOIN medecin m ON r.id_medecin = m.id
             WHERE r.patient_id = ? 
             AND r.date_rendez_vous >= CURDATE()
-            AND r.statut IN ('confirme', 'attribue')
+            AND r.statut IN ('confirme', 'attribue', 'attente', 'reporte')
             ORDER BY r.date_rendez_vous ASC, r.heure_rendez_vous ASC
-            LIMIT 3
+            LIMIT 5
         `, [patientId]);
 
         // 2. Statistiques réelles basées sur l'activité médicale
-        // dossier_count : nombre de consultations réelles enregistrées
-        // medecin_count : nombre de médecins différents ayant effectué ces consultations
-        // rdv_count : nombre de rendez-vous futurs planifiés
         const [statsRows] = await pool.execute(`
             SELECT 
-                (SELECT COUNT(*) FROM reservation WHERE patient_id = ? AND date_rendez_vous >= CURDATE() AND statut IN ('confirme', 'attribue')) as rdv_count,
-                (SELECT COUNT(DISTINCT c.id_medecin) FROM consultation c JOIN reservation r ON c.id_reservation = r.id_reservation WHERE r.patient_id = ?) as medecin_count,
+                (SELECT COUNT(*) FROM reservation WHERE patient_id = ? AND statut != 'annule') as rdv_count,
+                (SELECT COUNT(DISTINCT id_medecin) FROM reservation WHERE patient_id = ? AND id_medecin IS NOT NULL) as medecin_count,
                 (SELECT COUNT(*) FROM consultation c JOIN reservation r ON c.id_reservation = r.id_reservation WHERE r.patient_id = ?) as dossier_count
         `, [patientId, patientId, patientId]);
 

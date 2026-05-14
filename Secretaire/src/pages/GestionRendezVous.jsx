@@ -1,405 +1,282 @@
-import { useMemo, useState, useEffect } from 'react'
-import { CheckCircle, Plus, Trash2, XCircle, ArrowRightCircle, Clock, MapPin, AlertCircle, Calendar, User, Search, Mail, Phone, X } from 'lucide-react'
+import { useState, useEffect } from 'react'
 import Layout from '../layouts/Layout'
-import ModalRendezVous from '../components/ModalRendezVous'
-import { useAuth } from '../context/AuthContext'
-import { DOCTORS, getDoctorById, getAvailableDoctors, getTimeSlots } from '../data/clinicData'
-
-const STATUTS = {
-  attente: 'En attente',
-  confirme: 'Confirmé',
-  annule: 'Annulé'
-}
-
-const COULEURS_STATUTS = {
-  attente: 'border-orange-200 bg-orange-50',
-  confirme: 'border-emerald-200 bg-emerald-50',
-  annule: 'border-rose-200 bg-rose-50'
-}
-
-const MOTIFS_CONSULTATION = [
-  'Contrôle cardiaque',
-  'Traitement de l\'hypertension',
-  'Électrocardiogramme',
-  'Échocardiogramme',
-  'Consultation préventive',
-  'Suivi post-opératoire'
-]
-
-const INITIAL_FORM = {
-  nom: '',
-  prenom: '',
-  date_naissance: '',
-  sexe: 'M',
-  telephone: '',
-  email: '',
-  adresse: '',
-  motif: '',
-  date_rendez_vous: '',
-  heure_rendez_vous: '',
-  id_medecin: ''
-}
+import { Calendar, Clock, MapPin, User, CheckCircle, XCircle, RotateCcw, Stethoscope, AlertTriangle, Phone, Mail, X } from 'lucide-react'
 
 export default function GestionRendezVous() {
-  const { user } = useAuth()
-  const [rendezVous, setRendezVous] = useState([])
-  const [filtre, setFiltre] = useState('tous')
-  const [modalOuvert, setModalOuvert] = useState(false)
-  const [modalType, setModalType] = useState('ajouter')
-  const [selectedRdv, setSelectedRdv] = useState(null)
-  const [formData, setFormData] = useState(INITIAL_FORM)
-  const [messageErreur, setMessageErreur] = useState('')
-  const [absences, setAbsences] = useState([])
-  const [medecins, setMedecins] = useState([])
+  const [activeTab, setActiveTab] = useState('upcoming')
+  const [appointments, setAppointments] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [actionLoading, setActionLoading] = useState(null)
+  
+  // États pour le modal de report
+  const [showReportModal, setShowReportModal] = useState(false)
+  const [selectedApp, setSelectedApp] = useState(null)
+  const [reportData, setReportData] = useState({
+    date: '',
+    heure: '',
+    motif: 'Indisponibilité du médecin'
+  })
 
-  const API_URL = '' // Utilise le proxy Vite en développement
+  const API_URL = 'http://localhost:3000'
+
+  const fetchAppointments = async () => {
+    try {
+      setLoading(true)
+      const res = await fetch(`${API_URL}/api/reservations`)
+      const data = await res.json()
+      if (data.success) {
+        setAppointments(data.reservations || [])
+      }
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    fetchData()
+    fetchAppointments()
   }, [])
 
-  const fetchData = async () => {
+  // ======================================================
+  // 📊 COMPTEURS PAR STATUT
+  // ======================================================
+  const countByStatut = (statuts) =>
+    appointments.filter(a => statuts.includes((a.statut || '').toLowerCase())).length
+
+  const countUpcoming  = countByStatut(['confirme', 'attribue'])
+  const countPast      = countByStatut(['termine'])
+  const countCancelled = countByStatut(['annule', 'reporte'])
+
+  const filteredAppointments = appointments.filter(app => {
+    const s = (app.statut || '').toLowerCase()
+    if (activeTab === 'upcoming')  return ['confirme', 'attribue'].includes(s)
+    if (activeTab === 'past')      return s === 'termine'
+    if (activeTab === 'cancelled') return ['annule', 'reporte'].includes(s)
+    return true
+  })
+
+  const handleCancel = async (id) => {
+    if (!window.confirm('Voulez-vous vraiment annuler ce rendez-vous ?')) return
+    setActionLoading(id)
     try {
-      console.log('🔄 Tentative de récupération des données depuis:', API_URL);
-      const [resRes, absRes, medRes] = await Promise.all([
-        fetch(`${API_URL}/api/reservations`),
-        fetch(`${API_URL}/api/disponibilites`),
-        fetch(`${API_URL}/api/personnel?role=medecin`)
-      ])
-
-      if (!resRes.ok || !absRes.ok || !medRes.ok) {
-        throw new Error('Erreur lors de la récupération des données (HTTP Error)');
-      }
-
-      const resData = await resRes.json()
-      const absData = await absRes.json()
-      const medData = await medRes.json()
-
-      console.log('📦 Données reçues:', { res: resData, abs: absData, med: medData });
-
-      setRendezVous(Array.isArray(resData.reservations) ? resData.reservations : [])
-      setAbsences(Array.isArray(absData) ? absData : [])
-      setMedecins(Array.isArray(medData.personnel) ? medData.personnel : [])
+      await fetch(`${API_URL}/api/reservations/${id}/cancel`, { method: 'PUT' })
+      await fetchAppointments()
     } catch (error) {
-      console.error('❌ Erreur lors du chargement des données:', error)
-      setMessageErreur('Impossible de charger les données. Vérifiez la connexion au serveur.')
+      console.error(error)
+    } finally {
+      setActionLoading(null)
     }
   }
 
-  const handleRefresh = () => {
-    fetchData()
+  const openReportModal = (app) => {
+    setSelectedApp(app)
+    setReportData({
+      date: app.date_rendez_vous ? app.date_rendez_vous.split('T')[0] : '',
+      heure: app.heure_rendez_vous || '',
+      motif: 'Indisponibilité du médecin'
+    })
+    setShowReportModal(true)
   }
 
-  const rendezVousFiltres = useMemo(
-    () =>
-      Array.isArray(rendezVous) ? rendezVous.filter((rdv) => filtre === 'tous' || rdv.statut === filtre) : [],
-    [rendezVous, filtre]
-  )
-
-  const medecinsDisponibles = useMemo(
-    () => Array.isArray(medecins) ? medecins : [],
-    [medecins]
-  )
-
-  const creneauxDisponibles = useMemo(
-    () => {
-      return ['08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30']
-    },
-    []
-  )
-
-  const ouvrirModal = (type, rdv = null) => {
-    console.log('🔓 Ouverture du modal:', type, rdv);
-    setModalType(type)
-    if (type === 'reporter' && rdv) {
-      setSelectedRdv(rdv)
-      setFormData({
-        ...INITIAL_FORM,
-        id_medecin: rdv.id_medecin,
-        date_rendez_vous: rdv.date_rendez_vous.split('T')[0],
-        heure_rendez_vous: rdv.heure_rendez_vous
-      })
-    } else {
-      setSelectedRdv(null)
-      setFormData(INITIAL_FORM)
-    }
-    setModalOuvert(true)
-  }
-
-  const fermerModal = () => {
-    setModalOuvert(false)
-    setMessageErreur('')
-    setFormData(INITIAL_FORM)
-  }
-
-  const gererChangement = (e) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-  }
-
-  const obtenirNomMedecin = (id) => {
-    const med = medecins.find(m => m.id === Number(id))
-    return med ? `${med.prenom} ${med.nom}` : 'Non assigné'
-  }
-
-  const estDisponible = (medecinId, date) => {
-    if (!medecinId) return true
-    return !absences.some(abs =>
-      abs.medecin_id === Number(medecinId) &&
-      date >= abs.date_debut &&
-      date <= abs.date_fin
-    )
-  }
-
-  const ajouterRendezVous = async () => {
-    const required = ['nom', 'prenom', 'date_naissance', 'sexe', 'telephone', 'motif', 'date_rendez_vous', 'heure_rendez_vous', 'id_medecin']
-    if (required.some(key => !formData[key])) {
-      setMessageErreur('Veuillez remplir tous les champs obligatoires (*)')
+  const handleConfirmReport = async () => {
+    if (!reportData.date || !reportData.heure) {
+      alert('Veuillez remplir la date et l\'heure')
       return
     }
-
-    if (!estDisponible(formData.id_medecin, formData.date_rendez_vous)) {
-      setMessageErreur(`Le médecin sélectionné est absent à cette date.`)
-      return
-    }
-
-    const payload = {
-      ...formData,
-      id_secretaire: user?.id
-    }
-
-    console.log('📤 Envoi de la réservation:', payload);
-
-    if (!payload.id_secretaire) {
-      setMessageErreur('Erreur d\'authentification : ID secrétaire manquant. Veuillez vous reconnecter.')
-      return
-    }
-
+    setActionLoading(selectedApp.id)
     try {
-      const res = await fetch(`${API_URL}/api/reservations`, {
-        method: 'POST',
+      const res = await fetch(`${API_URL}/api/reservations/${selectedApp.id}/report`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          date_rendez_vous: reportData.date,
+          heure_rendez_vous: reportData.heure,
+          motif_report: reportData.motif
+        })
       })
       const data = await res.json()
       if (data.success) {
-        fetchData()
-        fermerModal()
-      } else {
-        setMessageErreur(data.message)
+        setShowReportModal(false)
+        await fetchAppointments()
       }
     } catch (error) {
-      console.error('Erreur creation:', error)
-      setMessageErreur('Erreur de connexion au serveur')
+      console.error(error)
+    } finally {
+      setActionLoading(null)
     }
   }
 
-  const changerStatut = async (id, statut) => {
-    try {
-      const res = await fetch(`${API_URL}/api/reservations/${id}/statut`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ statut })
-      })
-      if (res.ok) fetchData()
-    } catch (error) {
-      console.error('Erreur changement statut:', error)
-    }
+  const getStatutBadge = (statut) => {
+    const s = (statut || '').toLowerCase()
+    if (s === 'confirme')  return { label: 'Confirmé',   cls: 'bg-emerald-100 text-emerald-700 border-emerald-200' }
+    if (s === 'attribue')  return { label: 'Attribué',   cls: 'bg-indigo-100 text-indigo-700 border-indigo-200' }
+    if (s === 'annule')    return { label: 'Annulé',     cls: 'bg-rose-100 text-rose-700 border-rose-200' }
+    if (s === 'reporte')   return { label: 'Reporté',    cls: 'bg-orange-100 text-orange-700 border-orange-200' }
+    if (s === 'termine')   return { label: 'Terminé',    cls: 'bg-gray-100 text-gray-600 border-gray-200' }
+    return { label: statut, cls: 'bg-gray-100 text-gray-600 border-gray-200' }
   }
 
-  const supprimerRendezVous = async (id) => {
-    if (!confirm('Supprimer définitivement ce rendez-vous ?')) return
-    try {
-      const res = await fetch(`${API_URL}/api/reservations/${id}`, { method: 'DELETE' })
-      if (res.ok) fetchData()
-    } catch (error) {
-      console.error('Erreur suppression:', error)
-    }
-  }
-
+  const tabs = [
+    { key: 'upcoming',  label: 'À venir',         count: countUpcoming,  icon: <CheckCircle className="w-4 h-4" />,  activeColor: 'border-b-emerald-500 text-emerald-600' },
+    { key: 'past',      label: 'Passés',           count: countPast,      icon: <Clock className="w-4 h-4" />,        activeColor: 'border-b-gray-500 text-gray-600' },
+    { key: 'cancelled', label: 'Annulés/Reportés', count: countCancelled, icon: <XCircle className="w-4 h-4" />,      activeColor: 'border-b-rose-500 text-rose-600' },
+  ]
 
   return (
     <Layout>
-      <div className="p-8 space-y-8 bg-gradient-to-br from-blue-50 via-emerald-50 to-teal-50 min-h-screen">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-4xl font-bold text-slate-900">Gestion des rendez-vous</h1>
-            <p className="text-slate-600 mt-2">Organisez et gérez les rendez-vous des patients</p>
-          </div>
-          <div className="flex gap-3 relative z-10">
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-3xl font-extrabold text-gray-900">Gestion des Rendez-vous</h1>
+          <p className="text-gray-500 mt-1.5 font-medium">Planification et report dynamique des consultations</p>
+        </div>
+
+        {/* TABS */}
+        <div className="flex gap-1 border-b border-gray-200">
+          {tabs.map(tab => (
             <button
-              onClick={handleRefresh}
-              className="inline-flex items-center gap-3 rounded-2xl bg-white px-6 py-3 text-slate-600 font-semibold shadow-sm border border-slate-200 hover:bg-slate-50 transition"
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`flex items-center gap-2 px-5 py-3.5 font-bold text-sm border-b-2 transition-all ${
+                activeTab === tab.key ? tab.activeColor : 'border-b-transparent text-gray-400 hover:text-gray-600'
+              }`}
             >
-              <Clock className="w-5 h-5" /> Rafraîchir
+              {tab.icon} {tab.label}
+              <span className={`px-2 py-0.5 rounded-full text-xs font-black ${activeTab === tab.key ? 'bg-current/10' : 'bg-gray-100 text-gray-500'}`}>
+                {tab.count}
+              </span>
             </button>
-            <button
-              onClick={() => ouvrirModal('ajouter')}
-              className="inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-3 text-white font-semibold shadow-lg hover:shadow-xl transition"
-            >
-              <Plus className="w-5 h-5" /> Nouveau RDV
-            </button>
-          </div>
+          ))}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-4">
-              <div className="bg-blue-100 p-3 rounded-2xl">
-                <Calendar className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm font-black uppercase text-slate-400 tracking-wider">Total RDV</p>
-                <p className="mt-3 text-3xl font-bold text-slate-900">{rendezVous.length}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-4">
-              <div className="bg-orange-100 p-3 rounded-2xl">
-                <Clock className="w-6 h-6 text-orange-600" />
-              </div>
-              <div>
-                <p className="text-sm font-black uppercase text-slate-400 tracking-wider">En attente</p>
-                <p className="mt-3 text-3xl font-bold text-slate-900">
-                  {rendezVous.filter((r) => r.statut === 'attente').length}
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-4">
-              <div className="bg-emerald-100 p-3 rounded-2xl">
-                <CheckCircle className="w-6 h-6 text-emerald-600" />
-              </div>
-              <div>
-                <p className="text-sm font-black uppercase text-slate-400 tracking-wider">Confirmés</p>
-                <p className="mt-3 text-3xl font-bold text-slate-900">
-                  {rendezVous.filter((r) => r.statut === 'confirme').length}
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-4">
-              <div className="bg-rose-100 p-3 rounded-2xl">
-                <XCircle className="w-6 h-6 text-rose-600" />
-              </div>
-              <div>
-                <p className="text-sm font-black uppercase text-slate-400 tracking-wider">Annulés</p>
-                <p className="mt-3 text-3xl font-bold text-slate-900">
-                  {rendezVous.filter((r) => r.statut === 'annule').length}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-4 rounded-[2rem] shadow-sm border border-slate-100">
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 px-2">
-            {['tous', 'attente', 'confirme', 'annule'].map((f) => (
-              <button
-                key={f}
-                onClick={() => setFiltre(f)}
-                className={`px-6 py-2.5 rounded-xl text-sm font-bold capitalize transition-all whitespace-nowrap ${filtre === f
-                  ? 'bg-slate-900 text-white shadow-lg'
-                  : 'text-slate-500 hover:bg-slate-50'
-                  }`}
-              >
-                {f === 'tous' ? 'Tous les RDV' : STATUTS[f]}
-              </button>
-            ))}
-          </div>
-          <div className="relative group px-2">
-            <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-teal-500 transition-colors" />
-            <input
-              type="text"
-              placeholder="Rechercher un patient..."
-              className="w-full md:w-64 pl-12 pr-6 py-3 bg-slate-50 border-2 border-slate-50 rounded-xl text-sm focus:bg-white focus:border-teal-500 outline-none transition-all font-medium"
-            />
-          </div>
-        </div>
-
-        <div className="grid gap-6">
-          {rendezVousFiltres.length === 0 ? (
-            <div className="bg-white rounded-[2.5rem] p-16 text-center border-2 border-dashed border-slate-200">
-              <Calendar className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-500 font-medium text-lg">Aucun rendez-vous trouvé.</p>
-            </div>
-          ) : (
-            rendezVousFiltres.map((rdv) => (
-              <div key={rdv.id} className={`group relative bg-white rounded-[2rem] p-6 shadow-sm border-2 transition-all hover:shadow-xl hover:-translate-y-1 ${COULEURS_STATUTS[rdv.statut]}`}>
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                  <div className="flex items-start gap-5">
-                    <div className="bg-white p-4 rounded-2xl shadow-sm group-hover:scale-110 transition-transform">
-                      <User className="w-8 h-8 text-teal-600" />
+        {loading ? (
+          <div className="flex justify-center py-20"><div className="w-10 h-10 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin" /></div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4">
+            {filteredAppointments.map(app => (
+              <div key={app.id} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${getStatutBadge(app.statut).cls}`}>
+                        {getStatutBadge(app.statut).label}
+                      </span>
+                      <span className="text-xs text-gray-400 font-bold">ID: #{app.id}</span>
                     </div>
-                    <div>
-                      <div className="flex items-center gap-3 mb-1">
-                        <h3 className="font-bold text-xl text-slate-900">{rdv.prenom} {rdv.nom}</h3>
-                        <span className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter border-2 ${rdv.statut === 'confirme' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
-                          rdv.statut === 'annule' ? 'bg-rose-100 text-rose-700 border-rose-200' :
-                            'bg-orange-100 text-orange-700 border-orange-200'
-                          }`}>
-                          {STATUTS[rdv.statut]}
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap gap-4 text-sm text-slate-500 font-medium">
-                        <div className="flex items-center gap-1.5"><Calendar className="w-4 h-4" /> {new Date(rdv.date_rendez_vous).toLocaleDateString()}</div>
-                        <div className="flex items-center gap-1.5"><Clock className="w-4 h-4" /> {rdv.heure_rendez_vous}</div>
-                        <div className="flex items-center gap-1.5"><Search className="w-4 h-4 text-teal-500" /> <span className="text-slate-700">Dr. {obtenirNomMedecin(rdv.id_medecin)}</span></div>
-                      </div>
+                    <h3 className="text-lg font-bold text-gray-900">{app.patient_prenom} {app.patient_nom}</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1 mt-3">
+                      <div className="flex items-center gap-2 text-sm text-gray-500"><Calendar className="w-4 h-4 text-teal-500" /> {new Date(app.date_rendez_vous).toLocaleDateString('fr-FR')}</div>
+                      <div className="flex items-center gap-2 text-sm text-gray-500"><Clock className="w-4 h-4 text-teal-500" /> {app.heure_rendez_vous?.substring(0, 5)}</div>
+                      {app.medecin_nom && <div className="flex items-center gap-2 text-sm text-indigo-600 font-bold"><Stethoscope className="w-4 h-4" /> Dr. {app.medecin_nom}</div>}
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    {rdv.statut === 'attente' && (
+                  <div className="flex gap-2">
+                    {['confirme', 'attribue'].includes((app.statut || '').toLowerCase()) && (
                       <>
-                        <button onClick={() => changerStatut(rdv.id, 'confirme')} className="p-3 bg-white text-emerald-600 hover:bg-emerald-600 hover:text-white border-2 border-emerald-100 rounded-2xl transition-all shadow-sm"><CheckCircle className="w-6 h-6" /></button>
-                        <button onClick={() => ouvrirModal('reporter', rdv)} className="p-3 bg-white text-blue-600 hover:bg-blue-600 hover:text-white border-2 border-blue-100 rounded-2xl transition-all shadow-sm"><ArrowRightCircle className="w-6 h-6" /></button>
+                        <button onClick={() => openReportModal(app)} className="flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-700 font-bold rounded-xl border border-amber-200 hover:bg-amber-100 transition-colors">
+                          <RotateCcw className="w-4 h-4" /> Reporter
+                        </button>
+                        <button onClick={() => handleCancel(app.id)} className="flex items-center gap-2 px-4 py-2 bg-rose-50 text-rose-600 font-bold rounded-xl border border-rose-200 hover:bg-rose-100 transition-colors">
+                          <XCircle className="w-4 h-4" /> Annuler
+                        </button>
                       </>
                     )}
-                    <button onClick={() => changerStatut(rdv.id, 'annule')} className="p-3 bg-white text-rose-600 hover:bg-rose-600 hover:text-white border-2 border-rose-100 rounded-2xl transition-all shadow-sm"><XCircle className="w-6 h-6" /></button>
-                    <button onClick={() => supprimerRendezVous(rdv.id)} className="p-3 bg-white text-slate-400 hover:bg-slate-600 hover:text-white border-2 border-slate-100 rounded-2xl transition-all shadow-sm"><Trash2 className="w-6 h-6" /></button>
                   </div>
                 </div>
               </div>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        )}
 
-        <ModalRendezVous
-          modalOuvert={modalOuvert}
-          modalType={modalType}
-          selectedRdv={selectedRdv}
-          formData={formData}
-          setFormData={setFormData}
-          gererChangement={gererChangement}
-          fermerModal={fermerModal}
-          ajouterRendezVous={ajouterRendezVous}
-          creneauxDisponibles={creneauxDisponibles}
-          medecins={medecins}
-          estDisponible={estDisponible}
-          messageErreur={messageErreur}
-          onReporter={async () => {
-            try {
-              const res = await fetch(`${API_URL}/api/reservations/${selectedRdv.id}/reporter`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  id_medecin: formData.id_medecin,
-                  date_rendez_vous: formData.date_rendez_vous,
-                  heure_rendez_vous: formData.heure_rendez_vous
-                })
-              })
-              if (res.ok) {
-                fetchData()
-                fermerModal()
-              }
-            } catch (error) {
-              console.error('Erreur report:', error)
-            }
-          }}
-        />
+        {/* MODAL DE REPORT PROFESSIONNEL */}
+        {showReportModal && selectedApp && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div className="bg-white rounded-[2.5rem] w-full max-w-xl overflow-hidden shadow-2xl animate-in zoom-in duration-200">
+              <div className="bg-gradient-to-r from-amber-500 to-orange-600 p-8 text-white">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h2 className="text-2xl font-black">Reporter le Rendez-vous</h2>
+                    <p className="text-amber-100 font-medium opacity-90">Modification dynamique de la planification</p>
+                  </div>
+                  <button onClick={() => setShowReportModal(false)} className="p-2 hover:bg-white/20 rounded-full transition-colors">
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-8 space-y-6">
+                {/* Infos Patient */}
+                <div className="bg-gray-50 rounded-3xl p-5 border border-gray-100">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Informations du Patient</p>
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center border border-gray-200 shadow-sm">
+                      <User className="w-6 h-6 text-gray-400" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900 text-lg">{selectedApp.patient_prenom} {selectedApp.patient_nom}</p>
+                      <div className="flex flex-col gap-1 mt-1">
+                        <span className="flex items-center gap-2 text-sm text-gray-500"><Phone className="w-3.5 h-3.5 text-teal-500" /> {selectedApp.patient_telephone || 'Non renseigné'}</span>
+                        <span className="flex items-center gap-2 text-sm text-gray-500"><Mail className="w-3.5 h-3.5 text-teal-500" /> {selectedApp.patient_email || 'Non renseigné'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Formulaire de report */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-gray-500 uppercase tracking-wider ml-1">Nouvelle Date</label>
+                    <div className="relative">
+                      <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-500" />
+                      <input 
+                        type="date" 
+                        value={reportData.date}
+                        onChange={(e) => setReportData({...reportData, date: e.target.value})}
+                        className="w-full pl-11 pr-4 py-3 bg-white border-2 border-gray-100 rounded-2xl focus:border-amber-500 outline-none transition-all font-bold text-gray-700"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-gray-500 uppercase tracking-wider ml-1">Nouvelle Heure</label>
+                    <div className="relative">
+                      <Clock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-500" />
+                      <input 
+                        type="time" 
+                        value={reportData.heure}
+                        onChange={(e) => setReportData({...reportData, heure: e.target.value})}
+                        className="w-full pl-11 pr-4 py-3 bg-white border-2 border-gray-100 rounded-2xl focus:border-amber-500 outline-none transition-all font-bold text-gray-700"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-gray-500 uppercase tracking-wider ml-1">Motif du report</label>
+                  <textarea 
+                    rows="2"
+                    value={reportData.motif}
+                    onChange={(e) => setReportData({...reportData, motif: e.target.value})}
+                    placeholder="Ex: Le médecin est en urgence..."
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-100 rounded-2xl focus:border-amber-500 outline-none transition-all font-medium text-gray-700"
+                  ></textarea>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button onClick={() => setShowReportModal(false)} className="flex-1 py-4 font-bold text-gray-500 bg-gray-100 rounded-2xl hover:bg-gray-200 transition-all">
+                    Annuler
+                  </button>
+                  <button 
+                    onClick={handleConfirmReport}
+                    disabled={actionLoading === selectedApp.id}
+                    className="flex-[2] py-4 font-black text-white bg-gradient-to-r from-amber-500 to-orange-600 rounded-2xl shadow-lg shadow-amber-200 hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+                  >
+                    {actionLoading === selectedApp.id ? 'Traitement...' : 'Confirmer le Report'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </Layout>
   )

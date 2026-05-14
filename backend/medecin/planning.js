@@ -9,7 +9,7 @@ router.get('/medecin/:medecinId', async (req, res) => {
     const { medecinId } = req.params;
 
     try {
-        await cleanupOldPlanning();
+        // await cleanupOldPlanning(); // Désactivé pour conserver l'historique
 
         const [rows] = await pool.execute(`
             SELECT * 
@@ -33,17 +33,57 @@ router.get('/medecin/:medecinId', async (req, res) => {
 // 🌍 PLANNING GLOBAL
 // ======================================================
 router.get('/all/global', async (req, res) => {
+    const { start_date, end_date, search, patient_search } = req.query;
+    
     try {
-        await cleanupOldPlanning();
-
-        const [rows] = await pool.execute(`
-            SELECT p.*, m.nom AS medecin_nom, m.prenom AS medecin_prenom, m.specialite
+        let query = `
+            SELECT DISTINCT p.*, m.nom AS medecin_nom, m.prenom AS medecin_prenom, m.specialite
             FROM planning_medecin p
             JOIN medecin m ON p.id_medecin = m.id
-            ORDER BY p.date_planning ASC, p.heure_debut ASC
-        `);
+            LEFT JOIN reservation r ON r.id_medecin = p.id_medecin 
+                AND r.date_rendez_vous = p.date_planning 
+                AND r.heure_rendez_vous BETWEEN p.heure_debut AND p.heure_fin
+            LEFT JOIN patient pt ON r.patient_id = pt.id
+            WHERE 1=1
+        `;
+        const params = [];
 
-        res.json({ success: true, planning: rows });
+        if (start_date) {
+            query += " AND p.date_planning >= ?";
+            params.push(start_date);
+        }
+        if (end_date) {
+            query += " AND p.date_planning <= ?";
+            params.push(end_date);
+        }
+        if (search) {
+            query += " AND (m.nom LIKE ? OR m.prenom LIKE ?)";
+            params.push(`%${search}%`, `%${search}%`);
+        }
+        if (patient_search) {
+            query += " AND (pt.nom LIKE ? OR pt.prenom LIKE ?)";
+            params.push(`%${patient_search}%`, `%${patient_search}%`);
+        }
+
+        query += " ORDER BY p.date_planning ASC, p.heure_debut ASC";
+
+        const [rows] = await pool.execute(query, params);
+
+        // Pour chaque créneau, vérifier s'il y a des rendez-vous
+        const planningWithImpacts = await Promise.all(rows.map(async (p) => {
+            const [rdvs] = await pool.execute(`
+                SELECT COUNT(*) as count 
+                FROM reservation 
+                WHERE id_medecin = ? 
+                AND date_rendez_vous = ? 
+                AND heure_rendez_vous BETWEEN ? AND ?
+                AND statut NOT IN ('annule', 'termine')
+            `, [p.id_medecin, p.date_planning, p.heure_debut, p.heure_fin]);
+            
+            return { ...p, nb_reservations: rdvs[0].count };
+        }));
+
+        res.json({ success: true, planning: planningWithImpacts });
     } catch (error) {
         console.error(error);
         res.status(500).json({ success: false, message: 'Erreur serveur' });
@@ -54,19 +94,36 @@ router.get('/all/global', async (req, res) => {
 // 🧹 NETTOYAGE AUTOMATIQUE (après 24h)
 // ======================================================
 const cleanupOldPlanning = async () => {
-    try {
-        const [result] = await pool.execute(`
-            DELETE FROM planning_medecin 
-            WHERE TIMESTAMP(date_planning, heure_fin) < NOW() - INTERVAL 24 HOUR
-        `);
-
-        if (result.affectedRows > 0) {
-            console.log(`🧹 ${result.affectedRows} anciens créneaux supprimés (plus de 24h)`);
-        }
-    } catch (err) {
-        console.error('Erreur lors du cleanup planning:', err);
-    }
+    // Désactivé selon les nouvelles exigences de conservation des données
+    console.log('🧹 Cleanup automatique désactivé');
 };
+
+// ======================================================
+// 🔍 IMPACTS D'UN CRÉNEAU
+// ======================================================
+router.get('/:id/impacts', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const [planning] = await pool.execute('SELECT * FROM planning_medecin WHERE id = ?', [id]);
+        if (planning.length === 0) return res.status(404).json({ success: false });
+
+        const p = planning[0];
+        const [rdvs] = await pool.execute(`
+            SELECT r.*, p.nom as patient_nom, p.prenom as patient_prenom, p.telephone as patient_telephone
+            FROM reservation r
+            JOIN patient p ON r.patient_id = p.id
+            WHERE r.id_medecin = ? 
+            AND r.date_rendez_vous = ? 
+            AND r.heure_rendez_vous BETWEEN ? AND ?
+            AND r.statut NOT IN ('annule', 'termine')
+        `, [p.id_medecin, p.date_planning, p.heure_debut, p.heure_fin]);
+
+        res.json({ success: true, impactes: rdvs });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false });
+    }
+});
 
 // ======================================================
 // 📝 AJOUT / MODIFICATION
@@ -79,7 +136,7 @@ router.post('/', async (req, res) => {
     }
 
     try {
-        await cleanupOldPlanning();
+        // await cleanupOldPlanning(); // Désactivé
 
         // Vérification chevauchement
         const [overlaps] = await pool.execute(`

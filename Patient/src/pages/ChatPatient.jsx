@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../layouts/Layout';
 import { 
   Send, ArrowLeft, CheckCircle2, MessageSquare, 
-  Image as ImageIcon, Mic, Paperclip, FileText, Download, Play, Trash2, RefreshCw
+  Image as ImageIcon, Mic, Paperclip, FileText, Download, Play, Trash2, RefreshCw, Pause
 } from 'lucide-react';
 
 export default function ChatPatient() {
@@ -23,13 +23,17 @@ export default function ChatPatient() {
   const fileInputRef = useRef(null);
   const imageInputRef = useRef(null);
   const mediaRecorderRef = useRef(null);
+  const audioRef = useRef(null);
+  const [playingAudio, setPlayingAudio] = useState(null);
+
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
   // Charger les infos du médecin et les messages
   const fetchData = async () => {
     if (!patientId || !medecinId) return;
     try {
       // Charger les messages
-      const resMsg = await fetch(`/api/messagerie/conversation/${patientId}/${medecinId}`);
+      const resMsg = await fetch(`${API_URL}/api/messagerie/conversation/${patientId}/${medecinId}`);
       const dataMsg = await resMsg.json();
       if (dataMsg.success) {
         setMessages(dataMsg.data);
@@ -37,7 +41,7 @@ export default function ChatPatient() {
         // Marquer comme lu
         const nonLus = dataMsg.data.some(m => m.expediteur === 'medecin' && m.lu === 0);
         if (nonLus) {
-          await fetch('/api/messagerie/marquer-lu', {
+          await fetch(`${API_URL}/api/messagerie/marquer-lu`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id_patient: patientId, id_medecin: medecinId, pour_qui: 'patient' })
@@ -45,8 +49,8 @@ export default function ChatPatient() {
         }
       }
 
-      // Charger les infos du médecin via la liste des discussions (simple way)
-      const resDisc = await fetch(`/api/messagerie/patient/${patientId}/discussions`);
+      // Charger les infos du médecin
+      const resDisc = await fetch(`${API_URL}/api/messagerie/patient/${patientId}/discussions`);
       const dataDisc = await resDisc.json();
       if (dataDisc.success) {
         const disc = dataDisc.data.find(d => d.medecin_id === parseInt(medecinId));
@@ -92,6 +96,7 @@ export default function ChatPatient() {
       setIsRecording(true);
     } catch (err) {
       console.error("Microphone access denied:", err);
+      alert("Accès au microphone refusé. Veuillez vérifier vos paramètres.");
     }
   };
 
@@ -117,17 +122,16 @@ export default function ChatPatient() {
       formData.append('fichier', attachment);
     }
 
-    setNouveauMessage('');
-    setAttachment(null);
-    setAttachmentType('text');
-
     try {
-      const response = await fetch('/api/messagerie/envoyer', {
+      const res = await fetch(`${API_URL}/api/messagerie/envoyer`, {
         method: 'POST',
         body: formData
       });
-      const data = await response.json();
+      const data = await res.json();
       if (data.success) {
+        setNouveauMessage('');
+        setAttachment(null);
+        setAttachmentType('text');
         fetchData();
       }
     } catch (error) {
@@ -135,16 +139,20 @@ export default function ChatPatient() {
     }
   };
 
+  const getFullUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    return `${API_URL}${url}`;
+  };
+
   return (
     <Layout>
-      <div className="h-[calc(100vh-100px)] flex flex-col bg-white rounded-[2.5rem] shadow-2xl border border-gray-100 overflow-hidden relative">
+      <div className="max-w-4xl mx-auto h-[calc(100vh-120px)] flex flex-col bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border border-gray-100 animate-in fade-in duration-500">
+        
         {/* Header */}
-        <div className="px-8 py-6 bg-white border-b border-gray-50 flex items-center justify-between z-10 shadow-sm">
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={() => navigate('/dashboard/consultations')}
-              className="p-2 hover:bg-gray-50 rounded-xl text-gray-400 transition"
-            >
+        <div className="p-6 border-b border-gray-50 bg-white/80 backdrop-blur-sm flex items-center justify-between sticky top-0 z-10">
+          <div className="flex items-center gap-5">
+            <button onClick={() => navigate(-1)} className="p-2.5 hover:bg-teal-50 text-teal-600 rounded-2xl transition-all active:scale-90">
               <ArrowLeft className="w-6 h-6" />
             </button>
             <div className="w-12 h-12 bg-teal-600 text-white rounded-2xl flex items-center justify-center font-black text-xl shadow-lg shadow-teal-100">
@@ -160,7 +168,7 @@ export default function ChatPatient() {
         </div>
 
         {/* Messages List */}
-        <div className="flex-1 overflow-y-auto p-8 space-y-6 bg-slate-50/20">
+        <div className="flex-1 overflow-y-auto p-8 space-y-6 bg-slate-50/20 custom-scrollbar">
           {loading ? (
             <div className="flex flex-col items-center justify-center h-full text-gray-300">
               <RefreshCw className="w-10 h-10 animate-spin mb-4" />
@@ -178,28 +186,54 @@ export default function ChatPatient() {
                 <div key={msg.id || idx} className={`flex ${isPatient ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
                   <div className={`max-w-[75%] rounded-[2rem] px-6 py-4 shadow-sm relative ${
                     isPatient 
-                      ? 'bg-teal-600 text-white rounded-tr-none' 
-                      : 'bg-white text-gray-800 border border-gray-100 rounded-tl-none'
+                      ? 'bg-teal-600 text-white rounded-tr-none shadow-teal-100' 
+                      : 'bg-white text-gray-800 border border-gray-100 rounded-tl-none shadow-gray-100'
                   }`}>
                     {msg.type === 'image' && msg.fichier_url && (
                       <div className="mb-3 rounded-xl overflow-hidden shadow-md">
                         <img 
-                          src={`${msg.fichier_url}`} 
+                          src={getFullUrl(msg.fichier_url)} 
                           alt="Shared" 
-                          className="max-w-full h-auto cursor-pointer hover:scale-105 transition-transform"
-                          onClick={() => window.open(`${msg.fichier_url}`, '_blank')}
+                          className="max-w-full h-auto cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => window.open(getFullUrl(msg.fichier_url), '_blank')}
                         />
                       </div>
                     )}
 
                     {msg.type === 'vocal' && msg.fichier_url && (
-                      <div className={`mb-3 p-3 rounded-2xl flex items-center gap-3 ${isPatient ? 'bg-teal-500' : 'bg-teal-50'}`}>
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isPatient ? 'bg-white text-teal-600' : 'bg-teal-600 text-white'}`}>
-                          <Play className="w-5 h-5" />
+                      <div className={`mb-3 p-4 rounded-[1.5rem] flex items-center gap-4 ${isPatient ? 'bg-teal-700/50' : 'bg-teal-50/50'}`}>
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center cursor-pointer transition-all active:scale-90 ${isPatient ? 'bg-white text-teal-600' : 'bg-teal-600 text-white shadow-md'}`}>
+                           {playingAudio === msg.id ? (
+                             <Pause className="w-6 h-6 fill-current" onClick={() => { 
+                               if (audioRef.current) {
+                                 audioRef.current.pause(); 
+                                 setPlayingAudio(null); 
+                               }
+                             }} />
+                           ) : (
+                             <Play className="w-6 h-6 fill-current" onClick={() => {
+                               if (audioRef.current) {
+                                 const url = getFullUrl(msg.fichier_url);
+                                 console.log('Playing audio:', url);
+                                 audioRef.current.src = url;
+                                 audioRef.current.load();
+                                 audioRef.current.play()
+                                   .then(() => setPlayingAudio(msg.id))
+                                   .catch(err => {
+                                     console.error('Audio playback error:', err);
+                                     alert("Impossible de lire ce fichier audio. Le format n'est peut-être pas supporté par votre navigateur ou le fichier est manquant.");
+                                     setPlayingAudio(null);
+                                   });
+                               }
+                             }} />
+                           )}
                         </div>
-                        <audio controls className="h-8 max-w-[150px] md:max-w-[200px]">
-                          <source src={`${msg.fichier_url}`} type="audio/webm" />
-                        </audio>
+                        <div className="flex-1 flex flex-col gap-1">
+                           <div className="h-1 bg-gray-200/30 rounded-full relative overflow-hidden">
+                              <div className={`absolute top-0 left-0 h-full bg-current opacity-50 ${playingAudio === msg.id ? 'animate-progress' : 'w-0'}`}></div>
+                           </div>
+                           <p className={`text-[8px] font-black uppercase tracking-tighter ${isPatient ? 'text-teal-200' : 'text-teal-600'}`}>Message Vocal</p>
+                        </div>
                       </div>
                     )}
 
@@ -209,7 +243,7 @@ export default function ChatPatient() {
                         <div className="flex-1 min-w-0">
                           <p className={`text-xs font-bold truncate ${isPatient ? 'text-white' : 'text-gray-900'}`}>Document</p>
                           <a 
-                            href={`${msg.fichier_url}`} 
+                            href={getFullUrl(msg.fichier_url)} 
                             target="_blank" 
                             rel="noopener noreferrer"
                             className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-1 mt-1 ${isPatient ? 'text-teal-200 hover:text-white' : 'text-teal-600 hover:text-teal-700'}`}
@@ -237,6 +271,14 @@ export default function ChatPatient() {
           <div ref={messagesEndRef} />
         </div>
 
+        {/* Global Audio Reference */}
+        <audio 
+          ref={audioRef} 
+          hidden 
+          onEnded={() => setPlayingAudio(null)} 
+          onError={() => { alert("Erreur lors de la lecture de l'audio"); setPlayingAudio(null); }}
+        />
+
         {/* Input Area */}
         <div className="p-6 bg-white border-t border-gray-50">
           {attachment && (
@@ -253,15 +295,23 @@ export default function ChatPatient() {
             </div>
           )}
 
-          <form onSubmit={envoyerMessage} className="flex items-end gap-3 bg-gray-50 p-2 rounded-[2rem] border border-gray-100 focus-within:border-teal-300 focus-within:bg-white transition-all">
-            <div className="flex items-center gap-1 pl-2 mb-2">
-              <button type="button" onClick={() => imageInputRef.current.click()} className="p-2.5 text-gray-400 hover:text-teal-600 hover:bg-white rounded-full transition">
+          <form onSubmit={envoyerMessage} className="flex items-end gap-3 bg-gray-100 p-2 rounded-[2rem] border border-transparent focus-within:border-teal-300 focus-within:bg-white transition-all shadow-sm">
+            <div className="flex items-center gap-1 pl-2 mb-1.5">
+              <button type="button" onClick={() => imageInputRef.current.click()} className="p-3 text-gray-400 hover:text-teal-600 hover:bg-white rounded-full transition-all">
                 <ImageIcon className="w-5 h-5" />
               </button>
-              <button type="button" onClick={() => fileInputRef.current.click()} className="p-2.5 text-gray-400 hover:text-teal-600 hover:bg-white rounded-full transition">
+              <button type="button" onClick={() => fileInputRef.current.click()} className="p-3 text-gray-400 hover:text-teal-600 hover:bg-white rounded-full transition-all">
                 <Paperclip className="w-5 h-5" />
               </button>
-              <button type="button" onClick={isRecording ? stopRecording : startRecording} className={`p-2.5 rounded-full transition ${isRecording ? 'bg-red-500 text-white animate-pulse' : 'text-gray-400 hover:text-teal-600 hover:bg-white'}`}>
+              <button 
+                type="button" 
+                onMouseDown={startRecording}
+                onMouseUp={stopRecording}
+                onTouchStart={startRecording}
+                onTouchEnd={stopRecording}
+                className={`p-3 rounded-full transition-all ${isRecording ? 'bg-red-500 text-white animate-pulse' : 'text-gray-400 hover:text-teal-600 hover:bg-white'}`}
+                title="Maintenir pour enregistrer"
+              >
                 <Mic className="w-5 h-5" />
               </button>
             </div>
@@ -286,13 +336,21 @@ export default function ChatPatient() {
             <button
               type="submit"
               disabled={!nouveauMessage.trim() && !attachment}
-              className="w-12 h-12 flex items-center justify-center bg-teal-600 hover:bg-teal-700 disabled:bg-gray-200 text-white rounded-2xl shadow-lg transition-all shrink-0 active:scale-95"
+              className="w-12 h-12 flex items-center justify-center bg-teal-600 hover:bg-teal-700 disabled:bg-gray-200 text-white rounded-2xl shadow-xl transition-all shrink-0 active:scale-95"
             >
               <Send className="w-5 h-5" />
             </button>
           </form>
+          <p className="text-[9px] text-gray-400 mt-3 text-center font-bold uppercase tracking-widest">Maintenez le micro pour enregistrer un message vocal</p>
         </div>
       </div>
+      <style dangerouslySetInnerHTML={{ __html: `
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+        @keyframes progress { from { width: 0%; } to { width: 100%; } }
+        .animate-progress { animation: progress 3s linear infinite; }
+      `}} />
     </Layout>
   );
 }

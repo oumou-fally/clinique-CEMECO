@@ -159,17 +159,35 @@ export default function TableauDeBordPatient() {
                       </p>
                     </div>
                     <div>
-                      <p className="font-black text-gray-900 text-lg">Dr. {appointment.medecin_nom} {appointment.medecin_prenom}</p>
-                      <p className="text-sm text-gray-500 font-bold uppercase tracking-widest text-[10px]">{appointment.specialite}</p>
+                      <p className="font-black text-gray-900 text-lg">
+                        {appointment.medecin_nom 
+                          ? `Dr. ${appointment.medecin_nom} ${appointment.medecin_prenom || ''}`
+                          : 'Médecin à confirmer'}
+                      </p>
+                      <p className="text-sm text-gray-500 font-bold uppercase tracking-widest text-[10px]">
+                        {appointment.specialite || 'Généraliste'}
+                      </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="flex items-center gap-2 justify-end text-gray-900 font-black mb-1">
-                      <Clock className="w-4 h-4 text-teal-600" />
-                      {appointment.heure_rendez_vous.substring(0,5)}
+                    <div className="text-right">
+                      <div className="flex items-center gap-2 justify-end text-gray-900 font-black mb-1">
+                        <Clock className="w-4 h-4 text-teal-600" />
+                        {appointment.heure_rendez_vous.substring(0,5)}
+                      </div>
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                        appointment.statut === 'confirme' ? 'bg-emerald-100 text-emerald-700' :
+                        appointment.statut === 'attribue' ? 'bg-indigo-100 text-indigo-700' :
+                        appointment.statut === 'annule' ? 'bg-rose-100 text-rose-700' :
+                        appointment.statut === 'reporte' ? 'bg-amber-100 text-amber-700' :
+                        'bg-gray-100 text-gray-700'
+                      }`}>
+                        {appointment.statut === 'confirme' ? 'Confirmé' :
+                         appointment.statut === 'attribue' ? 'Attribué' :
+                         appointment.statut === 'annule' ? 'Annulé' :
+                         appointment.statut === 'reporte' ? 'Reporté' :
+                         appointment.statut || 'En attente'}
+                      </span>
                     </div>
-                    <span className="px-3 py-1 bg-teal-100 text-teal-700 rounded-full text-[10px] font-black uppercase tracking-widest">Confirmé</span>
-                  </div>
                 </div>
               ))
             )}

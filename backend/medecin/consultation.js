@@ -97,16 +97,30 @@ router.post('/', async (req, res) => {
 });
 
 // Récupérer l'historique des consultations pour un médecin
+// Récupérer l'historique des consultations pour un médecin (inclut toutes les réservations terminées)
 router.get('/historique/:medecinId', async (req, res) => {
     const { medecinId } = req.params;
     try {
         const [rows] = await pool.execute(`
-            SELECT c.*, p.nom as patient_nom, p.prenom as patient_prenom, r.date_rendez_vous, r.heure_rendez_vous, r.motif
-            FROM consultation c
-            JOIN reservation r ON c.id_reservation = r.id_reservation
+            SELECT 
+                r.id_reservation as id, 
+                r.date_rendez_vous, 
+                r.heure_rendez_vous, 
+                r.motif, 
+                r.statut,
+                c.id as id_consultation,
+                c.date_consultation,
+                c.diagnostic,
+                c.traitement,
+                c.notes,
+                p.nom as patient_nom, 
+                p.prenom as patient_prenom,
+                p.id as patient_id
+            FROM reservation r
+            LEFT JOIN consultation c ON r.id_reservation = c.id_reservation
             JOIN patient p ON r.patient_id = p.id
-            WHERE c.id_medecin = ?
-            ORDER BY c.date_consultation DESC
+            WHERE r.id_medecin = ? AND (r.statut = 'termine' OR c.id IS NOT NULL)
+            ORDER BY r.date_rendez_vous DESC, r.heure_rendez_vous DESC
         `, [medecinId]);
         
         res.json({ success: true, consultations: rows });
@@ -141,15 +155,44 @@ router.get('/detail/:reservationId', async (req, res) => {
 
 // Enregistrer une ordonnance
 router.post('/ordonnance', async (req, res) => {
-    const { id_consultation, medicaments } = req.body;
+    let { id_consultation, id_reservation, medicaments } = req.body;
 
-    if (!id_consultation || !medicaments || !Array.isArray(medicaments) || medicaments.length === 0) {
-        return res.status(400).json({ success: false, message: 'Données invalides' });
+    if (!id_consultation && !id_reservation) {
+        return res.status(400).json({ success: false, message: 'ID Consultation ou ID Réservation requis' });
     }
 
     const connection = await pool.getConnection();
     try {
         await connection.beginTransaction();
+
+        // Si on a l'ID Réservation mais pas Consultation, on le cherche ou on le crée
+        if (!id_consultation && id_reservation) {
+            const [rows] = await connection.execute(
+                'SELECT id FROM consultation WHERE id_reservation = ?',
+                [id_reservation]
+            );
+            
+            if (rows.length > 0) {
+                id_consultation = rows[0].id;
+            } else {
+                // Création automatique d'un enregistrement de consultation basique si manquant
+                // On récupère l'ID du médecin depuis la réservation
+                const [resInfo] = await connection.execute('SELECT id_medecin FROM reservation WHERE id_reservation = ?', [id_reservation]);
+                const medId = resInfo.length > 0 ? resInfo[0].id_medecin : null;
+                
+                const [newConsult] = await connection.execute(
+                    'INSERT INTO consultation (id_reservation, id_medecin, date_consultation) VALUES (?, ?, CURRENT_TIMESTAMP)',
+                    [id_reservation, medId]
+                );
+                id_consultation = newConsult.insertId;
+                
+                // On s'assure que la réservation est bien marquée comme terminée
+                await connection.execute(
+                    "UPDATE reservation SET statut = 'termine' WHERE id_reservation = ?",
+                    [id_reservation]
+                );
+            }
+        }
 
         const [existing] = await connection.execute(
             'SELECT id FROM ordonnance WHERE id_consultation = ?',
@@ -182,13 +225,28 @@ router.post('/ordonnance', async (req, res) => {
 });
 
 // Récupérer l'ordonnance d'une consultation
-router.get('/ordonnance/:consultationId', async (req, res) => {
-    const { consultationId } = req.params;
+router.get('/ordonnance/:id', async (req, res) => {
+    const { id } = req.params;
     try {
-        const [rows] = await pool.execute(
+        // On cherche d'abord si c'est un ID de consultation
+        let [rows] = await pool.execute(
             'SELECT * FROM ordonnance WHERE id_consultation = ?',
-            [consultationId]
+            [id]
         );
+
+        // Si non trouvé, c'est peut-être un ID de réservation
+        if (rows.length === 0) {
+            const [consults] = await pool.execute(
+                'SELECT id FROM consultation WHERE id_reservation = ?',
+                [id]
+            );
+            if (consults.length > 0) {
+                [rows] = await pool.execute(
+                    'SELECT * FROM ordonnance WHERE id_consultation = ?',
+                    [consults[0].id]
+                );
+            }
+        }
 
         if (rows.length > 0) {
             const ordonnance = rows[0];
@@ -211,7 +269,7 @@ router.get('/ordonnance/:consultationId', async (req, res) => {
 router.get('/ordonnances/all', async (req, res) => {
     try {
         const [rows] = await pool.execute(`
-            SELECT o.*, c.id AS id_consultation, p.nom as patient_nom, p.prenom as patient_prenom, r.date_rendez_vous, r.motif
+            SELECT o.*, c.id AS id_consultation, p.nom as patient_nom, p.prenom as patient_prenom, r.date_rendez_vous, r.motif, r.id_reservation
             FROM ordonnance o
             JOIN consultation c ON o.id_consultation = c.id
             JOIN reservation r ON c.id_reservation = r.id_reservation
@@ -230,7 +288,7 @@ router.get('/ordonnances/medecin/:medecinId', async (req, res) => {
     const { medecinId } = req.params;
     try {
         const [rows] = await pool.execute(`
-            SELECT o.*, c.id AS id_consultation, p.nom as patient_nom, p.prenom as patient_prenom, r.date_rendez_vous, r.motif
+            SELECT o.*, c.id AS id_consultation, p.nom as patient_nom, p.prenom as patient_prenom, r.date_rendez_vous, r.motif, r.id_reservation
             FROM ordonnance o
             JOIN consultation c ON o.id_consultation = c.id
             JOIN reservation r ON c.id_reservation = r.id_reservation

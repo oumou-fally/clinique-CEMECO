@@ -36,8 +36,8 @@ export default function EmploiDuTempsMedecins() {
     try {
       setLoading(true)
       const [planRes, absRes, medRes] = await Promise.all([
-        fetch('/api/planning/all/global'),
-        fetch('/api/disponibilites'),
+        fetch('/api/medecin/planning/all/global'),
+        fetch('/api/medecin/disponibilites'),
         fetch('/api/personnel?role=medecin')
       ])
       
@@ -59,7 +59,7 @@ export default function EmploiDuTempsMedecins() {
     e.preventDefault()
     setError('')
     try {
-      const res = await fetch('/api/planning', {
+      const res = await fetch('/api/medecin/planning', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editingSlot)
@@ -79,7 +79,7 @@ export default function EmploiDuTempsMedecins() {
   const handleDeleteSlot = async (id) => {
     if (!window.confirm('Voulez-vous vraiment supprimer ce créneau ?')) return
     try {
-      const res = await fetch(`/api/planning/${id}`, { method: 'DELETE' })
+      const res = await fetch(`/api/medecin/planning/${id}`, { method: 'DELETE' })
       const data = await res.json()
       if (data.success) {
         fetchData()
@@ -98,7 +98,9 @@ export default function EmploiDuTempsMedecins() {
     switch(statut) {
       case 'disponible': return 'bg-green-100 text-green-700 border-green-200'
       case 'indisponible': return 'bg-red-100 text-red-700 border-red-200'
-      case 'urgence': return 'bg-orange-100 text-orange-700 border-orange-200'
+      case 'modifié': return 'bg-orange-100 text-orange-700 border-orange-200'
+      case 'annulé': return 'bg-gray-200 text-gray-700 border-gray-300'
+      case 'urgence': return 'bg-purple-100 text-purple-700 border-purple-200'
       default: return 'bg-gray-100 text-gray-700 border-gray-200'
     }
   }
@@ -340,6 +342,8 @@ export default function EmploiDuTempsMedecins() {
                     >
                       <option value="disponible">✅ Disponible</option>
                       <option value="indisponible">❌ Indisponible</option>
+                      <option value="modifié">🟠 Modifié</option>
+                      <option value="annulé">⚪ Annulé</option>
                       <option value="urgence">⚠️ Urgence uniquement</option>
                     </select>
                   </div>

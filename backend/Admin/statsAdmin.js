@@ -28,14 +28,14 @@ router.get('/', async (req, res) => {
              p.nom as patient_nom, p.prenom as patient_prenom, 
              m.nom as medecin_nom, r.statut
       FROM reservation r
-      JOIN patient p ON r.patient_id = p.id
-      JOIN medecin m ON r.id_medecin = m.id
+      LEFT JOIN patient p ON r.patient_id = p.id
+      LEFT JOIN medecin m ON r.id_medecin = m.id
       ORDER BY r.date_rendez_vous DESC
     `);
 
     // 6. Liste complète des patients / dossiers (pour Supervision)
     const [allPatients] = await pool.execute(`
-      SELECT p.id, p.nom, p.prenom, p.telephone, p.date_inscription,
+      SELECT p.id, p.nom, p.prenom, p.telephone,
              (SELECT COUNT(*) FROM rapport_medical WHERE id_patient = p.id) as consultations
       FROM patient p
       ORDER BY p.nom ASC

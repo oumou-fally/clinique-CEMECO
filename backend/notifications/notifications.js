@@ -5,7 +5,7 @@ const pool = require('../config/db');
 // ======================================================
 // 🔔 NOTIFICATIONS DU MÉDECIN
 // ======================================================
-router.get('/notifications/:medecinId', async (req, res) => {
+router.get('/medecin/:medecinId', async (req, res) => {
   const { medecinId } = req.params
   try {
     const [rows] = await pool.execute(`
@@ -28,9 +28,33 @@ router.get('/notifications/:medecinId', async (req, res) => {
 })
 
 // ======================================================
-// ✅ MARQUER NOTIFICATION COMME LUE (MÉDECIN)
+// 🔔 NOTIFICATIONS DU PATIENT
 // ======================================================
-router.put('/notifications/:id/lu', async (req, res) => {
+router.get('/patient/:patientId', async (req, res) => {
+  const { patientId } = req.params
+  try {
+    const [rows] = await pool.execute(`
+      SELECT n.id, n.type, n.message, n.lu, n.created_at,
+             n.id_reservation,
+             r.date_rendez_vous, r.heure_rendez_vous,
+             m.nom AS medecin_nom, m.prenom AS medecin_prenom, m.specialite
+      FROM notifications n
+      LEFT JOIN reservation r ON n.id_reservation = r.id_reservation
+      LEFT JOIN medecin m ON r.medecin_id = m.id
+      WHERE n.id_patient = ?
+      ORDER BY n.created_at DESC
+    `, [patientId])
+    res.json({ success: true, notifications: rows })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ success: false })
+  }
+})
+
+// ======================================================
+// ✅ MARQUER NOTIFICATION COMME LUE
+// ======================================================
+router.put('/:id/lu', async (req, res) => {
   const { id } = req.params
   try {
     await pool.execute('UPDATE notifications SET lu = 1 WHERE id = ?', [id])
@@ -40,15 +64,5 @@ router.put('/notifications/:id/lu', async (req, res) => {
     res.status(500).json({ success: false })
   }
 })
-
-// Base route for notifications
-router.get('/', async (req, res) => {
-    try {
-        res.json({ success: true, message: 'Notifications API is working' });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ success: false });
-    }
-});
 
 module.exports = router;
