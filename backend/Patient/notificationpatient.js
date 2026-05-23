@@ -9,13 +9,13 @@ router.get('/patient/:patientId', async (req, res) => {
   const { patientId } = req.params;
   try {
     const [rows] = await pool.execute(`
-      SELECT n.id, n.type, n.title, n.message, n.lu, n.created_at,
+      SELECT n.id, n.type AS statut, n.type, n.title, n.message, n.lu, n.created_at,
              n.id_reservation,
              r.date_rendez_vous, r.heure_rendez_vous,
              m.nom AS medecin_nom, m.prenom AS medecin_prenom, m.specialite AS medecin_specialite
       FROM notifications n
       LEFT JOIN reservation r ON n.id_reservation = r.id_reservation
-      LEFT JOIN medecin m ON r.medecin_id = m.id
+      LEFT JOIN medecin m ON r.id_medecin = m.id
       WHERE n.id_patient = ?
       ORDER BY n.created_at DESC
     `, [patientId]);

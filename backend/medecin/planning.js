@@ -69,18 +69,23 @@ router.get('/all/global', async (req, res) => {
 
         const [rows] = await pool.execute(query, params);
 
-        // Pour chaque créneau, vérifier s'il y a des rendez-vous
+        // Pour chaque créneau, vérifier s'il y a des rendez-vous et récupérer leurs détails
         const planningWithImpacts = await Promise.all(rows.map(async (p) => {
             const [rdvs] = await pool.execute(`
-                SELECT COUNT(*) as count 
-                FROM reservation 
-                WHERE id_medecin = ? 
-                AND date_rendez_vous = ? 
-                AND heure_rendez_vous BETWEEN ? AND ?
-                AND statut NOT IN ('annule', 'termine')
+                SELECT r.id_reservation AS id, r.*, pt.nom as patient_nom, pt.prenom as patient_prenom, pt.telephone as patient_telephone, pt.email as patient_email
+                FROM reservation r
+                JOIN patient pt ON r.patient_id = pt.id
+                WHERE r.id_medecin = ? 
+                AND r.date_rendez_vous = ? 
+                AND r.heure_rendez_vous BETWEEN ? AND ?
+                AND r.statut != 'annule'
             `, [p.id_medecin, p.date_planning, p.heure_debut, p.heure_fin]);
             
-            return { ...p, nb_reservations: rdvs[0].count };
+            return { 
+                ...p, 
+                nb_reservations: rdvs.length,
+                reservations: rdvs
+            };
         }));
 
         res.json({ success: true, planning: planningWithImpacts });
@@ -109,13 +114,13 @@ router.get('/:id/impacts', async (req, res) => {
 
         const p = planning[0];
         const [rdvs] = await pool.execute(`
-            SELECT r.*, p.nom as patient_nom, p.prenom as patient_prenom, p.telephone as patient_telephone
+            SELECT r.id_reservation AS id, r.*, pt.nom as patient_nom, pt.prenom as patient_prenom, pt.telephone as patient_telephone, pt.email as patient_email
             FROM reservation r
-            JOIN patient p ON r.patient_id = p.id
+            JOIN patient pt ON r.patient_id = pt.id
             WHERE r.id_medecin = ? 
             AND r.date_rendez_vous = ? 
             AND r.heure_rendez_vous BETWEEN ? AND ?
-            AND r.statut NOT IN ('annule', 'termine')
+            AND r.statut != 'annule'
         `, [p.id_medecin, p.date_planning, p.heure_debut, p.heure_fin]);
 
         res.json({ success: true, impactes: rdvs });

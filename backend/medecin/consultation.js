@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../config/db');
 const router = express.Router();
+const { notifyPatient } = require('../config/notifier');
 
 // Récupérer les réservations confirmées pour un médecin spécifique (avec infos patient)
 router.get('/reservations/:medecinId', async (req, res) => {
@@ -83,6 +84,18 @@ router.post('/', async (req, res) => {
             "UPDATE reservation SET statut = 'termine', notif_patient = 1 WHERE id_reservation = ?",
             [id_reservation]
         );
+
+        // NOTIFIER LE PATIENT
+        const [rdvCheck] = await connection.execute('SELECT date_rendez_vous, heure_rendez_vous FROM reservation WHERE id_reservation = ?', [id_reservation]);
+        if (rdvCheck.length > 0) {
+            const dateSimple = new Date(rdvCheck[0].date_rendez_vous).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+            await notifyPatient({
+                id_reservation: id_reservation,
+                type: 'termine',
+                title: 'Consultation terminée',
+                message: `Votre consultation du ${dateSimple} à ${rdvCheck[0].heure_rendez_vous?.substring(0, 5)} a été enregistrée. Consultez votre dossier médical.`
+            });
+        }
 
         await connection.commit();
         res.json({ success: true, message: 'Consultation enregistrée avec succès', id: result.insertId });
@@ -211,6 +224,23 @@ router.post('/ordonnance', async (req, res) => {
                 'INSERT INTO ordonnance (id_consultation, medicaments) VALUES (?, ?)',
                 [id_consultation, medicamentsJson]
             );
+        }
+
+        // NOTIFIER LE PATIENT
+        const [rdvCheck] = await connection.execute(`
+            SELECT r.id_reservation, r.date_rendez_vous, r.heure_rendez_vous
+            FROM consultation c
+            JOIN reservation r ON c.id_reservation = r.id_reservation
+            WHERE c.id = ?
+        `, [id_consultation]);
+        if (rdvCheck.length > 0) {
+            const dateSimple = new Date(rdvCheck[0].date_rendez_vous).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+            await notifyPatient({
+                id_reservation: rdvCheck[0].id_reservation,
+                type: 'ordonnance',
+                title: 'Ordonnance disponible',
+                message: `Votre ordonnance pour le rendez-vous du ${dateSimple} à ${rdvCheck[0].heure_rendez_vous?.substring(0, 5)} est disponible. Consultez votre dossier médical.`
+            });
         }
 
         await connection.commit();

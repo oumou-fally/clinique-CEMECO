@@ -64,6 +64,7 @@ app.use('/api/patient/medecins', require('./Patient/medecins'));
 app.use('/api/patient/dashboard', require('./Patient/dashboard'));
 app.use('/api/messagerie', require('./Patient/messagerie'));
 app.use('/api/patient/types-consultation', require('./Patient/typesConsultation'));
+app.use('/api/patient/notifications', require('./Patient/notificationpatient'));
 
 // ======================================================
 // 🧑‍💼 SECRÉTAIRE - ROUTES CORRIGÉES

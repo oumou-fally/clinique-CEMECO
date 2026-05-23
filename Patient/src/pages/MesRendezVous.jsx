@@ -73,7 +73,7 @@ export default function MesRendezVous() {
           id_secretaire: 1,
           date_rendez_vous: formData.date,
           heure_rendez_vous: formData.time,
-          motif: formData.reason
+          motif: formData.reasons.join(', ')
         })
       })
       const data = await response.json()

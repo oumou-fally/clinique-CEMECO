@@ -217,7 +217,7 @@ export default function GestionUtilisateurs() {
                 {loading ? (
                   [1,2,3].map(i => <tr key={i} className="animate-pulse"><td colSpan="4" className="h-24 px-10 bg-gray-50/50"></td></tr>)
                 ) : utilisateurs.map(user => (
-                  <tr key={user.id} className="hover:bg-blue-50/20 transition-all group">
+                  <tr key={`${user.role}-${user.id}`} className="hover:bg-blue-50/20 transition-all group">
                     <td className="px-10 py-8">
                       <p className="font-black text-gray-900 text-lg uppercase tracking-tighter">
                         {user.prenom} {user.nom}

@@ -89,4 +89,57 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// ======================================================
+// 👤 GET PROFIL MÉDECIN
+// ======================================================
+router.get('/profil/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows] = await pool.execute(
+      'SELECT id, nom, prenom, email, specialite, telephone, statut, dernier_connexion FROM medecin WHERE id = ? LIMIT 1',
+      [id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Médecin non trouvé' });
+    }
+
+    res.json({ success: true, medecin: rows[0] });
+  } catch (error) {
+    console.error('Erreur GET profil:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// ======================================================
+// ✏️ UPDATE PROFIL MÉDECIN
+// ======================================================
+router.put('/profil/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nom, prenom, email, telephone } = req.body;
+
+    await pool.execute(
+      'UPDATE medecin SET nom = ?, prenom = ?, email = ?, telephone = ? WHERE id = ?',
+      [nom, prenom, email, telephone, id]
+    );
+
+    // Fetch updated data
+    const [rows] = await pool.execute(
+      'SELECT id, nom, prenom, email, specialite, telephone, statut FROM medecin WHERE id = ? LIMIT 1',
+      [id]
+    );
+
+    // Also update localStorage-compatible response
+    res.json({
+      success: true,
+      message: 'Profil mis à jour avec succès',
+      medecin: rows[0]
+    });
+  } catch (error) {
+    console.error('Erreur PUT profil:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 module.exports = router;

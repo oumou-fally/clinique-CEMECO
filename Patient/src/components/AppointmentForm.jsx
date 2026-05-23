@@ -5,9 +5,9 @@ export default function AppointmentForm({ isOpen, onClose, onSubmit }) {
   const [formData, setFormData] = useState({
     date: '',
     time: '',
-    reason: '',
+    reasons: [],
     notes: '',
-    price: ''
+    totalPrice: 0
   })
 
   const [errors, setErrors] = useState({})
@@ -59,8 +59,8 @@ export default function AppointmentForm({ isOpen, onClose, onSubmit }) {
       newErrors.time = 'L\'heure est requise'
     }
 
-    if (!formData.reason) {
-      newErrors.reason = 'Le type de consultation est requis'
+    if (!formData.reasons || formData.reasons.length === 0) {
+      newErrors.reasons = 'Au moins un type de consultation est requis'
     }
 
     setErrors(newErrors)
@@ -70,24 +70,43 @@ export default function AppointmentForm({ isOpen, onClose, onSubmit }) {
   const handleChange = (e) => {
     const { name, value } = e.target
     
-    if (name === 'reason') {
-      const selectedType = consultationTypes.find(t => t.nom === value)
-      setFormData(prev => ({
-        ...prev,
-        [name]: value,
-        price: selectedType ? selectedType.prix : ''
-      }))
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }))
-    }
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
 
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
         [name]: ''
+      }))
+    }
+  }
+
+  const toggleReason = (typeNom) => {
+    setFormData(prev => {
+      const currentReasons = prev.reasons || []
+      const isSelected = currentReasons.includes(typeNom)
+      const newReasons = isSelected 
+        ? currentReasons.filter(r => r !== typeNom)
+        : [...currentReasons, typeNom]
+
+      const newTotalPrice = newReasons.reduce((total, reason) => {
+        const t = consultationTypes.find(ct => ct.nom === reason)
+        return total + (t ? Number(t.prix) : 0)
+      }, 0)
+
+      return {
+        ...prev,
+        reasons: newReasons,
+        totalPrice: newTotalPrice
+      }
+    })
+
+    if (errors.reasons) {
+      setErrors(prev => ({
+        ...prev,
+        reasons: ''
       }))
     }
   }
@@ -103,9 +122,9 @@ export default function AppointmentForm({ isOpen, onClose, onSubmit }) {
     setFormData({
       date: '',
       time: '',
-      reason: '',
+      reasons: [],
       notes: '',
-      price: ''
+      totalPrice: 0
     })
   }
 
@@ -194,38 +213,92 @@ export default function AppointmentForm({ isOpen, onClose, onSubmit }) {
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               <div className="flex items-center gap-2">
                 <Stethoscope className="w-4 h-4" />
-                Type de consultation *
+                Types de consultation (sélectionnez un ou plusieurs) *
               </div>
             </label>
-            <select
-              name="reason"
-              value={formData.reason}
-              onChange={handleChange}
-              disabled={loadingTypes}
-              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.reason ? 'border-red-500' : 'border-gray-300'
-              } ${loadingTypes ? 'bg-gray-50' : ''}`}
-            >
-              <option value="">{loadingTypes ? 'Chargement...' : '-- Sélectionner un type --'}</option>
-              {consultationTypes.map(type => (
-                <option key={type.nom} value={type.nom}>
-                  {type.nom}
-                </option>
-              ))}
-            </select>
-            {errors.reason && <p className="text-red-500 text-sm mt-1">{errors.reason}</p>}
+            {loadingTypes ? (
+              <div className="p-4 text-center text-gray-500 bg-gray-50 rounded-lg">Chargement...</div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {consultationTypes.map(type => {
+                  const isSelected = formData.reasons?.includes(type.nom)
+                  return (
+                    <button
+                      key={type.nom}
+                      type="button"
+                      onClick={() => toggleReason(type.nom)}
+                      className={`relative flex flex-col p-4 rounded-xl border-2 text-left transition-all duration-200 ease-in-out overflow-hidden group ${
+                        isSelected 
+                          ? 'border-blue-600 bg-blue-50/50 shadow-md ring-1 ring-blue-600/20' 
+                          : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-md hover:-translate-y-0.5'
+                      }`}
+                    >
+                      {/* Optional subtle gradient background for selected state */}
+                      {isSelected && (
+                        <div className="absolute inset-0 bg-linear-to-br from-blue-500/5 to-purple-500/5 pointer-events-none" />
+                      )}
+                      
+                      <div className="flex justify-between items-start w-full mb-3 relative z-10">
+                        <span className={`font-bold leading-tight pr-2 ${isSelected ? 'text-blue-800' : 'text-gray-800 group-hover:text-blue-700'}`}>
+                          {type.nom}
+                        </span>
+                        <div className={`shrink-0 w-5 h-5 mt-0.5 rounded-full border-2 flex items-center justify-center transition-colors shadow-sm ${
+                          isSelected ? 'border-blue-600 bg-blue-600' : 'border-gray-300 bg-gray-50 group-hover:border-blue-400'
+                        }`}>
+                          {isSelected && <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                        </div>
+                      </div>
+                      
+                      <div className="mt-auto relative z-10 flex items-center gap-1.5">
+                        <div className={`px-2.5 py-1 rounded-md text-sm font-bold ${
+                          isSelected ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600 group-hover:bg-blue-50 group-hover:text-blue-600'
+                        }`}>
+                          {new Intl.NumberFormat('fr-GN', { style: 'currency', currency: 'GNF' }).format(type.prix)}
+                        </div>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+            {errors.reasons && <p className="text-red-500 text-sm mt-1">{errors.reasons}</p>}
           </div>
 
           {/* Price Field (Dynamic) */}
-          {formData.price && (
+          {formData.reasons && formData.reasons.length > 0 && (
             <div className="bg-teal-50 border border-teal-200 rounded-xl p-4 animate-in fade-in slide-in-from-top-2 duration-300">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2 text-teal-700">
-                  <CreditCard className="w-5 h-5" />
-                  <span className="font-bold">Prix de la consultation</span>
+              <div className="flex flex-col gap-3">
+                <div className="flex justify-between items-center border-b border-teal-200 pb-2">
+                  <div className="flex items-center gap-2 text-teal-700">
+                    <FileText className="w-5 h-5" />
+                    <span className="font-bold">Consultations choisies</span>
+                  </div>
+                  <div className="text-sm font-semibold text-teal-800 bg-teal-100 px-2 py-1 rounded-full">
+                    {formData.reasons.length} sélectionnée(s)
+                  </div>
                 </div>
-                <div className="text-xl font-black text-teal-800">
-                  {new Intl.NumberFormat('fr-GN', { style: 'currency', currency: 'GNF' }).format(formData.price)}
+                {formData.reasons.map(reason => {
+                  const t = consultationTypes.find(ct => ct.nom === reason)
+                  return (
+                    <div key={reason} className="flex justify-between items-center text-sm">
+                      <span className="text-teal-800 flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-teal-500"></div>
+                        {reason}
+                      </span>
+                      <span className="text-teal-700 font-bold">
+                        {t ? new Intl.NumberFormat('fr-GN', { style: 'currency', currency: 'GNF' }).format(t.prix) : ''}
+                      </span>
+                    </div>
+                  )
+                })}
+                <div className="flex justify-between items-center mt-2 pt-3 border-t border-teal-200">
+                  <div className="flex items-center gap-2 text-teal-700">
+                    <CreditCard className="w-5 h-5" />
+                    <span className="font-bold uppercase tracking-wider text-sm">Prix Total Estimé</span>
+                  </div>
+                  <div className="text-2xl font-black text-teal-800">
+                    {new Intl.NumberFormat('fr-GN', { style: 'currency', currency: 'GNF' }).format(formData.totalPrice)}
+                  </div>
                 </div>
               </div>
             </div>

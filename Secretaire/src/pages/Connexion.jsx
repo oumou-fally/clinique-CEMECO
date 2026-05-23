@@ -98,69 +98,69 @@ export default function Connexion() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
-      <div className="w-full max-w-md animate-fadeIn">
-        <div className="bg-gradient-to-br from-emerald-600 via-teal-600 to-teal-700 px-8 pt-16 pb-20 rounded-t-[2.5rem] shadow-2xl relative overflow-hidden">
+      <div className="w-full max-w-sm animate-fadeIn">
+        <div className="bg-gradient-to-br from-emerald-600 via-teal-600 to-teal-700 px-6 pt-10 pb-12 rounded-t-3xl shadow-2xl relative overflow-hidden">
           {/* Decorative background elements */}
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-emerald-400/10 rounded-full -ml-12 -mb-12 blur-xl"></div>
+          <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -mr-12 -mt-12 blur-2xl"></div>
+          <div className="absolute bottom-0 left-0 w-20 h-20 bg-emerald-400/10 rounded-full -ml-10 -mb-10 blur-xl"></div>
           
           <div className="relative flex flex-col items-center">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="bg-white p-3.5 rounded-2xl shadow-xl transform transition-all duration-500 hover:scale-110 hover:rotate-6 group">
-                <Activity className="w-10 h-10 text-emerald-600 group-hover:text-teal-600 transition-colors" />
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-white p-2.5 rounded-xl shadow-xl transform transition-all duration-500 hover:scale-110 hover:rotate-6 group">
+                <Activity className="w-8 h-8 text-emerald-600 group-hover:text-teal-600 transition-colors" />
               </div>
               <div className="flex flex-col">
-                <h1 className="text-5xl font-black text-white tracking-tighter leading-none">
+                <h1 className="text-3xl font-black text-white tracking-tighter leading-none">
                   CEMECO
                 </h1>
                 <div className="h-1 w-full bg-emerald-400 rounded-full mt-1 opacity-50"></div>
               </div>
             </div>
             
-            <p className="text-emerald-50 text-center text-sm font-semibold tracking-wide uppercase opacity-90">
+            <p className="text-emerald-50 text-center text-xs font-semibold tracking-wide uppercase opacity-90">
               Centre Médical d'Excellence
             </p>
-            <p className="text-teal-100/80 text-center text-xs font-medium mt-1">
+            <p className="text-teal-100/80 text-center text-[10px] font-medium mt-1">
               Spécialisé en Cardiologie Avancée
             </p>
 
-            <div className="mt-8">
-              <div className="bg-white/10 backdrop-blur-md border border-white/20 px-5 py-2 rounded-2xl shadow-inner">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
-                  <ShieldCheck className="w-4 h-4 text-emerald-300" />
-                  <span className="text-[11px] font-bold text-white uppercase tracking-wider">Espace Sécurisé • Secrétariat</span>
+            <div className="mt-5">
+              <div className="bg-white/10 backdrop-blur-md border border-white/20 px-4 py-1.5 rounded-xl shadow-inner">
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></div>
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-300" />
+                  <span className="text-[10px] font-bold text-white uppercase tracking-wider">Espace Sécurisé • Secrétariat</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <form onSubmit={soumettreFormulaire} className="bg-white px-8 py-8 space-y-6 rounded-b-3xl shadow-2xl">
+        <form onSubmit={soumettreFormulaire} className="bg-white px-6 py-6 space-y-4 rounded-b-3xl shadow-2xl">
           {success && (
-            <div className="bg-emerald-50 border-l-4 border-emerald-500 text-emerald-700 px-4 py-3 rounded-r-xl text-sm font-medium flex items-center gap-2 animate-slideDown">
-              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+            <div className="bg-emerald-50 border-l-4 border-emerald-500 text-emerald-700 px-3 py-2 rounded-r-lg text-sm font-medium flex items-center gap-2 animate-slideDown">
+              <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
               <span>{success}</span>
             </div>
           )}
 
           {error && (
-            <div className="bg-rose-50 border-l-4 border-rose-500 text-rose-700 px-4 py-3 rounded-r-xl text-sm font-medium flex items-start gap-2 animate-shake">
-              <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+            <div className="bg-rose-50 border-l-4 border-rose-500 text-rose-700 px-3 py-2 rounded-r-lg text-sm font-medium flex items-start gap-2 animate-shake">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
           )}
 
           {attempts > 0 && attempts < 5 && (
-            <div className="bg-amber-50 border border-amber-200 text-amber-700 px-4 py-2 rounded-xl text-xs text-center">
+            <div className="bg-amber-50 border border-amber-200 text-amber-700 px-3 py-1.5 rounded-lg text-xs text-center">
               ⚠️ Tentative {attempts}/5 - Après 5 essais, compte bloqué 5 minutes
             </div>
           )}
 
           <div className="space-y-1 group">
-            <label className="flex items-center gap-2.5 text-sm font-bold text-slate-700 ml-1 mb-1 transition-colors group-focus-within:text-emerald-600">
-              <div className="p-1.5 bg-emerald-50 rounded-lg group-focus-within:bg-emerald-100 transition-colors">
-                <Mail className="w-4 h-4 text-emerald-600" />
+            <label className="flex items-center gap-2 text-xs font-bold text-slate-700 ml-1 mb-1 transition-colors group-focus-within:text-emerald-600">
+              <div className="p-1 bg-emerald-50 rounded-md group-focus-within:bg-emerald-100 transition-colors">
+                <Mail className="w-3.5 h-3.5 text-emerald-600" />
               </div>
               Adresse Email
             </label>
@@ -173,15 +173,15 @@ export default function Connexion() {
                 placeholder="secretaire@cemeco.com"
                 autoComplete="email"
                 autoFocus
-                className="w-full px-5 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 transition-all outline-none disabled:bg-gray-100 disabled:cursor-not-allowed font-medium text-slate-900"
+                className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 transition-all outline-none disabled:bg-gray-100 disabled:cursor-not-allowed text-sm font-medium text-slate-900"
               />
             </div>
           </div>
 
           <div className="space-y-1 group">
-            <label className="flex items-center gap-2.5 text-sm font-bold text-slate-700 ml-1 mb-1 transition-colors group-focus-within:text-emerald-600">
-              <div className="p-1.5 bg-emerald-50 rounded-lg group-focus-within:bg-emerald-100 transition-colors">
-                <Lock className="w-4 h-4 text-emerald-600" />
+            <label className="flex items-center gap-2 text-xs font-bold text-slate-700 ml-1 mb-1 transition-colors group-focus-within:text-emerald-600">
+              <div className="p-1 bg-emerald-50 rounded-md group-focus-within:bg-emerald-100 transition-colors">
+                <Lock className="w-3.5 h-3.5 text-emerald-600" />
               </div>
               Mot de passe
             </label>
@@ -193,33 +193,33 @@ export default function Connexion() {
                 disabled={loading || blocked}
                 placeholder="••••••••"
                 autoComplete="current-password"
-                className="w-full px-5 pr-12 py-3.5 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 transition-all outline-none disabled:bg-gray-100 disabled:cursor-not-allowed font-medium text-slate-900"
+                className="w-full px-4 pr-10 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 transition-all outline-none disabled:bg-gray-100 disabled:cursor-not-allowed text-sm font-medium text-slate-900"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-emerald-600 transition-colors p-1"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-emerald-600 transition-colors p-1"
               >
-                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mt-2">
             <label className="flex items-center space-x-2 cursor-pointer group">
               <input 
                 type="checkbox" 
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
                 disabled={loading}
-                className="w-4 h-4 text-emerald-600 bg-gray-100 border-gray-300 rounded focus:ring-emerald-500 focus:ring-2 cursor-pointer disabled:opacity-50"
+                className="w-3.5 h-3.5 text-emerald-600 bg-gray-100 border-gray-300 rounded focus:ring-emerald-500 focus:ring-2 cursor-pointer disabled:opacity-50"
               />
-              <span className="text-sm text-gray-600 group-hover:text-gray-800 transition-colors">Se souvenir de moi</span>
+              <span className="text-xs text-gray-600 group-hover:text-gray-800 transition-colors">Se souvenir de moi</span>
             </label>
             <button
               type="button"
               onClick={() => navigate('/mot-de-passe-oublie')}
-              className="text-sm text-emerald-600 font-medium hover:text-emerald-700 transition-colors hover:underline"
+              className="text-xs text-emerald-600 font-medium hover:text-emerald-700 transition-colors hover:underline"
             >
               Mot de passe oublié?
             </button>
@@ -228,11 +228,11 @@ export default function Connexion() {
           <button
             type="submit"
             disabled={loading || blocked}
-            className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-semibold py-3 rounded-xl transition-all transform hover:scale-[1.02] hover:shadow-lg active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+            className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-sm font-semibold py-2.5 rounded-lg transition-all transform hover:scale-[1.02] hover:shadow-lg active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 mt-2"
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">
-                <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import Layout from '../layouts/Layout'
 import { useAuth } from '../context/AuthContext'
-import { Bell, BellOff, Calendar, Clock, CheckCircle, XCircle, RotateCcw, Stethoscope, CheckCheck } from 'lucide-react'
+import { Bell, BellOff, Calendar, Clock, CheckCircle, XCircle, RotateCcw, Stethoscope, CheckCheck, CreditCard } from 'lucide-react'
 
 export default function Notifications() {
   const { patientId } = useAuth()
@@ -18,7 +18,7 @@ export default function Notifications() {
     if (!patientId) return
     try {
       setLoading(true)
-      const res = await fetch(`${API_URL}/api/reservations/notifications/patient/${patientId}`)
+      const res = await fetch(`${API_URL}/api/patient/notifications/patient/${patientId}`)
       const data = await res.json()
       if (data.success) {
         setNotifications(data.notifications || [])
@@ -35,14 +35,14 @@ export default function Notifications() {
   }, [patientId])
 
   // ======================================================
-  // ✅ MARQUER COMME LUE (notif_patient = 0)
+  // ✅ MARQUER COMME LUE
   // ======================================================
-  const markAsRead = async (rdvId) => {
+  const markAsRead = async (notifId) => {
     try {
-      await fetch(`${API_URL}/api/reservations/notifications/patient/${rdvId}/lu`, {
+      await fetch(`${API_URL}/api/patient/notifications/patient/${notifId}/lu`, {
         method: 'PUT'
       })
-      setNotifications(prev => prev.filter(n => n.id !== rdvId))
+      setNotifications(prev => prev.filter(n => n.id !== notifId))
     } catch (error) {
       console.error(error)
     }
@@ -59,10 +59,14 @@ export default function Notifications() {
   // ======================================================
   const getStatutConfig = (statut) => {
     const s = (statut || '').toLowerCase()
-    if (s === 'confirme')  return { label: 'Rendez-vous confirmé',   icon: <CheckCircle className="w-6 h-6" />, bg: 'bg-emerald-50', iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600', border: 'border-emerald-200', badge: 'bg-emerald-100 text-emerald-700 border-emerald-200' }
-    if (s === 'attribue')  return { label: 'Médecin attribué',        icon: <Stethoscope className="w-6 h-6" />, bg: 'bg-indigo-50',  iconBg: 'bg-indigo-100',  iconColor: 'text-indigo-600',  border: 'border-indigo-200',  badge: 'bg-indigo-100 text-indigo-700 border-indigo-200' }
-    if (s === 'annule')    return { label: 'Rendez-vous annulé',      icon: <XCircle className="w-6 h-6" />,    bg: 'bg-rose-50',    iconBg: 'bg-rose-100',    iconColor: 'text-rose-600',    border: 'border-rose-200',    badge: 'bg-rose-100 text-rose-700 border-rose-200' }
-    if (s === 'reporte')   return { label: 'Rendez-vous reporté',     icon: <RotateCcw className="w-6 h-6" />,  bg: 'bg-amber-50',   iconBg: 'bg-amber-100',   iconColor: 'text-amber-600',   border: 'border-amber-200',   badge: 'bg-amber-100 text-amber-700 border-amber-200' }
+    if (s === 'confirme')    return { label: 'Rendez-vous confirmé',   icon: <CheckCircle className="w-6 h-6" />, bg: 'bg-emerald-50', iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600', border: 'border-emerald-200', badge: 'bg-emerald-100 text-emerald-700 border-emerald-200' }
+    if (s === 'attribue')    return { label: 'Médecin attribué',        icon: <Stethoscope className="w-6 h-6" />, bg: 'bg-indigo-50',  iconBg: 'bg-indigo-100',  iconColor: 'text-indigo-600',  border: 'border-indigo-200',  badge: 'bg-indigo-100 text-indigo-700 border-indigo-200' }
+    if (s === 'annule')      return { label: 'Rendez-vous annulé',      icon: <XCircle className="w-6 h-6" />,    bg: 'bg-rose-50',    iconBg: 'bg-rose-100',    iconColor: 'text-rose-600',    border: 'border-rose-200',    badge: 'bg-rose-100 text-rose-700 border-rose-200' }
+    if (s === 'reporte')     return { label: 'Rendez-vous reporté',     icon: <RotateCcw className="w-6 h-6" />,  bg: 'bg-amber-50',   iconBg: 'bg-amber-100',   iconColor: 'text-amber-600',   border: 'border-amber-200',   badge: 'bg-amber-100 text-amber-700 border-amber-200' }
+    if (s === 'termine')     return { label: 'Consultation enregistrée', icon: <CheckCircle className="w-6 h-6" />, bg: 'bg-teal-50',    iconBg: 'bg-teal-100',    iconColor: 'text-teal-600',    border: 'border-teal-200',    badge: 'bg-teal-100 text-teal-700 border-teal-200' }
+    if (s === 'ordonnance')  return { label: 'Ordonnance disponible',   icon: <Stethoscope className="w-6 h-6" />, bg: 'bg-sky-50',     iconBg: 'bg-sky-100',     iconColor: 'text-sky-600',     border: 'border-sky-200',     badge: 'bg-sky-100 text-sky-700 border-sky-200' }
+    if (s === 'creation' || s === 'attente') return { label: 'Demande de rendez-vous', icon: <Clock className="w-6 h-6" />, bg: 'bg-amber-50', iconBg: 'bg-amber-100', iconColor: 'text-amber-600', border: 'border-amber-200', badge: 'bg-amber-100 text-amber-700 border-amber-200' }
+    if (s === 'facture')     return { label: 'Facturation & Paiement',  icon: <CreditCard className="w-6 h-6" />,  bg: 'bg-purple-50',  iconBg: 'bg-purple-100',  iconColor: 'text-purple-600',  border: 'border-purple-200',  badge: 'bg-purple-100 text-purple-700 border-purple-200' }
     return { label: 'Mise à jour de rendez-vous', icon: <Bell className="w-6 h-6" />, bg: 'bg-gray-50', iconBg: 'bg-gray-100', iconColor: 'text-gray-500', border: 'border-gray-200', badge: 'bg-gray-100 text-gray-600 border-gray-200' }
   }
 

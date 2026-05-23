@@ -1,6 +1,7 @@
 const express = require('express')
 const pool = require('../config/db')
 const router = express.Router()
+const { notifyPatient } = require('../config/notifier')
 
 // ======================================================
 // 📋 GET RESERVATIONS D'UN PATIENT
@@ -85,6 +86,16 @@ router.post('/', async (req, res) => {
       motif
     ])
 
+    // NOTIFIER LE PATIENT
+    const dateSimple = new Date(date_rendez_vous).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+    await notifyPatient({
+      id_patient: patient_id,
+      id_reservation: result.insertId,
+      type: 'creation',
+      title: 'Demande de rendez-vous reçue',
+      message: `Votre demande de rendez-vous du ${dateSimple} à ${heure_rendez_vous?.substring(0, 5)} a bien été enregistrée. Elle est en attente de confirmation.`
+    });
+
     res.json({ success: true, id: result.insertId })
 
   } catch (error) {
@@ -121,6 +132,16 @@ router.put('/:id/confirm', async (req, res) => {
       const dateFormatee = new Date(rdv.date_rendez_vous).toLocaleDateString('fr-FR', {
         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
       })
+
+      // NOTIFIER LE PATIENT
+      const dateSimple = new Date(rdv.date_rendez_vous).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+      await notifyPatient({
+        id_patient: rdv.patient_id,
+        id_reservation: id,
+        type: 'confirme',
+        title: 'Rendez-vous confirmé',
+        message: `Votre rendez-vous du ${dateSimple} à ${rdv.heure_rendez_vous?.substring(0, 5)} a été confirmé par la secrétaire.`
+      });
 
       // 3. Si un médecin est déjà assigné, lui envoyer aussi une notification
       if (rdv.id_medecin) {
@@ -163,10 +184,24 @@ router.put('/:id/assign', async (req, res) => {
     `, [id_medecin, date_rendez_vous, heure_rendez_vous]);
 
     if (dispo.length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Le médecin n\'est pas disponible sur ce créneau (créneau inexistant, annulé ou occupé)' 
-      });
+      // Pour une affectation manuelle par la secrétaire ou l'administrateur,
+      // on crée automatiquement le créneau disponible pour maintenir la cohérence,
+      // plutôt que de bloquer l'action.
+      const [h, m, s] = heure_rendez_vous.split(':');
+      const heureFinMin = parseInt(m) + 30;
+      let extraHours = 0;
+      let finalMin = heureFinMin;
+      if (heureFinMin >= 60) {
+        extraHours = Math.floor(heureFinMin / 60);
+        finalMin = heureFinMin % 60;
+      }
+      const finalHour = (parseInt(h) + extraHours) % 24;
+      const heureFinAjustee = `${String(finalHour).padStart(2, '0')}:${String(finalMin).padStart(2, '0')}:00`;
+
+      await pool.execute(`
+        INSERT INTO planning_medecin (id_medecin, date_planning, heure_debut, heure_fin, statut, commentaire)
+        VALUES (?, ?, ?, ?, 'disponible', 'Créé automatiquement lors de l\\'attribution')
+      `, [id_medecin, date_rendez_vous, heure_rendez_vous, heureFinAjustee]);
     }
 
     // 1. Mettre à jour la réservation
@@ -195,6 +230,19 @@ router.put('/:id/assign', async (req, res) => {
       const dateFormatee = new Date(rdv.date_rendez_vous).toLocaleDateString('fr-FR', {
         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
       })
+
+      // NOTIFIER LE PATIENT
+      const [medInfo] = await pool.execute('SELECT nom, prenom FROM medecin WHERE id = ?', [id_medecin]);
+      const medNom = medInfo.length > 0 ? `Dr. ${medInfo[0].prenom} ${medInfo[0].nom}` : 'Un médecin';
+      const dateSimple = new Date(rdv.date_rendez_vous).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+      
+      await notifyPatient({
+        id_reservation: id,
+        type: 'attribue',
+        title: 'Médecin attribué',
+        message: `Le ${medNom} a été attribué à votre rendez-vous du ${dateSimple} à ${rdv.heure_rendez_vous?.substring(0, 5)}.`
+      });
+
       const message = `🩺 Nouveau rendez-vous attribué — Patient : ${rdv.patient_prenom} ${rdv.patient_nom} | Date : ${dateFormatee} à ${rdv.heure_rendez_vous?.substring(0,5)} | Motif : ${rdv.motif || 'Non précisé'} | Tél. : ${rdv.patient_telephone || 'N/A'}`
 
       await pool.execute(`
@@ -281,6 +329,16 @@ router.put('/:id/auto-assign', async (req, res) => {
       const dateFormatee = new Date(rdvDetails.date_rendez_vous).toLocaleDateString('fr-FR', {
         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
       })
+
+      // NOTIFIER LE PATIENT
+      const dateSimple = new Date(rdvDetails.date_rendez_vous).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+      await notifyPatient({
+        id_reservation: id,
+        type: 'attribue',
+        title: 'Médecin attribué automatiquement',
+        message: `Le Dr. ${medecin.prenom} ${medecin.nom} a été attribué automatiquement à votre rendez-vous du ${dateSimple} à ${rdvDetails.heure_rendez_vous?.substring(0, 5)}.`
+      });
+
       const message = `🩺 Nouveau rendez-vous attribué — Patient : ${rdvDetails.patient_prenom} ${rdvDetails.patient_nom} | Date : ${dateFormatee} à ${rdvDetails.heure_rendez_vous?.substring(0,5)} | Motif : ${rdvDetails.motif || 'Non précisé'} | Tél. : ${rdvDetails.patient_telephone || 'N/A'}`
 
       await pool.execute(`
@@ -335,6 +393,16 @@ router.put('/:id/report', async (req, res) => {
       })
       const heureFormatee = rdv.heure_rendez_vous?.substring(0, 5)
 
+      // NOTIFIER LE PATIENT
+      const dateSimple = new Date(date_rendez_vous).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+      await notifyPatient({
+        id_patient: rdv.patient_id,
+        id_reservation: id,
+        type: 'reporte',
+        title: 'Rendez-vous reporté',
+        message: `Votre rendez-vous a été reporté au ${dateSimple} à ${heure_rendez_vous?.substring(0, 5)} par la secrétaire. Motif : ${motif_report || 'Non précisé'}.`
+      });
+
       // Notification pour le médecin (si assigné)
       if (rdv.id_medecin) {
         const msgMedecin = `⏳ Rendez-vous reporté — Patient : ${rdv.patient_prenom} ${rdv.patient_nom} | Nouvelle date : ${dateFormatee} à ${heureFormatee} | Motif du report : ${motif_report || 'Non précisé'}`
@@ -377,13 +445,25 @@ router.put('/:id/cancel', async (req, res) => {
       WHERE id_reservation = ?
     `, [id])
 
-    if (updatedRows.length > 0 && updatedRows[0].id_medecin) {
+    if (updatedRows.length > 0) {
       const rdv = updatedRows[0]
-      const msg = `❌ Le rendez-vous du ${new Date(rdv.date_rendez_vous).toLocaleDateString('fr-FR')} à ${rdv.heure_rendez_vous?.substring(0,5)} a été annulé.`
-      await pool.execute(`
-        INSERT INTO notifications (type, message, id_medecin, id_reservation, lu)
-        VALUES ('annule', ?, ?, ?, 0)
-      `, [msg, updatedRows[0].id_medecin, id])
+      const dateSimple = new Date(rdv.date_rendez_vous).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+      
+      // NOTIFIER LE PATIENT
+      await notifyPatient({
+        id_reservation: id,
+        type: 'annule',
+        title: 'Rendez-vous annulé',
+        message: `Votre rendez-vous du ${dateSimple} à ${rdv.heure_rendez_vous?.substring(0, 5)} a été annulé par la secrétaire.`
+      });
+
+      if (rdv.id_medecin) {
+        const msg = `❌ Le rendez-vous du ${new Date(rdv.date_rendez_vous).toLocaleDateString('fr-FR')} à ${rdv.heure_rendez_vous?.substring(0,5)} a été annulé.`
+        await pool.execute(`
+          INSERT INTO notifications (type, message, id_medecin, id_reservation, lu)
+          VALUES ('annule', ?, ?, ?, 0)
+        `, [msg, rdv.id_medecin, id])
+      }
     }
 
     res.json({ success: true })

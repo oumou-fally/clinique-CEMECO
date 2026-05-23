@@ -178,4 +178,55 @@ router.get('/notifications/count/:id', async (req, res) => {
   }
 });
 
+// ======================================================
+// 👤 GET PROFIL SECRÉTAIRE
+// ======================================================
+router.get('/profil/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows] = await pool.execute(
+      'SELECT id, nom, prenom, email, telephone, statut FROM secretaire WHERE id = ? LIMIT 1',
+      [id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Secrétaire non trouvée' });
+    }
+
+    res.json({ success: true, secretaire: rows[0] });
+  } catch (error) {
+    console.error('Erreur GET profil secrétaire:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// ======================================================
+// ✏️ UPDATE PROFIL SECRÉTAIRE
+// ======================================================
+router.put('/profil/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nom, prenom, email, telephone } = req.body;
+
+    await pool.execute(
+      'UPDATE secretaire SET nom = ?, prenom = ?, email = ?, telephone = ? WHERE id = ?',
+      [nom, prenom, email, telephone, id]
+    );
+
+    const [rows] = await pool.execute(
+      'SELECT id, nom, prenom, email, telephone, statut FROM secretaire WHERE id = ? LIMIT 1',
+      [id]
+    );
+
+    res.json({
+      success: true,
+      message: 'Profil mis à jour avec succès',
+      secretaire: rows[0]
+    });
+  } catch (error) {
+    console.error('Erreur PUT profil secrétaire:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 module.exports = router;

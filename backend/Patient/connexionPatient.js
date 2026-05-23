@@ -367,4 +367,55 @@ router.post('/reset-password', async (req, res) => {
   }
 });
 
+// ======================================================
+// 👤 GET PROFIL PATIENT
+// ======================================================
+router.get('/profil/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows] = await pool.execute(
+      'SELECT id, nom, prenom, email, telephone, sexe, date_naissance, commune, quartier FROM patient WHERE id = ? LIMIT 1',
+      [id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Patient non trouvé' });
+    }
+
+    res.json({ success: true, patient: rows[0] });
+  } catch (error) {
+    console.error('Erreur GET profil patient:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// ======================================================
+// ✏️ UPDATE PROFIL PATIENT
+// ======================================================
+router.put('/profil/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nom, prenom, email, telephone, sexe, date_naissance, commune, quartier } = req.body;
+
+    await pool.execute(
+      'UPDATE patient SET nom = ?, prenom = ?, email = ?, telephone = ?, sexe = ?, date_naissance = ?, commune = ?, quartier = ? WHERE id = ?',
+      [nom, prenom, email, telephone, sexe, date_naissance, commune, quartier, id]
+    );
+
+    const [rows] = await pool.execute(
+      'SELECT id, nom, prenom, email, telephone, sexe, date_naissance, commune, quartier FROM patient WHERE id = ? LIMIT 1',
+      [id]
+    );
+
+    res.json({
+      success: true,
+      message: 'Profil mis à jour avec succès',
+      patient: rows[0]
+    });
+  } catch (error) {
+    console.error('Erreur PUT profil patient:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
 module.exports = router;
