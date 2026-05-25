@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Activity, Mail, Lock, Eye, EyeOff, AlertCircle, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
@@ -111,7 +111,7 @@ export default function Connexion() {
               </div>
               <div className="flex flex-col">
                 <h1 className="text-3xl font-black text-white tracking-tighter leading-none">
-                  CEMECO
+                  Cabinet de cardiologie
                 </h1>
                 <div className="h-1 w-full bg-emerald-400 rounded-full mt-1 opacity-50"></div>
               </div>
@@ -121,7 +121,10 @@ export default function Connexion() {
               Centre Médical d'Excellence
             </p>
             <p className="text-teal-100/80 text-center text-[10px] font-medium mt-1">
-              Spécialisé en Cardiologie Avancée
+              siege: CEMECO KIPE BP: 1384 CONAKRY REPUBLIQUE GUINEE
+            </p>
+            <p className="text-teal-100/80 text-center text-[10px] font-medium mt-1">
+              secretaire: tel 612 80 00 08
             </p>
 
             <div className="mt-5">
@@ -170,7 +173,7 @@ export default function Connexion() {
                 value={email}
                 onChange={(e) => { setEmail(e.target.value); setError(''); }}
                 disabled={loading || blocked}
-                placeholder="secretaire@cemeco.com"
+                placeholder=""
                 autoComplete="email"
                 autoFocus
                 className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 transition-all outline-none disabled:bg-gray-100 disabled:cursor-not-allowed text-sm font-medium text-slate-900"
@@ -191,7 +194,7 @@ export default function Connexion() {
                 value={password}
                 onChange={(e) => { setPassword(e.target.value); setError(''); }}
                 disabled={loading || blocked}
-                placeholder="••••••••"
+                placeholder=""
                 autoComplete="current-password"
                 className="w-full px-4 pr-10 py-2.5 bg-slate-50 border-2 border-slate-100 rounded-xl focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 transition-all outline-none disabled:bg-gray-100 disabled:cursor-not-allowed text-sm font-medium text-slate-900"
               />

@@ -7,7 +7,9 @@
 export const CLINIC_INFO = {
   name: 'CEMECO',
   fullName: 'CEMECO Cabinet de Cardiologie',
-  location: 'Kipé, près de Heroes Coffee - En face de Plaza Diamond',
+  location: 'CEMECO KIPE BP: 1384 CONAKRY REPUBLIQUE GUINEE',
+  phone: '612 80 00 08',
+  email: 'contact@cemeco-clinic.com',
   hours: {
     weekday: '8h00 - 17h00', // Monday to Saturday
     weekend: 'Fermé le dimanche',

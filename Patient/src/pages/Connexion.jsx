@@ -88,7 +88,7 @@ export default function Connexion() {
               <div className="bg-white p-3 rounded-2xl shadow-xl">
                 <Activity className="w-8 h-8 text-teal-600" />
               </div>
-              <h1 className="text-3xl font-black tracking-tighter">CEMECO</h1>
+              <h1 className="text-3xl font-black tracking-tighter">Cabinet de Cardiologie</h1>
             </div>
             
             <h2 className="text-5xl font-bold leading-tight mb-6">
@@ -110,8 +110,9 @@ export default function Connexion() {
                 <p className="text-sm text-teal-100">Des soins spécialisés pour votre cœur.</p>
               </div>
             </div>
-            <div className="text-sm text-teal-200/80">
-              📍 Kipé, près de Heroes Coffee - En face de Plaza Diamond
+            <div className="text-sm text-teal-200/80 mt-2 space-y-1">
+              <p>📍 siege: CEMECO KIPE BP: 1384 CONAKRY REPUBLIQUE GUINEE</p>
+              <p>📞 secretaire: tel 612 80 00 08</p>
             </div>
           </div>
         </div>
@@ -160,7 +161,7 @@ export default function Connexion() {
                       <User className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                       <input
                         name="prenom"
-                        placeholder="Jean"
+                        placeholder=""
                         value={formData.prenom}
                         onChange={handleInputChange}
                         className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition"
@@ -173,7 +174,7 @@ export default function Connexion() {
                       <User className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                       <input
                         name="nom"
-                        placeholder="Dupont"
+                        placeholder=""
                         value={formData.nom}
                         onChange={handleInputChange}
                         className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition"
@@ -190,7 +191,7 @@ export default function Connexion() {
                   <input
                     type="email"
                     name="email"
-                    placeholder="votre@email.com"
+                    placeholder=""
                     value={formData.email}
                     onChange={handleInputChange}
                     className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition"
@@ -206,7 +207,7 @@ export default function Connexion() {
                       <Phone className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                       <input
                         name="telephone"
-                        placeholder="600 00 00 00"
+                        placeholder=""
                         value={formData.telephone}
                         onChange={handleInputChange}
                         className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition"
@@ -234,7 +235,7 @@ export default function Connexion() {
                       <MapPin className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                       <input
                         name="commune"
-                        placeholder="Ex: Kaloum"
+                        placeholder=""
                         value={formData.commune}
                         onChange={handleInputChange}
                         className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition"
@@ -247,7 +248,7 @@ export default function Connexion() {
                       <MapPin className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
                       <input
                         name="quartier"
-                        placeholder="Ex: Almamya"
+                        placeholder=""
                         value={formData.quartier}
                         onChange={handleInputChange}
                         className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition"
@@ -282,7 +283,7 @@ export default function Connexion() {
                   <input
                     type="password"
                     name="password"
-                    placeholder="••••••••"
+                    placeholder=""
                     value={formData.password}
                     onChange={handleInputChange}
                     className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none transition"

@@ -1,6 +1,7 @@
 const express = require('express');
 const pool = require('../config/db');
 const { checkRole } = require('../middleware/authRole');
+const { hashPassword } = require('../utils/auth');
 
 const router = express.Router();
 
@@ -60,6 +61,7 @@ router.post('/', checkRole(['super_admin', 'admin']), async (req, res) => {
     // Générer un mot de passe automatique
     const plainPassword = generatePassword(10);
     console.log(`🔑 Mot de passe généré pour ${prenom} ${nom} : ${plainPassword}`);
+    const hashedPassword = await hashPassword(plainPassword);
 
     // Récupérer l'id_admin depuis le body ou le middleware
     const adminId = id_admin || req.admin?.id || null;
@@ -73,7 +75,7 @@ router.post('/', checkRole(['super_admin', 'admin']), async (req, res) => {
         nom || null, 
         email || null, 
         telephone || null, 
-        plainPassword || null, 
+        hashedPassword || null, 
         adminId || null
       ]
     );

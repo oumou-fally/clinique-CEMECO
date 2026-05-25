@@ -1,11 +1,13 @@
 const express = require('express');
 const pool = require('../config/db');
+const { comparePassword, hashPassword, generateToken, isHashedPassword } = require('../utils/auth');
 
 const router = express.Router();
 
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const password = String(req.body.password || '').trim();
 
     console.log('📝 Tentative de connexion reçue');
     console.log('📧 Email:', email);
@@ -20,10 +22,9 @@ router.post('/login', async (req, res) => {
 
     console.log('🔍 Recherche du médecin en base de données...');
     const [rows] = await pool.execute(
-      'SELECT id, nom, prenom, email, mot_de_passe, statut FROM medecin WHERE email = ? LIMIT 1',
+      'SELECT id, nom, prenom, email, mot_de_passe, statut FROM medecin WHERE LOWER(email) = ? LIMIT 1',
       [email]
     );
-
     if (rows.length === 0) {
       console.error('❌ Médecin non trouvé avec l\'email:', email);
       return res.status(401).json({
@@ -48,13 +49,19 @@ router.post('/login', async (req, res) => {
 
     // ✅ COMPARAISON DU MOT DE PASSE
     console.log('🔐 Vérification du mot de passe...');
-    
-    if (password !== medecin.mot_de_passe) {
+    const isPasswordValid = await comparePassword(password, medecin.mot_de_passe);
+
+    if (!isPasswordValid) {
       console.error('❌ Mot de passe incorrect pour:', email);
       return res.status(401).json({
         success: false,
         message: 'Email ou mot de passe incorrect'
       });
+    }
+
+    if (!isHashedPassword(medecin.mot_de_passe)) {
+      const hashedPassword = await hashPassword(password);
+      await pool.execute('UPDATE medecin SET mot_de_passe = ? WHERE id = ?', [hashedPassword, medecin.id]);
     }
 
     console.log('✅ Mot de passe valide!');
@@ -68,9 +75,16 @@ router.post('/login', async (req, res) => {
     console.log('✨ Connexion réussie pour le médecin:', medecin.prenom, medecin.nom);
     console.log('🎯 Redirection vers le dashboard du médecin ID:', medecin.id);
 
+    const token = generateToken({
+      id: medecin.id,
+      role: 'medecin',
+      email: medecin.email
+    });
+
     res.json({
       success: true,
       message: 'Connexion réussie',
+      token,
       medecin: {
         id: medecin.id,
         nom: medecin.nom.trim(),

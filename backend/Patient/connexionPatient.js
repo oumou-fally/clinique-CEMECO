@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const pool = require('../config/db');
 const { sendOTPEmail } = require('../config/mailer');
+const { comparePassword, hashPassword, generateToken, isHashedPassword } = require('../utils/auth');
 
 const router = express.Router();
 
@@ -38,7 +39,7 @@ router.post('/login', async (req, res) => {
     // Recherche patient
     console.log('🔍 Recherche du patient en base de données...');
     const [rows] = await pool.execute(
-      'SELECT id, nom, prenom, email, mot_de_passe FROM patient WHERE email = ? LIMIT 1',
+      'SELECT id, nom, prenom, email, mot_de_passe FROM patient WHERE LOWER(email) = ? LIMIT 1',
       [email]
     );
 
@@ -55,17 +56,20 @@ router.post('/login', async (req, res) => {
     console.log('👤 ID:', patient.id);
     console.log('📛 Nom:', patient.prenom, patient.nom);
 
-    // Nettoyage base
-    const dbPassword = String(patient.mot_de_passe).trim();
-
-    // Comparaison
+    // Vérification du mot de passe
     console.log('🔐 Vérification du mot de passe...');
-    if (password !== dbPassword) {
+    const isPasswordValid = await comparePassword(password, patient.mot_de_passe);
+    if (!isPasswordValid) {
       console.error('❌ Mot de passe incorrect pour:', email);
       return res.status(401).json({
         success: false,
         message: 'Email ou mot de passe incorrect'
       });
+    }
+
+    if (!isHashedPassword(patient.mot_de_passe)) {
+      const hashedPassword = await hashPassword(password);
+      await pool.execute('UPDATE patient SET mot_de_passe = ? WHERE id = ?', [hashedPassword, patient.id]);
     }
 
     console.log('✅ Mot de passe valide!');
@@ -80,9 +84,16 @@ router.post('/login', async (req, res) => {
     console.log('✨ Connexion réussie pour le patient ID:', patient.id);
     console.log('🎯 Redirection vers le dashboard du patient ID:', patient.id);
 
+    const token = generateToken({
+      id: patient.id,
+      role: 'patient',
+      email: patient.email
+    });
+
     return res.json({
       success: true,
       message: 'Connexion réussie',
+      token,
       patient: {
         id: patient.id,
         nom: patient.nom,
@@ -104,13 +115,22 @@ router.post('/login', async (req, res) => {
 // Inscription d'un nouveau patient
 router.post('/register', async (req, res) => {
   try {
-    const { nom, prenom, email, telephone, sexe, date_naissance, commune, quartier, password } = req.body;
+    let { nom, prenom, email, telephone, sexe, date_naissance, commune, quartier, password } = req.body;
+    email = email?.trim()?.toLowerCase();
+    password = password?.trim();
 
     // Validation basique
     if (!nom || !prenom || !email || !password) {
       return res.status(400).json({
         success: false,
         message: 'Les champs Nom, Prénom, Email et Mot de passe sont requis'
+      });
+    }
+
+    if (password.length < 4) {
+      return res.status(400).json({
+        success: false,
+        message: 'Le mot de passe doit contenir au moins 4 caractères'
       });
     }
 
@@ -123,10 +143,12 @@ router.post('/register', async (req, res) => {
       });
     }
 
+    const hashedPassword = await hashPassword(password);
+
     // Insertion du nouveau patient
     const [result] = await pool.execute(
       'INSERT INTO patient (nom, prenom, email, telephone, sexe, date_naissance, commune, quartier, mot_de_passe, dernier_connexion) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())',
-      [nom, prenom, email, telephone, sexe, date_naissance, commune, quartier, password]
+      [nom, prenom, email, telephone, sexe, date_naissance, commune, quartier, hashedPassword]
     );
 
     const newPatientId = result.insertId;
@@ -309,8 +331,8 @@ router.post('/reset-password', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Tous les champs sont requis' });
     }
 
-    if (newPassword.length < 6) {
-      return res.status(400).json({ success: false, message: 'Le mot de passe doit contenir au moins 6 caractères' });
+    if (newPassword.length < 4) {
+      return res.status(400).json({ success: false, message: 'Le mot de passe doit contenir au moins 4 caractères' });
     }
 
     // Vérifier le token
@@ -342,6 +364,7 @@ router.post('/reset-password', async (req, res) => {
     }
 
     // Mettre à jour le mot de passe
+    const hashedPassword = await hashPassword(newPassword);
     await pool.execute(
       `UPDATE patient 
        SET mot_de_passe = ?,
@@ -351,7 +374,7 @@ router.post('/reset-password', async (req, res) => {
            reset_token = NULL,
            reset_token_expiry = NULL
        WHERE id = ?`,
-      [newPassword, patient.id]
+      [hashedPassword, patient.id]
     );
 
     console.log(`✅ Mot de passe réinitialisé pour le patient ${patient.id} (${email})`);

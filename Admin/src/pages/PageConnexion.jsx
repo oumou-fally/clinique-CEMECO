@@ -51,10 +51,7 @@ export default function PageConnexion() {
                 <Activity className="w-10 h-10 text-blue-600" />
               </div>
             </div>
-            <h1 className="text-4xl font-bold text-white">CEMECO</h1>
-            <p className="text-blue-100 mt-2 text-sm font-medium inline-block">
-              Cabinet de Cardiologie
-            </p>
+            <h1 className="text-4xl font-bold text-white">Cabinet de Cardiologie</h1>
             <p className="text-blue-100 mt-1 text-xs font-light">
               Gestion Administrative
             </p>

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : 127.0.0.1:3306
--- Généré le : sam. 23 mai 2026 à 22:48
+-- Généré le : lun. 25 mai 2026 à 13:17
 -- Version du serveur : 8.0.31
 -- Version de PHP : 8.0.26
 
@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS `administrateur` (
 --
 
 INSERT INTO `administrateur` (`id`, `nom`, `prenom`, `telephone`, `email`, `mot_de_passe`, `actif`, `date_creation`, `dernier_connexion`, `role`) VALUES
-(1, 'Baldé', 'Elhadj Yaya', NULL, 'elhadj.balde@clinique.com', '123456', 1, '2026-05-03 17:46:23', '2026-05-17 15:48:18', 'super_admin');
+(1, 'Baldé', 'Elhadj Yaya', NULL, 'elhadj.balde@clinique.com', '$2b$12$1Wa6YtgKl/3i4x9YKlhs4Os3fOtvzq0ZzpnGZfIZJgxmvzs73vPei', 1, '2026-05-03 17:46:23', '2026-05-17 15:48:18', 'super_admin');
 
 -- --------------------------------------------------------
 
@@ -110,7 +110,7 @@ CREATE TABLE IF NOT EXISTS `clinique_info` (
 --
 
 INSERT INTO `clinique_info` (`id`, `nom`, `adresse`, `telephone`, `email`, `site_web`, `notifications_email`, `sauvegarde_auto`, `retention_donnees`) VALUES
-(1, 'Clinique CEMECO', 'Kipé, près de Heroes Coffee - En face de Plaza Diamond', '+224 622 00 00 00', 'contact@cemeco.gn', 'www.cemeco.gn', 1, 1, 'unlimited');
+(1, 'Clinique CEMECO', 'CEMECO KIPE BP: 1384 CONAKRY REPUBLIQUE GUINEE', '612 80 00 08', 'contact@cemeco.gn', 'www.cemeco.gn', 1, 1, 'unlimited');
 
 -- --------------------------------------------------------
 
@@ -300,12 +300,12 @@ CREATE TABLE IF NOT EXISTS `medecin` (
 
 INSERT INTO `medecin` (`id`, `nom`, `prenom`, `telephone`, `email`, `mot_de_passe`, `id_admin`, `statut`, `date_creation`, `dernier_connexion`, `specialite`, `reset_otp`, `reset_otp_expiry`, `reset_otp_attempts`, `reset_token`, `reset_token_expiry`) VALUES
 (1, 'iuu', 'mfkm', '7887788', 'sfjdsl@gmail.com', '$2b$10$FPfc838XvCa2xxZFs/OsS.4R26E.L9Eq2RvV2P4eVE8Pdjn8EaL6a', NULL, 'actif', '2026-04-19 16:32:54', NULL, 'Cardiologue', NULL, NULL, 0, NULL, NULL),
-(3, 'Baldé', 'Elhadj Yaya', '620000001', 'elhadj.yaya@gmail.com', 'yaya123', NULL, 'actif', '2026-04-21 00:25:35', '2026-05-23 17:41:11', 'Cardiologue', NULL, NULL, 0, NULL, NULL),
-(4, 'Bah', 'Mamadou Bassirou', '620000002', 'bassirou.bah@gmail.com', 'bassirou123', NULL, 'actif', '2026-04-21 00:25:35', '2026-05-14 16:24:26', 'Cardiologue', NULL, NULL, 0, NULL, NULL),
-(5, 'Diallo', 'Mamadou', '620000003', 'mamadou.diallo@gmail.com', 'diallo123', NULL, 'actif', '2026-04-21 00:25:35', '2026-04-21 19:38:31', 'Cardiologue', NULL, NULL, 0, NULL, NULL),
-(6, 'Baldé', 'Thierno Siradjo', '620000004', 'siradjo.balde@gmail.com', 'siradjo123', NULL, 'actif', '2026-04-21 00:25:35', '2026-04-22 15:45:59', 'Cardiologue', NULL, NULL, 0, NULL, NULL),
-(7, 'Baldé', 'Thierno Boubacar', '620000005', 'boubacar.barry@gmail.com', 'barry123', NULL, 'actif', '2026-04-21 00:25:35', NULL, 'Cardiologue', NULL, NULL, 0, NULL, NULL),
-(10, 'balde', 'oumou fally', '627634812', 'baldeoumoufally14@gmail.com', 'DP_6tB9ocO', 1, 'actif', '2026-05-17 13:10:22', NULL, 'Généraliste', NULL, NULL, 0, NULL, NULL);
+(3, 'Baldé', 'Elhadj Yaya', '620000001', 'elhadj.yaya@gmail.com', '$2b$12$2laniunOOu8.uZmqbh7dE.ONiJUHNE.UWKqdiXwLo2z3bffh8NsPi', NULL, 'actif', '2026-04-21 00:25:35', '2026-05-25 11:21:49', 'Cardiologue', NULL, NULL, 0, NULL, NULL),
+(4, 'Bah', 'Mamadou Bassirou', '620000002', 'bassirou.bah@gmail.com', '$2b$12$ChI0yMXpqCZXv8kxzp62SemfrbjyNp5M7xj87KSbAeLXc5aLUoB9.', NULL, 'actif', '2026-04-21 00:25:35', '2026-05-14 16:24:26', 'Cardiologue', NULL, NULL, 0, NULL, NULL),
+(5, 'Diallo', 'Mamadou', '620000003', 'mamadou.diallo@gmail.com', '$2b$12$Cfhh3OdBxnsNKn10CYtvSuD0lxN2qtOZva6XrZE6JYcbOEROkTxGO', NULL, 'actif', '2026-04-21 00:25:35', '2026-04-21 19:38:31', 'Cardiologue', NULL, NULL, 0, NULL, NULL),
+(6, 'Baldé', 'Thierno Siradjo', '620000004', 'siradjo.balde@gmail.com', '$2b$12$Df6eBfUhWDAvYaDmkZhfGOi1MIooxN38qTkP5fWJHXTooc9T9hJq2', NULL, 'actif', '2026-04-21 00:25:35', '2026-04-22 15:45:59', 'Cardiologue', NULL, NULL, 0, NULL, NULL),
+(7, 'Baldé', 'Thierno Boubacar', '620000005', 'boubacar.barry@gmail.com', '$2b$12$OC3yvnFkrB/6WQB/qoYTQu1w9tbiT/JLPoazUrLfqTBHOs200mE5m', NULL, 'actif', '2026-04-21 00:25:35', NULL, 'Cardiologue', NULL, NULL, 0, NULL, NULL),
+(10, 'balde', 'oumou fally', '627634812', 'baldeoumoufally14@gmail.com', '$2b$12$JfrKJrzQAao1I2DV5ypFY.MulcASEtArYGIQocTljCTTFjrvS4Cfq', 1, 'actif', '2026-05-17 13:10:22', NULL, 'Généraliste', NULL, NULL, 0, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -522,18 +522,17 @@ CREATE TABLE IF NOT EXISTS `patient` (
   `antecedent_familial` text,
   `antecedent_personnel` text,
   PRIMARY KEY (`id`)
-) ENGINE=MyISAM AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Déchargement des données de la table `patient`
 --
 
 INSERT INTO `patient` (`id`, `nom`, `prenom`, `telephone`, `commune`, `quartier`, `email`, `sexe`, `mot_de_passe`, `dernier_connexion`, `date_naissance`, `reset_token`, `reset_token_expiry`, `reset_otp_attempts`, `reset_otp`, `reset_otp_expiry`, `groupe_sanguin`, `allergies`, `antecedent_familial`, `antecedent_personnel`) VALUES
-(1, 'Diallo', 'Aminata', '620000000', 'Ratoma', 'Kaporo', 'aminata@gmail.com', 'F', '123456', '2026-05-03 17:35:51', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL),
+(1, 'Diallo', 'Aminata', '620000000', 'Ratoma', 'Kaporo', 'aminata@gmail.com', 'F', '$2b$12$sUa7nvJJq4USHISqVkCe5.zjsANHTmUQT3jNtQ844SPgUIyr4Utt6', '2026-05-25 13:03:03', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL),
 (5, 'Test', 'Patient', '620000000', NULL, NULL, NULL, NULL, '', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL),
-(6, 'baldé', 'oumou fally', '627634812', NULL, NULL, 'baldeoumoufally14@gmail.com', 'F', 'sacko@1', '2026-05-14 17:50:29', '2004-06-08', NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL),
-(7, 'sacko', 'mamady', '612374585', NULL, NULL, 'sacko2120@gmail.com', 'M', 'zanka', '2026-05-08 18:57:17', '2003-02-03', NULL, NULL, 0, '523111', '2026-05-05 17:53:12', NULL, NULL, NULL, NULL),
-(8, 'Bah', 'Ibrahima ', '622383922', 'dubreka', 'Kagbelen', 'bahabdoulayeibrahim@gmail.com', 'M', 'okotsu', '2026-05-23 14:58:06', '2007-08-13', NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL);
+(6, 'baldé', 'oumou fally', '627634812', NULL, NULL, 'baldeoumoufally14@gmail.com', 'F', '$2b$12$AN6FwqVPtaYIQc/JYO3X4.ekI8AOjObAtnY/DC3PTYU2OwRR68b8S', '2026-05-25 13:06:42', '2004-06-08', NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL),
+(7, 'sacko', 'mamady', '612374585', NULL, NULL, 'sacko2120@gmail.com', 'M', '$2b$12$jUS4OV3THEeBGjgKRUtLR.owu4YhvP7dqXGZZ2vNAMfrjnWN8rieu', '2026-05-25 13:03:03', '2003-02-03', NULL, NULL, 0, '523111', '2026-05-05 17:53:12', NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -683,14 +682,15 @@ CREATE TABLE IF NOT EXISTS `secretaire` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `email` (`email`),
   KEY `fk_secretaire_admin` (`id_admin`)
-) ENGINE=MyISAM AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Déchargement des données de la table `secretaire`
 --
 
 INSERT INTO `secretaire` (`id`, `nom`, `prenom`, `email`, `mot_de_passe`, `telephone`, `statut`, `dernier_connexion`, `id_admin`, `created_at`, `reset_otp`, `reset_otp_expiry`, `reset_otp_attempts`, `reset_token`, `reset_token_expiry`) VALUES
-(3, 'Baldé', 'Aissatou', 'baldeaissatou@gmail.com', 'd_3fW0-7oE', '627634812', 'actif', '2026-05-23 18:00:52', 1, '2026-04-24 21:18:41', NULL, NULL, 0, NULL, NULL);
+(3, 'Baldé', 'Aissatou', 'baldeaissatou@gmail.com', '$2b$12$pM39p131HFCgIeaCmUWjB.cMElUmAlYoVUXX6Q1ckb5jcLZsYN50m', '627634812', 'actif', '2026-05-25 11:31:12', 1, '2026-04-24 21:18:41', NULL, NULL, 0, NULL, NULL),
+(4, 'Test', 'Secretaire', 'testsecretaire@example.com', '$2b$12$v54KBj8xVX7ptxNNCs0hse7KX/BJspwYyS2lqMy5Q.MdnB9310m/.', '0000000000', 'actif', '2026-05-25 13:11:20', NULL, '2026-05-25 13:11:20', NULL, NULL, 0, NULL, NULL);
 
 -- --------------------------------------------------------
 

@@ -1,5 +1,6 @@
 const express = require('express');
 const pool = require('../config/db');
+const { comparePassword, hashPassword, generateToken, isHashedPassword } = require('../utils/auth');
 
 const router = express.Router();
 
@@ -9,7 +10,8 @@ const router = express.Router();
  */
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const password = String(req.body.password || '').trim();
 
     if (!email || !password) {
       return res.status(400).json({
@@ -19,7 +21,7 @@ router.post('/login', async (req, res) => {
     }
 
     const [rows] = await pool.execute(
-      'SELECT id, nom, prenom, email, mot_de_passe, role, actif FROM administrateur WHERE email = ? LIMIT 1',
+      'SELECT id, nom, prenom, email, mot_de_passe, role, actif FROM administrateur WHERE LOWER(email) = ? LIMIT 1',
       [email]
     );
 
@@ -39,17 +41,29 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    if (password !== admin.mot_de_passe) {
+    const isPasswordValid = await comparePassword(password, admin.mot_de_passe);
+    if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
         message: 'Email ou mot de passe incorrect'
       });
     }
 
+    if (!isHashedPassword(admin.mot_de_passe)) {
+      const hashedPassword = await hashPassword(password);
+      await pool.execute('UPDATE administrateur SET mot_de_passe = ? WHERE id = ?', [hashedPassword, admin.id]);
+    }
+
     await pool.execute(
       'UPDATE administrateur SET dernier_connexion = NOW() WHERE id = ?',
       [admin.id]
     );
+
+    const token = generateToken({
+      id: admin.id,
+      role: admin.role || 'admin',
+      email: admin.email
+    });
 
     const adminResponse = {
       id: admin.id,
@@ -63,6 +77,7 @@ router.post('/login', async (req, res) => {
     res.json({
       success: true,
       message: 'Connexion réussie',
+      token,
       admin: adminResponse
     });
 

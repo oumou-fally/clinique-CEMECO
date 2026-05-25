@@ -1,5 +1,6 @@
 const express = require('express');
 const pool = require('../config/db');
+const { comparePassword, hashPassword, generateToken, verifyToken, isHashedPassword } = require('../utils/auth');
 
 const router = express.Router();
 
@@ -41,7 +42,7 @@ router.post('/login-secretaire', validateLogin, async (req, res) => {
     const [rows] = await pool.execute(
       `SELECT id, nom, prenom, email, mot_de_passe, telephone, statut 
        FROM secretaire 
-       WHERE email = ?`,
+       WHERE LOWER(email) = ?`,
       [email]
     );
 
@@ -61,11 +62,17 @@ router.post('/login-secretaire', validateLogin, async (req, res) => {
       });
     }
 
-    if (password !== secretaire.mot_de_passe) {
+    const isPasswordValid = await comparePassword(password, secretaire.mot_de_passe);
+    if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
         message: 'Email ou mot de passe incorrect'
       });
+    }
+
+    if (!isHashedPassword(secretaire.mot_de_passe)) {
+      const hashedPassword = await hashPassword(password);
+      await pool.execute('UPDATE secretaire SET mot_de_passe = ? WHERE id = ?', [hashedPassword, secretaire.id]);
     }
 
     await pool.execute(
@@ -73,8 +80,11 @@ router.post('/login-secretaire', validateLogin, async (req, res) => {
       [secretaire.id]
     );
 
-    // Token simple (compatible avec ton système actuel)
-    const token = Buffer.from(`${secretaire.id}:${Date.now()}`).toString('base64');
+    const token = generateToken({
+      id: secretaire.id,
+      role: 'secretaire',
+      email: secretaire.email
+    });
 
     const secretaireData = {
       id: secretaire.id,
@@ -90,8 +100,8 @@ router.post('/login-secretaire', validateLogin, async (req, res) => {
     res.json({
       success: true,
       message: 'Connexion réussie',
-      secretaire: secretaireData,
-      token: token
+      token,
+      secretaire: secretaireData
     });
 
   } catch (error) {
@@ -118,8 +128,17 @@ router.get('/verify-secretaire', async (req, res) => {
       });
     }
 
-    const decoded = Buffer.from(token, 'base64').toString();
-    const [id] = decoded.split(':');
+    let payload;
+    try {
+      payload = verifyToken(token);
+    } catch (error) {
+      return res.status(401).json({
+        success: false,
+        message: 'Session invalide ou expirée'
+      });
+    }
+
+    const { id } = payload;
 
     const [rows] = await pool.execute(
       'SELECT id, nom, prenom, email, telephone FROM secretaire WHERE id = ? AND statut = "actif"',

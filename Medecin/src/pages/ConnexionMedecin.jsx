@@ -48,8 +48,7 @@ export default function ConnexionMedecin() {
           <div className="bg-white p-4 rounded-full inline-block mb-4">
             <Activity className="w-10 h-10 text-teal-600" />
           </div>
-          <h1 className="text-4xl font-bold text-white">CEMECO</h1>
-          <p className="text-teal-100 text-sm">Cabinet de Cardiologie</p>
+          <h1 className="text-4xl font-bold text-white">Cabinet de Cardiologie</h1>
           <p className="text-teal-100 text-xs mt-1">Connexion Médecin</p>
         </div>
 

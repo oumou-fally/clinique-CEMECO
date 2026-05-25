@@ -99,8 +99,8 @@ export default function MotDePasseOublie() {
       setError('Les mots de passe ne correspondent pas')
       return
     }
-    if (passwords.new.length < 6) {
-      setError('Le mot de passe doit contenir au moins 6 caractères')
+    if (passwords.new.length < 4) {
+      setError('Le mot de passe doit contenir au moins 4 caractères')
       return
     }
 

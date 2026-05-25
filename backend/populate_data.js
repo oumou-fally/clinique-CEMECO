@@ -1,4 +1,5 @@
 const pool = require('./config/db');
+const { hashPassword } = require('./utils/auth');
 
 async function populate() {
     console.log('📦 Alimentation de la base de données avec vos données...');
@@ -35,9 +36,10 @@ async function populate() {
         ];
 
         for (const [id, nom, prenom, tel, email, sexe, pass] of patientsQueries) {
+            const hashedPass = pass ? await hashPassword(pass) : null;
             await pool.execute(
                 "INSERT IGNORE INTO patient (id, nom, prenom, telephone, email, sexe, mot_de_passe) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                [id, nom, prenom, tel, email, sexe, pass]
+                [id, nom, prenom, tel, email, sexe, hashedPass]
             );
         }
 
