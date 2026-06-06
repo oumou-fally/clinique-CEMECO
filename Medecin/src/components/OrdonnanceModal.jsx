@@ -129,16 +129,21 @@ export default function OrdonnanceModal({ isOpen, onClose, reservation, medecinI
         {/* Zone d'impression */}
         <div className="p-10 flex-1 overflow-y-auto print:overflow-visible print:p-6 print:text-black">
           
+          <div className="mb-6 rounded-3xl border border-gray-200 bg-gray-50 p-4 text-center print:bg-white print:border-black print:border-t-0 print:border-x-0 print:border-b-2">
+            <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Cabinet de Cardiologie - CEMECO</p>
+            <p className="text-sm font-bold text-gray-900">KIPE BP: 1384 • CONAKRY • REPUBLIQUE DE GUINEE</p>
+          </div>
+
           {/* En-tête clinique pour l'impression */}
           <div className="hidden print:block mb-6 border-b-2 border-black pb-4 text-center">
             <div className="flex justify-between items-center mb-2">
                <div className="text-left">
-                  <h1 className="text-3xl font-black uppercase tracking-tighter">Clinique CEMECO</h1>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-600">Santé & Bien-être pour tous</p>
+                  <h1 className="text-3xl font-black uppercase tracking-tighter">Cabinet de Cardiologie - CEMECO</h1>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-600">KIPE BP: 1384 • Conakry • République de Guinée</p>
                </div>
                <div className="text-right text-[8px] font-bold text-gray-400">
-                  <p>République de Guinée • Conakry, Commune de Ratoma</p>
-                  <p>Tel: (+224) 620 00 00 00</p>
+                  <p>Cabinet de Cardiologie</p>
+                  <p>Conakry, République de Guinée</p>
                </div>
             </div>
             

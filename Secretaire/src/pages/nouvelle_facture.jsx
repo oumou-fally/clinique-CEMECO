@@ -78,6 +78,67 @@ const grouperConsultationsParJour = (consults, facturesList) => {
   });
 };
 
+const nombreDeuxChiffres = (n) => {
+  const unites = ['zéro','un','deux','trois','quatre','cinq','six','sept','huit','neuf','dix','onze','douze','treize','quatorze','quinze','seize'];
+  const dizaines = ['','dix','vingt','trente','quarante','cinquante','soixante','soixante','quatre-vingt','quatre-vingt'];
+
+  if (n < 17) return unites[n];
+  if (n < 20) return `dix-${unites[n - 10]}`;
+  if (n < 70) {
+    const ten = Math.floor(n / 10);
+    const unit = n % 10;
+    const prefix = dizaines[ten];
+    if (unit === 0) return prefix;
+    if (unit === 1) return `${prefix} et un`;
+    return `${prefix}-${unites[unit]}`;
+  }
+  if (n < 80) {
+    const remainder = n - 60;
+    if (remainder === 1) return 'soixante et onze';
+    return `soixante-${nombreDeuxChiffres(remainder)}`;
+  }
+  if (n < 100) {
+    const remainder = n - 80;
+    if (remainder === 0) return 'quatre-vingts';
+    return `quatre-vingt${remainder === 1 ? '-un' : `-${nombreDeuxChiffres(remainder)}`}`;
+  }
+  return '';
+};
+
+const nombreTroisChiffres = (n) => {
+  const unites = ['','un','deux','trois','quatre','cinq','six','sept','huit','neuf'];
+  const centaines = Math.floor(n / 100);
+  const reste = n % 100;
+  const centText = centaines === 0 ? '' : `${centaines === 1 ? 'cent' : `${unites[centaines]} cent`}${reste === 0 ? 's' : ''}`;
+  const resteText = reste > 0 ? nombreDeuxChiffres(reste) : '';
+  return [centText, resteText].filter(Boolean).join(' ').trim();
+};
+
+const nombreEnLettres = (nombre) => {
+  const n = Math.round(Number(nombre) || 0);
+  if (n === 0) return 'zéro';
+  const milliards = Math.floor(n / 1000000000);
+  const millions = Math.floor((n % 1000000000) / 1000000);
+  const milliers = Math.floor((n % 1000000) / 1000);
+  const centaines = n % 1000;
+  const segments = [];
+
+  if (milliards) {
+    segments.push(`${nombreTroisChiffres(milliards)} milliard${milliards > 1 ? 's' : ''}`);
+  }
+  if (millions) {
+    segments.push(`${nombreTroisChiffres(millions)} million${millions > 1 ? 's' : ''}`);
+  }
+  if (milliers) {
+    segments.push(milliers === 1 ? 'mille' : `${nombreTroisChiffres(milliers)} mille`);
+  }
+  if (centaines) {
+    segments.push(nombreTroisChiffres(centaines));
+  }
+
+  return segments.join(' ').replace(/\s+/g, ' ').trim();
+};
+
 export default function ComposantFacturation() {
   const [factures, setFactures] = useState([]);
   const [patients, setPatients] = useState([]);
@@ -1656,7 +1717,8 @@ export default function ComposantFacturation() {
                     <div className="flex justify-between items-start border-b-2 border-slate-100 pb-8">
                       <div>
                         <h1 className="text-4xl font-black text-blue-600 tracking-tighter">CEMECO</h1>
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Clinique Médico-Chirurgicale</p>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Cabinet de Cardiologie</p>
+                        <p className="text-[10px] text-slate-400 mt-2 font-medium">CEMECO KIPE BP: 1384 CONAKRY REPUBLIQUE GUINEE</p>
                         <p className="text-[10px] text-slate-400 mt-2 font-medium">Conakry, République de Guinée</p>
                       </div>
                       <div className="text-right">
@@ -1800,181 +1862,81 @@ export default function ComposantFacturation() {
                     <div className="flex justify-between items-start border-b-2 border-slate-100 pb-8">
                       <div>
                         <h1 className="text-4xl font-black text-emerald-600 tracking-tighter">CEMECO</h1>
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Clinique Médico-Chirurgicale</p>
+                        <p className="text-xs font-black uppercase tracking-widest text-slate-400 mt-1">Cabinet de Cardiologie</p>
+                        <p className="text-[10px] text-slate-400 mt-2 font-medium">CEMECO KIPE BP: 1384 CONAKRY REPUBLIQUE GUINEE</p>
                         <p className="text-[10px] text-slate-400 mt-2 font-medium">Conakry, République de Guinée</p>
                       </div>
                       <div className="text-right">
                         <h3 className="text-2xl font-black uppercase text-slate-900">REÇU</h3>
-                        <p className="font-mono text-sm text-slate-500 font-bold mt-1">N° FAC-{selectedFacture.id}</p>
+                        <p className="font-mono text-sm text-slate-500 font-bold mt-1">N° REC-{selectedFacture.id}</p>
                         <p className="text-xs font-bold text-slate-400 mt-2">
-                          Date: {new Date(selectedFacture.created_at).toLocaleDateString('fr-FR')}
+                          {new Date(selectedFacture.created_at).toLocaleDateString('fr-FR')}
                         </p>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-8 py-4">
-                      <div>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Patient</p>
-                        <p className="text-xl font-black text-slate-900">{selectedFacture.patient_nom}</p>
-                        <p className="text-xs text-slate-500 font-bold mt-1">
-                          Patient {selectedFacture.patient_type === 'insured' ? 'Assuré' : 'Non Assuré'}
+                    <div className="space-y-4 text-slate-800">
+                      <div className="grid gap-3 text-sm">
+                        <div className="flex items-center justify-between border-b border-slate-200 py-3">
+                          <span className="font-black uppercase text-[10px] text-slate-400">Reçu de</span>
+                          <span>{selectedFacture.patient_nom}</span>
+                        </div>
+                        <div className="flex items-center justify-between border-b border-slate-200 py-3">
+                          <span className="font-black uppercase text-[10px] text-slate-400">La somme de</span>
+                          <span>{Number(selectedFacture.patient_type === 'insured' ? selectedFacture.montant_patient || 0 : selectedFacture.montant || 0).toLocaleString()} GNF</span>
+                        </div>
+                        <div className="flex items-center justify-between border-b border-slate-200 py-3">
+                          <span className="font-black uppercase text-[10px] text-slate-400">En lettres</span>
+                          <span className="italic text-right w-2/3">
+                            {nombreEnLettres(Number(selectedFacture.patient_type === 'insured' ? selectedFacture.montant_patient || 0 : selectedFacture.montant || 0)).replace(/^./, s => s.toUpperCase())} francs guinéens
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between border-b border-slate-200 py-3">
+                          <span className="font-black uppercase text-[10px] text-slate-400">Pour</span>
+                          <span className="text-right w-2/3">{selectedFacture.service}</span>
+                        </div>
+                      </div>
+
+                      <div className="bg-slate-50 rounded-3xl border border-slate-200 p-4">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Type de reçu</p>
+                        <p className="text-sm font-black text-slate-900">
+                          {selectedFacture.patient_type === 'insured' ? 'Ticket Modérateur - part payée par le patient' : 'Paiement direct par le patient'}
                         </p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Statut</p>
-                        <span className={`px-4 py-1.5 rounded-full text-xs font-black uppercase border ${STATUTS_CLASSES[selectedFacture.statut]}`}>
-                          {STATUTS_LABEL[selectedFacture.statut]}
-                        </span>
-                      </div>
-                    </div>
 
-                    <div className="border-2 border-slate-50 rounded-3xl overflow-hidden">
-                      <table className="w-full text-left">
-                        <thead className="bg-slate-50 text-[10px] font-black uppercase text-slate-400">
-                          <tr>
-                            <th className="px-6 py-4">Service</th>
-                            <th className="px-6 py-4 text-right">Montant</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50">
-                          <tr>
-                            <td className="px-6 py-6 font-bold text-slate-800">
-                              {selectedFacture.service}
-                              <p className="text-[10px] text-slate-400 font-medium uppercase mt-1">
-                                Clinique CEMECO
-                              </p>
-                            </td>
-                            <td className="px-6 py-6 text-right font-black text-xl text-slate-900">
-                              {Number(selectedFacture.montant).toLocaleString()} GNF
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-
-                    <div className="bg-slate-50 p-8 rounded-[2rem] space-y-6">
-                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-slate-200/50 pb-6">
-                        <div className="space-y-1">
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Mode de paiement</p>
-                          <p className="text-sm font-black text-slate-900 uppercase tracking-tighter">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="bg-white rounded-3xl border border-slate-200 p-4">
+                          <p className="text-[10px] uppercase font-black text-slate-400 mb-2">Montant payé</p>
+                          <p className="text-3xl font-black text-emerald-600">
+                            {Number(selectedFacture.patient_type === 'insured' ? selectedFacture.montant_patient || 0 : selectedFacture.montant || 0).toLocaleString()} GNF
+                          </p>
+                        </div>
+                        <div className="bg-white rounded-3xl border border-slate-200 p-4">
+                          <p className="text-[10px] uppercase font-black text-slate-400 mb-2">Mode de paiement</p>
+                          <p className="text-sm font-bold text-slate-900 uppercase">
                             {METHODES_PAIEMENT.find(m => m.value === selectedFacture.payment_method)?.label || selectedFacture.payment_method}
                           </p>
                           {selectedFacture.payment_method === 'orange-money' && selectedFacture.orange_number && (
-                            <p className="text-xs text-orange-600 font-semibold">Téléphone Orange Money: {selectedFacture.orange_number}</p>
+                            <p className="text-xs text-orange-600 mt-2">N° Orange Money : {selectedFacture.orange_number}</p>
                           )}
                           {selectedFacture.payment_method === 'cheque' && (
-                            <div className="text-xs text-slate-600 space-y-0.5 font-semibold">
-                              <p>N° Chèque: {selectedFacture.cheque_number}</p>
+                            <div className="space-y-1 text-xs text-slate-600 mt-2">
+                              <p>Chèque n°: {selectedFacture.cheque_number}</p>
                               <p>Banque: {selectedFacture.bank_name}</p>
                               <p>Titulaire: {selectedFacture.cheque_holder}</p>
                             </div>
                           )}
                         </div>
-                        {selectedFacture.patient_type === 'insured' && (
-                          <div className="space-y-1 md:text-right">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Informations Assurance</p>
-                            <p className="text-sm font-black text-blue-700 uppercase tracking-tighter">
-                              {selectedFacture.insurance_provider}
-                            </p>
-                            <p className="text-xs text-slate-600 font-semibold">Carte N°: {selectedFacture.insurance_number}</p>
-                            <p className="text-xs text-slate-600 font-semibold">Taux de couverture: {selectedFacture.coverage_rate}%</p>
-                            {selectedFacture.validation_ref && (
-                              <div className="mt-2 bg-blue-50/50 border border-blue-100 p-2.5 rounded-xl text-[10px] text-left md:text-right max-w-xs ml-auto">
-                                <p className="font-bold text-slate-700">Réf. Règlement: <span className="font-mono font-black">{selectedFacture.validation_ref}</span></p>
-                                <p className="font-black text-blue-600 mt-0.5">
-                                  {selectedFacture.statut === 'payee' 
-                                    ? "✅ Remboursement Validé" 
-                                    : "⏳ Validation Admin en cours"
-                                  }
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex flex-col md:flex-row justify-between items-end gap-6">
-                        {selectedFacture.patient_type === 'insured' ? (
-                          <div className="space-y-2 text-left w-full md:w-auto">
-                            <div className="flex justify-between md:justify-start gap-8 border-b border-slate-100 pb-2">
-                              <span className="text-xs font-bold text-slate-400 uppercase">Part Assurance ({selectedFacture.coverage_rate}%) :</span>
-                              <span className="text-sm font-black text-blue-600">
-                                {Number(selectedFacture.montant_assurance || 0).toLocaleString()} GNF
-                              </span>
-                            </div>
-                            <div className="flex justify-between md:justify-start gap-8">
-                              <span className="text-xs font-bold text-slate-400 uppercase">Part Patient ({100 - selectedFacture.coverage_rate}%) :</span>
-                              <span className="text-sm font-black text-slate-800">
-                                {Number(selectedFacture.montant_patient || 0).toLocaleString()} GNF
-                              </span>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="space-y-1">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Type de prise en charge</p>
-                            <p className="text-xs font-bold text-slate-800">Prise en charge patient à 100% (Non-assuré)</p>
-                          </div>
-                        )}
-                        <div className="text-right w-full md:w-auto mt-4 md:mt-0 border-t md:border-t-0 pt-4 md:pt-0 border-slate-200">
-                          <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Montant payé par Patient</p>
-                          <p className="text-4xl font-black text-emerald-600">
-                            {Number(selectedFacture.patient_type === 'insured' ? selectedFacture.montant_patient : selectedFacture.montant).toLocaleString()} <span className="text-lg">GNF</span>
-                          </p>
-                        </div>
                       </div>
                     </div>
 
-                    <div className="bg-slate-50 border border-slate-200 rounded-3xl p-5 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="text-sm font-black text-slate-900">Historique de validation</h4>
-                          <p className="text-[10px] text-slate-400">Suivi des statuts et validations enregistrées pour cette facture.</p>
-                        </div>
-                        <span className="text-[10px] text-slate-500">{historyLoading ? 'Chargement...' : `${history.length} événement(s)`}</span>
+                    <div className="mt-10 grid grid-cols-1 md:grid-cols-[1fr_auto] items-center gap-6">
+                      <div className="text-[10px] text-slate-400 uppercase tracking-widest">
+                        Conakry, le {new Date(selectedFacture.created_at).toLocaleDateString('fr-FR')}
                       </div>
-                      {historyLoading ? (
-                        <p className="text-xs text-slate-500">Chargement de l'historique...</p>
-                      ) : history.length === 0 ? (
-                        <p className="text-xs text-slate-400">Aucun historique disponible pour cette facture.</p>
-                      ) : (
-                        <div className="space-y-3">
-                          {history.map((entry) => {
-                            const oldStatut = entry.old_value ? JSON.parse(entry.old_value)?.statut : null;
-                            const newStatut = entry.new_value ? JSON.parse(entry.new_value)?.statut : null;
-                            const summary = entry.note
-                              ? entry.note
-                              : oldStatut && newStatut && oldStatut !== newStatut
-                                ? `${STATUTS_LABEL[oldStatut] || oldStatut} → ${STATUTS_LABEL[newStatut] || newStatut}`
-                                : entry.action.replace(/_/g, ' ');
-                            return (
-                              <div key={entry.id} className="rounded-2xl border border-slate-200 bg-white p-4">
-                                <div className="flex justify-between items-start gap-4">
-                                  <div>
-                                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">{entry.action.replace(/_/g, ' ')}</p>
-                                    <p className="text-sm font-bold text-slate-900">{summary}</p>
-                                  </div>
-                                  <p className="text-[10px] text-slate-500">{new Date(entry.created_at).toLocaleString('fr-FR')}</p>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4 mt-3 text-[10px] text-slate-600">
-                                  <div>Rôle: {entry.user_role || 'N/A'}</div>
-                                  <div>Utilisateur: {entry.user_id || 'N/A'}</div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                    <div className="pt-6 grid grid-cols-2 gap-12 text-center border-t border-dashed border-slate-200">
-                      <div className="space-y-4">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Signature du patient</p>
-                        <div className="h-16"></div>
-                      </div>
-                      <div className="space-y-4">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cachet du secrétariat</p>
-                        <div className="h-16 flex items-center justify-center italic text-slate-300 font-black text-5xl opacity-10">
-                          CEMECO
-                        </div>
+                      <div className="text-center">
+                        <div className="h-16 border-b border-slate-300 mb-2"></div>
+                        <p className="text-xs font-black uppercase text-slate-500">Signature</p>
                       </div>
                     </div>
                   </>

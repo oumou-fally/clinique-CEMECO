@@ -916,12 +916,12 @@ export default function GestionFinanciere() {
               <div className="flex justify-between pt-12 text-xs">
                 <div className="text-center w-48">
                   <p className="font-bold text-slate-400 mb-12">Le Responsable Comptable</p>
-                  <p className="font-black text-slate-800">S. Camara</p>
+                  <p className="font-black text-slate-800">Mme. Fatoumata Kenda. Barry</p>
                   <div className="text-[9px] text-slate-400 mt-1 italic">Signé électroniquement</div>
                 </div>
                 <div className="text-center w-48">
                   <p className="font-bold text-slate-400 mb-12">Le Directeur de la Clinique</p>
-                  <p className="font-black text-slate-800">Dr. M. Soumah</p>
+                  <p className="font-black text-slate-800">Pr. Elhadj Yaya. Baldé</p>
                   <div className="text-[9px] text-slate-400 mt-1 italic">Cachet & Signature officiels</div>
                 </div>
               </div>

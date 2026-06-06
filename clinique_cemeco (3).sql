@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : 127.0.0.1:3306
--- Généré le : lun. 25 mai 2026 à 13:17
+-- Généré le : sam. 06 juin 2026 à 11:49
 -- Version du serveur : 8.0.31
 -- Version de PHP : 8.0.26
 
@@ -67,23 +67,6 @@ CREATE TABLE IF NOT EXISTS `administrateur` (
 
 INSERT INTO `administrateur` (`id`, `nom`, `prenom`, `telephone`, `email`, `mot_de_passe`, `actif`, `date_creation`, `dernier_connexion`, `role`) VALUES
 (1, 'Baldé', 'Elhadj Yaya', NULL, 'elhadj.balde@clinique.com', '$2b$12$1Wa6YtgKl/3i4x9YKlhs4Os3fOtvzq0ZzpnGZfIZJgxmvzs73vPei', 1, '2026-05-03 17:46:23', '2026-05-17 15:48:18', 'super_admin');
-
--- --------------------------------------------------------
-
---
--- Structure de la table `archive_medecin`
---
-
-DROP TABLE IF EXISTS `archive_medecin`;
-CREATE TABLE IF NOT EXISTS `archive_medecin` (
-  `id_archive` int NOT NULL AUTO_INCREMENT,
-  `id_medecin` int NOT NULL,
-  `id_consultation` int DEFAULT NULL,
-  `date_archive` datetime DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id_archive`),
-  KEY `id_medecin` (`id_medecin`),
-  KEY `id_consultation` (`id_consultation`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
 
@@ -250,24 +233,6 @@ INSERT INTO `horaires_clinique` (`id`, `jour`, `debut`, `fin`, `actif`) VALUES
 -- --------------------------------------------------------
 
 --
--- Structure de la table `ligne_ordonnance`
---
-
-DROP TABLE IF EXISTS `ligne_ordonnance`;
-CREATE TABLE IF NOT EXISTS `ligne_ordonnance` (
-  `id_ligne` int NOT NULL AUTO_INCREMENT,
-  `id_ordonnance` int NOT NULL,
-  `medicament` varchar(255) DEFAULT NULL,
-  `dose` varchar(100) DEFAULT NULL,
-  `frequence` varchar(100) DEFAULT NULL,
-  `duree` varchar(100) DEFAULT NULL,
-  PRIMARY KEY (`id_ligne`),
-  KEY `id_ordonnance` (`id_ordonnance`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
--- --------------------------------------------------------
-
---
 -- Structure de la table `medecin`
 --
 
@@ -300,7 +265,7 @@ CREATE TABLE IF NOT EXISTS `medecin` (
 
 INSERT INTO `medecin` (`id`, `nom`, `prenom`, `telephone`, `email`, `mot_de_passe`, `id_admin`, `statut`, `date_creation`, `dernier_connexion`, `specialite`, `reset_otp`, `reset_otp_expiry`, `reset_otp_attempts`, `reset_token`, `reset_token_expiry`) VALUES
 (1, 'iuu', 'mfkm', '7887788', 'sfjdsl@gmail.com', '$2b$10$FPfc838XvCa2xxZFs/OsS.4R26E.L9Eq2RvV2P4eVE8Pdjn8EaL6a', NULL, 'actif', '2026-04-19 16:32:54', NULL, 'Cardiologue', NULL, NULL, 0, NULL, NULL),
-(3, 'Baldé', 'Elhadj Yaya', '620000001', 'elhadj.yaya@gmail.com', '$2b$12$2laniunOOu8.uZmqbh7dE.ONiJUHNE.UWKqdiXwLo2z3bffh8NsPi', NULL, 'actif', '2026-04-21 00:25:35', '2026-05-25 11:21:49', 'Cardiologue', NULL, NULL, 0, NULL, NULL),
+(3, 'Baldé', 'Elhadj Yaya', '628049387', 'elhadj.yaya@gmail.com', '$2b$12$2laniunOOu8.uZmqbh7dE.ONiJUHNE.UWKqdiXwLo2z3bffh8NsPi', NULL, 'actif', '2026-04-21 00:25:35', '2026-06-01 18:53:27', 'Cardiologue', NULL, NULL, 0, NULL, NULL),
 (4, 'Bah', 'Mamadou Bassirou', '620000002', 'bassirou.bah@gmail.com', '$2b$12$ChI0yMXpqCZXv8kxzp62SemfrbjyNp5M7xj87KSbAeLXc5aLUoB9.', NULL, 'actif', '2026-04-21 00:25:35', '2026-05-14 16:24:26', 'Cardiologue', NULL, NULL, 0, NULL, NULL),
 (5, 'Diallo', 'Mamadou', '620000003', 'mamadou.diallo@gmail.com', '$2b$12$Cfhh3OdBxnsNKn10CYtvSuD0lxN2qtOZva6XrZE6JYcbOEROkTxGO', NULL, 'actif', '2026-04-21 00:25:35', '2026-04-21 19:38:31', 'Cardiologue', NULL, NULL, 0, NULL, NULL),
 (6, 'Baldé', 'Thierno Siradjo', '620000004', 'siradjo.balde@gmail.com', '$2b$12$Df6eBfUhWDAvYaDmkZhfGOi1MIooxN38qTkP5fWJHXTooc9T9hJq2', NULL, 'actif', '2026-04-21 00:25:35', '2026-04-22 15:45:59', 'Cardiologue', NULL, NULL, 0, NULL, NULL),
@@ -329,7 +294,7 @@ CREATE TABLE IF NOT EXISTS `messagerie` (
   PRIMARY KEY (`id`),
   KEY `fk_message_medecin` (`id_medecin`),
   KEY `fk_message_patient` (`id_patient`)
-) ENGINE=MyISAM AUTO_INCREMENT=27 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=32 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Déchargement des données de la table `messagerie`
@@ -361,7 +326,12 @@ INSERT INTO `messagerie` (`id`, `id_medecin`, `id_patient`, `sujet`, `priorite`,
 (23, 3, 6, NULL, 'normal', 'patient', 'edfytiupio', 1, '2026-05-17 12:27:39', 'vocal', '/uploads/1779020859233-842237447.webm'),
 (24, 3, 1, NULL, 'normal', 'medecin', '', 0, '2026-05-17 12:37:52', 'image', '/uploads/1779021472071-273807703.png'),
 (25, 3, 6, NULL, 'normal', 'medecin', '', 1, '2026-05-17 12:38:06', 'image', '/uploads/1779021486980-723913093.png'),
-(26, 3, 8, NULL, 'normal', 'patient', 'malade de trop', 1, '2026-05-23 12:21:21', 'vocal', '/uploads/1779538881760-531285855.webm');
+(26, 3, 8, NULL, 'normal', 'patient', 'malade de trop', 1, '2026-05-23 12:21:21', 'vocal', '/uploads/1779538881760-531285855.webm'),
+(27, 3, 6, NULL, 'normal', 'medecin', '', 1, '2026-06-01 19:06:57', 'vocal', '/uploads/1780340817050-852749394.webm'),
+(28, 3, 6, NULL, 'normal', 'medecin', '', 1, '2026-06-01 19:07:18', 'vocal', '/uploads/1780340838157-273452347.webm'),
+(29, 3, 6, NULL, 'normal', 'medecin', '', 1, '2026-06-01 19:08:42', 'image', '/uploads/1780340922375-52652665.png'),
+(30, 3, 6, NULL, 'normal', 'medecin', '', 1, '2026-06-01 19:09:05', 'file', '/uploads/1780340945892-142031245.docx'),
+(31, 3, 6, NULL, 'normal', 'patient', '', 1, '2026-06-01 19:09:51', 'vocal', '/uploads/1780340991125-70275214.webm');
 
 -- --------------------------------------------------------
 
@@ -382,7 +352,7 @@ CREATE TABLE IF NOT EXISTS `notifications` (
   `id_patient` int DEFAULT NULL,
   `title` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=MyISAM AUTO_INCREMENT=76 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=90 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Déchargement des données de la table `notifications`
@@ -463,7 +433,21 @@ INSERT INTO `notifications` (`id`, `type`, `message`, `id_secretaire`, `id_medec
 (72, 'ordonnance', 'Votre ordonnance pour le rendez-vous du 22 mai 2026 à 10:30 est disponible. Consultez votre dossier médical.', NULL, NULL, 29, 0, '2026-05-23 12:20:05', 8, 'Ordonnance disponible'),
 (73, 'facture', 'Une facture d\'un montant de 450000 GNF a été émise pour votre consultation de Mesure Ambulatoire de la Pression Artérielle (MAPA) + Consultation.', NULL, NULL, NULL, 0, '2026-05-23 12:23:38', 8, 'Nouvelle facture disponible'),
 (74, 'facture', 'Votre part assurance pour la consultation de Mesure Ambulatoire de la Pression Artérielle (MAPA) + Consultation est en attente de validation par l\'administrateur.', NULL, NULL, NULL, 0, '2026-05-23 12:27:38', 8, 'En attente de validation'),
-(75, 'facture', 'Votre paiement pour la consultation de Chirurgie cardiaque a été confirmé avec succès.', NULL, NULL, NULL, 0, '2026-05-23 16:04:25', 1, 'Paiement confirmé');
+(75, 'facture', 'Votre paiement pour la consultation de Chirurgie cardiaque a été confirmé avec succès.', NULL, NULL, NULL, 0, '2026-05-23 16:04:25', 1, 'Paiement confirmé'),
+(76, 'annule', 'Votre rendez-vous du 30 avril 2026 à 15:00 a été annulé par la secrétaire.', NULL, NULL, 14, 0, '2026-06-01 15:19:32', 1, 'Rendez-vous annulé'),
+(77, 'creation', 'Votre demande de rendez-vous du 6 juin 2026 à 11:00 a bien été enregistrée. Elle est en attente de confirmation.', NULL, NULL, 30, 0, '2026-06-04 09:19:07', 6, 'Demande de rendez-vous reçue'),
+(78, 'creation', 'Votre demande de rendez-vous du 9 juin 2026 à 14:30 a bien été enregistrée. Elle est en attente de confirmation.', NULL, NULL, 31, 0, '2026-06-04 09:23:55', 10, 'Demande de rendez-vous reçue'),
+(79, 'confirme', 'Votre rendez-vous du 6 juin 2026 à 11:00 a été confirmé par la secrétaire.', NULL, NULL, 30, 0, '2026-06-04 19:25:55', 6, 'Rendez-vous confirmé'),
+(80, 'attribue', 'Le Dr. Elhadj Yaya Baldé a été attribué automatiquement à votre rendez-vous du 6 juin 2026 à 11:00.', NULL, NULL, 30, 0, '2026-06-04 19:25:55', 6, 'Médecin attribué automatiquement'),
+(81, 'rendez-vous', '🩺 Nouveau rendez-vous attribué — Patient : oumou fally baldé | Date : samedi 6 juin 2026 à 11:00 | Motif : Consultation, Mesure Ambulatoire de la Pression Artérielle (MAPA) | Tél. : 627634812', NULL, 3, 30, 0, '2026-06-04 19:25:55', NULL, NULL),
+(82, 'confirme', 'Votre rendez-vous du 6 juin 2026 à 11:00 a été confirmé par la secrétaire.', NULL, NULL, 30, 0, '2026-06-04 19:26:05', 6, 'Rendez-vous confirmé'),
+(83, 'confirmation', '✅ Rendez-vous confirmé — Patient : oumou fally baldé | Date : samedi 6 juin 2026 à 11:00 | Motif : Consultation, Mesure Ambulatoire de la Pression Artérielle (MAPA)', NULL, 3, 30, 0, '2026-06-04 19:26:05', NULL, NULL),
+(84, 'planning_jour', '📅 Planning du jour (2026-06-06) :\n\n• 08:00 - 17:00 (disponible)\n', NULL, 3, NULL, 1, '2026-06-06 11:44:57', NULL, NULL),
+(85, 'confirme', 'Votre rendez-vous du 9 juin 2026 à 14:30 a été confirmé par la secrétaire.', NULL, NULL, 31, 0, '2026-06-06 11:45:20', 10, 'Rendez-vous confirmé'),
+(86, 'attribue', 'Le Dr. Elhadj Yaya Baldé a été attribué automatiquement à votre rendez-vous du 9 juin 2026 à 14:30.', NULL, NULL, 31, 0, '2026-06-06 11:45:20', 10, 'Médecin attribué automatiquement'),
+(87, 'rendez-vous', '🩺 Nouveau rendez-vous attribué — Patient : Ibrahima  Bah | Date : mardi 9 juin 2026 à 14:30 | Motif : Consultation, Polygraphie ventilatoire | Tél. : 622383922', NULL, 3, 31, 0, '2026-06-06 11:45:20', NULL, NULL),
+(88, 'confirme', 'Votre rendez-vous du 9 juin 2026 à 14:30 a été confirmé par la secrétaire.', NULL, NULL, 31, 0, '2026-06-06 11:46:03', 10, 'Rendez-vous confirmé'),
+(89, 'confirmation', '✅ Rendez-vous confirmé — Patient : Ibrahima  Bah | Date : mardi 9 juin 2026 à 14:30 | Motif : Consultation, Polygraphie ventilatoire', NULL, 3, 31, 0, '2026-06-06 11:46:03', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -522,7 +506,7 @@ CREATE TABLE IF NOT EXISTS `patient` (
   `antecedent_familial` text,
   `antecedent_personnel` text,
   PRIMARY KEY (`id`)
-) ENGINE=MyISAM AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Déchargement des données de la table `patient`
@@ -531,8 +515,10 @@ CREATE TABLE IF NOT EXISTS `patient` (
 INSERT INTO `patient` (`id`, `nom`, `prenom`, `telephone`, `commune`, `quartier`, `email`, `sexe`, `mot_de_passe`, `dernier_connexion`, `date_naissance`, `reset_token`, `reset_token_expiry`, `reset_otp_attempts`, `reset_otp`, `reset_otp_expiry`, `groupe_sanguin`, `allergies`, `antecedent_familial`, `antecedent_personnel`) VALUES
 (1, 'Diallo', 'Aminata', '620000000', 'Ratoma', 'Kaporo', 'aminata@gmail.com', 'F', '$2b$12$sUa7nvJJq4USHISqVkCe5.zjsANHTmUQT3jNtQ844SPgUIyr4Utt6', '2026-05-25 13:03:03', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL),
 (5, 'Test', 'Patient', '620000000', NULL, NULL, NULL, NULL, '', NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL),
-(6, 'baldé', 'oumou fally', '627634812', NULL, NULL, 'baldeoumoufally14@gmail.com', 'F', '$2b$12$AN6FwqVPtaYIQc/JYO3X4.ekI8AOjObAtnY/DC3PTYU2OwRR68b8S', '2026-05-25 13:06:42', '2004-06-08', NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL),
-(7, 'sacko', 'mamady', '612374585', NULL, NULL, 'sacko2120@gmail.com', 'M', '$2b$12$jUS4OV3THEeBGjgKRUtLR.owu4YhvP7dqXGZZ2vNAMfrjnWN8rieu', '2026-05-25 13:03:03', '2003-02-03', NULL, NULL, 0, '523111', '2026-05-05 17:53:12', NULL, NULL, NULL, NULL);
+(6, 'baldé', 'oumou fally', '627634812', NULL, NULL, 'baldeoumoufally14@gmail.com', 'F', '$2b$12$AN6FwqVPtaYIQc/JYO3X4.ekI8AOjObAtnY/DC3PTYU2OwRR68b8S', '2026-06-04 11:29:27', '2004-06-08', NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL),
+(7, 'sacko', 'mamady', '612374585', NULL, NULL, 'sacko2120@gmail.com', 'M', '$2b$12$jUS4OV3THEeBGjgKRUtLR.owu4YhvP7dqXGZZ2vNAMfrjnWN8rieu', '2026-05-25 13:03:03', '2003-02-03', NULL, NULL, 0, '523111', '2026-05-05 17:53:12', NULL, NULL, NULL, NULL),
+(10, 'Bah', 'Ibrahima ', '622383922', 'dubreka', 'Kagbelen', 'bahabdoulayeibrahim@gmail.com', 'M', '$2b$12$Qjo2zC2yzAx0t1q0ol12Cu4B2rAlM.dWRQ4W3pQQzZrU5.QTlSVti', '2026-06-06 11:46:28', '2007-08-13', NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL),
+(11, 'Baldé', 'Ousmane', '620010304', 'Sonfonia', 'Sonfonia-africof', 'ousbalde111@gmail.com', 'M', '$2b$12$qLiNaVjr2yr9UhOwHwTqdO507Y3hxbTzO.0C6IJroeS7JLAxIK6Jy', '2026-06-01 19:04:24', '2011-11-01', NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -551,7 +537,7 @@ CREATE TABLE IF NOT EXISTS `planning_medecin` (
   `commentaire` text,
   PRIMARY KEY (`id`),
   KEY `id_medecin` (`id_medecin`)
-) ENGINE=MyISAM AUTO_INCREMENT=72 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=76 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Déchargement des données de la table `planning_medecin`
@@ -581,7 +567,11 @@ INSERT INTO `planning_medecin` (`id`, `id_medecin`, `date_planning`, `heure_debu
 (68, 3, '2026-05-21', '14:00:00', '14:30:00', 'disponible', 'Créé automatiquement lors de l\'attribution'),
 (69, 3, '2026-05-22', '15:00:00', '17:00:00', 'disponible', ''),
 (70, 3, '2026-05-21', '21:10:02', '23:59:59', 'disponible', 'temp_from_notification_68'),
-(71, 3, '2026-05-22', '00:00:00', '21:10:02', 'disponible', 'temp_from_notification_68');
+(71, 3, '2026-05-22', '00:00:00', '21:10:02', 'disponible', 'temp_from_notification_68'),
+(72, 3, '2026-06-06', '08:00:00', '17:00:00', 'disponible', ''),
+(73, 3, '2026-06-09', '08:00:00', '17:00:00', 'disponible', ''),
+(74, 3, '2026-06-06', '11:45:12', '23:59:59', 'disponible', 'temp_from_notification_84'),
+(75, 3, '2026-06-07', '00:00:00', '11:45:12', 'disponible', 'temp_from_notification_84');
 
 -- --------------------------------------------------------
 
@@ -623,7 +613,7 @@ CREATE TABLE IF NOT EXISTS `reservation` (
   `notif_medecin` tinyint DEFAULT '0',
   `notif_secretaire` tinyint DEFAULT '0',
   PRIMARY KEY (`id_reservation`)
-) ENGINE=MyISAM AUTO_INCREMENT=30 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=MyISAM AUTO_INCREMENT=32 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 --
 -- Déchargement des données de la table `reservation`
@@ -641,7 +631,7 @@ INSERT INTO `reservation` (`id_reservation`, `patient_id`, `id_medecin`, `id_sec
 (10, 1, NULL, 1, '2026-04-26', '11:30:00', 'attente', 'Consultation', NULL, 0, 0, 0),
 (12, 1, 3, 1, '2026-05-12', '10:30:00', '', 'Consultation', 'etyyuiuo', 1, 1, 0),
 (13, 1, NULL, 1, '2026-05-14', '13:30:00', '', 'Consultation', 'azertyui', 1, 0, 0),
-(14, 1, NULL, 1, '2026-04-30', '15:00:00', 'confirme', 'Consultation', NULL, 1, 0, 0),
+(14, 1, NULL, 1, '2026-04-30', '15:00:00', 'annule', 'Consultation', NULL, 1, 0, 0),
 (15, 1, NULL, 1, '2026-04-30', '16:30:00', 'annule', 'Électrocardiogramme', NULL, 1, 0, 0),
 (16, 1, NULL, 1, '2026-04-29', '09:00:00', 'annule', 'Consultation', NULL, 1, 0, 0),
 (17, 1, 3, 1, '2026-04-30', '16:30:00', 'attente', 'Contrôle des pacemakers', NULL, 0, 1, 0),
@@ -654,7 +644,9 @@ INSERT INTO `reservation` (`id_reservation`, `patient_id`, `id_medecin`, `id_sec
 (24, 6, 3, 1, '2026-05-23', '14:30:00', '', 'Consultation', 'Indisponibilité du médecin', 1, 1, 0),
 (25, 6, 3, 1, '2026-05-09', '11:30:00', 'termine', 'Électrocardiogramme', NULL, 1, 1, 0),
 (28, 6, 3, 1, '2026-05-21', '14:00:00', 'termine', 'Consultation, Mesure Ambulatoire de la Pression Artérielle (MAPA)', NULL, 1, 1, 0),
-(29, 8, 3, 1, '2026-05-22', '10:30:00', 'termine', 'Consultation, Mesure Ambulatoire de la Pression Artérielle (MAPA)', NULL, 1, 1, 0);
+(29, 8, 3, 1, '2026-05-22', '10:30:00', 'termine', 'Consultation, Mesure Ambulatoire de la Pression Artérielle (MAPA)', NULL, 1, 1, 0),
+(30, 6, 3, 1, '2026-06-06', '11:00:00', 'confirme', 'Consultation, Mesure Ambulatoire de la Pression Artérielle (MAPA)', NULL, 1, 1, 0),
+(31, 10, 3, 1, '2026-06-09', '14:30:00', 'confirme', 'Consultation, Polygraphie ventilatoire', NULL, 1, 1, 0);
 
 -- --------------------------------------------------------
 
