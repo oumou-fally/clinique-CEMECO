@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="420">
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <text x="20" y="28" font-family="Courier New, monospace" font-size="14" fill="#111">
+    <tspan x="20" dy="0">backend/</tspan>
+    <tspan x="20" dy="20">├─ package.json</tspan>
+    <tspan x="20" dy="20">├─ .env.example</tspan>
+    <tspan x="20" dy="20">├─ README.md</tspan>
+    <tspan x="20" dy="20">├─ prisma/</tspan>
+    <tspan x="40" dy="20">└─ schema.prisma</tspan>
+    <tspan x="20" dy="20">├─ src/</tspan>
+    <tspan x="40" dy="20">├─ index.js</tspan>
+    <tspan x="40" dy="20">├─ config/</tspan>
+    <tspan x="60" dy="20">└─ db.js</tspan>
+    <tspan x="40" dy="20">├─ routes/</tspan>
+    <tspan x="60" dy="20">├─ auth.routes.js</tspan>
+    <tspan x="60" dy="20">├─ patients.routes.js</tspan>
+    <tspan x="60" dy="20">└─ rendezvous.routes.js</tspan>
+    <tspan x="40" dy="20">├─ controllers/</tspan>
+    <tspan x="60" dy="20">├─ auth.controller.js</tspan>
+    <tspan x="60" dy="20">├─ patient.controller.js</tspan>
+    <tspan x="60" dy="20">└─ rendezvous.controller.js</tspan>
+    <tspan x="40" dy="20">├─ models/</tspan>
+    <tspan x="60" dy="20">├─ user.model.js</tspan>
+    <tspan x="60" dy="20">├─ patient.model.js</tspan>
+    <tspan x="60" dy="20">└─ rendezvous.model.js</tspan>
+    <tspan x="40" dy="20">├─ services/</tspan>
+    <tspan x="60" dy="20">└─ mail.service.js</tspan>
+    <tspan x="40" dy="20">├─ middleware/</tspan>
+    <tspan x="60" dy="20">├─ auth.middleware.js</tspan>
+    <tspan x="60" dy="20">└─ error.middleware.js</tspan>
+    <tspan x="40" dy="20">├─ utils/</tspan>
+    <tspan x="60" dy="20">└─ validators.js</tspan>
+    <tspan x="40" dy="20">├─ uploads/</tspan>
+    <tspan x="40" dy="20">└─ tests/</tspan>
+  </text>
+</svg>

@@ -171,6 +171,80 @@ export default function GestionConseilsMedicaux() {
     return `${base}${url.startsWith('/') ? '' : '/'}${url}`;
   };
 
+  // Central audio controls to ensure single audio element behavior
+  const playAudio = (url, id) => {
+    if (!audioRef.current) return;
+    try {
+      const audio = audioRef.current;
+      const fullUrl = getFullUrl(url);
+
+      // If same audio clicked while playing -> pause
+      if (playingAudio === id) {
+        audio.pause();
+        setPlayingAudio(null);
+        return;
+      }
+
+      // If another audio was playing, stop it and reset its progress
+      if (playingAudio && playingAudio !== id) {
+        audio.pause();
+        audio.currentTime = 0;
+        setAudioProgress(prev => ({ ...prev, [playingAudio]: 0 }));
+        setPlayingAudio(null);
+      }
+
+      // Load new source if different
+      if (!audio.src || !audio.src.includes(fullUrl)) {
+        audio.src = fullUrl;
+      }
+      audio.currentTime = 0;
+      audio.play()
+        .then(() => setPlayingAudio(id))
+        .catch(() => setPlayingAudio(null));
+    } catch (err) {
+      console.error('Audio play error', err);
+      setPlayingAudio(null);
+    }
+  };
+
+  // Audio element event handlers
+  const handleAudioTimeUpdate = () => {
+    if (!audioRef.current || !playingAudio) return;
+    const a = audioRef.current;
+    if (!isNaN(a.duration) && a.duration > 0) {
+      setAudioProgress(prev => ({ ...prev, [playingAudio]: (a.currentTime / a.duration) * 100 }));
+    }
+  };
+
+  const handleAudioLoadedMetadata = () => {
+    if (!audioRef.current || !playingAudio) return;
+    const a = audioRef.current;
+    if (!isNaN(a.duration) && a.duration > 0) {
+      setAudioProgress(prev => ({ ...prev, [playingAudio]: (a.currentTime / a.duration) * 100 }));
+    }
+  };
+
+  const handleAudioEnded = () => {
+    if (!audioRef.current) return;
+    setPlayingAudio(null);
+    if (audioRef.current) audioRef.current.currentTime = 0;
+  };
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.addEventListener('timeupdate', handleAudioTimeUpdate);
+    audio.addEventListener('loadedmetadata', handleAudioLoadedMetadata);
+    audio.addEventListener('ended', handleAudioEnded);
+    audio.addEventListener('error', () => setPlayingAudio(null));
+    return () => {
+      audio.removeEventListener('timeupdate', handleAudioTimeUpdate);
+      audio.removeEventListener('loadedmetadata', handleAudioLoadedMetadata);
+      audio.removeEventListener('ended', handleAudioEnded);
+      audio.removeEventListener('error', () => setPlayingAudio(null));
+    };
+  }, [playingAudio]);
+
   const formaterDate = (dateStr) => {
     if (!dateStr) return '';
     const date = new Date(dateStr);
@@ -369,20 +443,7 @@ export default function GestionConseilsMedicaux() {
                                 className={`w-11 h-11 rounded-full flex items-center justify-center cursor-pointer transition-all hover:scale-105 active:scale-95 shrink-0 ${
                                   isMedecin ? 'bg-white text-indigo-600' : 'bg-indigo-600 text-white shadow-md shadow-indigo-100'
                                 }`}
-                                onClick={() => { 
-                                  if (audioRef.current) { 
-                                    const url = getFullUrl(msg.fichier_url); 
-                                    if (playingAudio === msg.id) { 
-                                      audioRef.current.pause(); 
-                                      setPlayingAudio(null); 
-                                    } else { 
-                                      audioRef.current.src = url; 
-                                      audioRef.current.play()
-                                        .then(() => setPlayingAudio(msg.id))
-                                        .catch(() => setPlayingAudio(null)); 
-                                    } 
-                                  } 
-                                }}
+                                onClick={() => playAudio(msg.fichier_url, msg.id)}
                               >
                                 {playingAudio === msg.id ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-1" />}
                               </button>
@@ -453,7 +514,7 @@ export default function GestionConseilsMedicaux() {
                   <div ref={messagesEndRef} />
                 </div>
 
-                <audio ref={audioRef} hidden preload="auto" onEnded={() => setPlayingAudio(null)} onTimeUpdate={() => { if (audioRef.current && playingAudio && !isNaN(audioRef.current.duration)) { const progress = (audioRef.current.currentTime / audioRef.current.duration) * 100; setAudioProgress(prev => ({ ...prev, [playingAudio]: progress })); } }} onLoadedMetadata={() => { if (audioRef.current && playingAudio && !isNaN(audioRef.current.duration)) { setAudioProgress(prev => ({ ...prev, [playingAudio]: (audioRef.current.currentTime / audioRef.current.duration) * 100 })); } }} onError={() => setPlayingAudio(null)} />
+                <audio ref={audioRef} hidden preload="auto" />
                 
                 {/* Active Chat Input Area */}
                 <div className="p-6 bg-white border-t border-gray-100">

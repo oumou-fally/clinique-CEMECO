@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="460">
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <text x="20" y="28" font-family="Courier New, monospace" font-size="14" fill="#111">
+    <tspan x="20" dy="0">frontend/</tspan>
+    <tspan x="20" dy="20">├─ package.json</tspan>
+    <tspan x="20" dy="20">├─ vite.config.js</tspan>
+    <tspan x="20" dy="20">├─ README.md</tspan>
+    <tspan x="20" dy="20">├─ public/</tspan>
+    <tspan x="40" dy="20">└─ favicon.ico</tspan>
+    <tspan x="20" dy="20">├─ src/</tspan>
+    <tspan x="40" dy="20">├─ main.jsx</tspan>
+    <tspan x="40" dy="20">├─ App.jsx</tspan>
+    <tspan x="40" dy="20">├─ index.css</tspan>
+    <tspan x="40" dy="20">├─ assets/</tspan>
+    <tspan x="60" dy="20">└─ images/</tspan>
+    <tspan x="40" dy="20">├─ components/</tspan>
+    <tspan x="60" dy="20">├─ common/</tspan>
+    <tspan x="80" dy="20">├─ Header.jsx</tspan>
+    <tspan x="80" dy="20">└─ Footer.jsx</tspan>
+    <tspan x="60" dy="20">└─ ui/</tspan>
+    <tspan x="40" dy="20">├─ pages/</tspan>
+    <tspan x="60" dy="20">├─ Home.jsx</tspan>
+    <tspan x="60" dy="20">├─ Dashboard.jsx</tspan>
+    <tspan x="60" dy="20">└─ Login.jsx</tspan>
+    <tspan x="40" dy="20">├─ layouts/</tspan>
+    <tspan x="60" dy="20">└─ Layout.jsx</tspan>
+    <tspan x="40" dy="20">├─ context/</tspan>
+    <tspan x="60" dy="20">└─ AuthContext.jsx</tspan>
+    <tspan x="40" dy="20">├─ hooks/</tspan>
+    <tspan x="40" dy="20">├─ services/</tspan>
+    <tspan x="60" dy="20">└─ api.js</tspan>
+    <tspan x="40" dy="20">├─ styles/</tspan>
+    <tspan x="40" dy="20">└─ tests/</tspan>
+  </text>
+</svg>

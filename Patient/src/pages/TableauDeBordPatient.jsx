@@ -9,6 +9,8 @@ import AskDoctorForm from '../components/AskDoctorForm'
 export default function TableauDeBordPatient() {
   const { user, patientId, isAuthenticated } = useAuth()
   const [showAppointmentForm, setShowAppointmentForm] = useState(false)
+  const [showAppointmentDetails, setShowAppointmentDetails] = useState(false)
+  const [selectedAppointment, setSelectedAppointment] = useState(null)
   const [showConsultationForm, setShowConsultationForm] = useState(false)
   
   const [dashboardData, setDashboardData] = useState({
@@ -37,6 +39,11 @@ export default function TableauDeBordPatient() {
   useEffect(() => {
     fetchDashboardData();
   }, [patientId]);
+
+  const openAppointmentDetails = (appointment) => {
+    setSelectedAppointment(appointment)
+    setShowAppointmentDetails(true)
+  }
 
   if (loading) {
     return (
@@ -88,7 +95,10 @@ export default function TableauDeBordPatient() {
               <p className="text-blue-50 text-sm opacity-80">Avec Dr. {dashboardData.appointments[0].medecin_nom}</p>
             </div>
           </div>
-          <button className="bg-white text-blue-600 px-8 py-3 rounded-2xl font-black text-sm hover:bg-blue-50 transition shadow-lg relative z-10">
+          <button
+            onClick={() => openAppointmentDetails(dashboardData.appointments[0])}
+            className="bg-white text-blue-600 px-8 py-3 rounded-2xl font-black text-sm hover:bg-blue-50 transition shadow-lg relative z-10"
+          >
             Détails
           </button>
         </div>
@@ -138,7 +148,7 @@ export default function TableauDeBordPatient() {
               <div className="w-2 h-8 bg-teal-600 rounded-full"></div>
               Prochains RDV
             </h2>
-            <Link to="/dashboard/planning" className="text-teal-600 font-bold text-sm hover:underline">Voir tout</Link>
+            <Link to="/dashboard/appointments" className="text-teal-600 font-bold text-sm hover:underline">Voir tout</Link>
           </div>
 
           <div className="space-y-6">
@@ -251,6 +261,63 @@ export default function TableauDeBordPatient() {
           </div>
         </div>
       </div>
+
+      {showAppointmentDetails && selectedAppointment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6">
+          <div className="w-full max-w-2xl rounded-[2rem] bg-white p-6 shadow-2xl ring-1 ring-black/10">
+            <div className="flex items-start justify-between gap-4 mb-6">
+              <div>
+                <p className="text-sm uppercase tracking-widest text-teal-600 font-black">Détails du rendez-vous</p>
+                <h3 className="text-2xl font-black text-gray-900 mt-2">{selectedAppointment.medecin_nom ? `Dr. ${selectedAppointment.medecin_nom} ${selectedAppointment.medecin_prenom || ''}` : 'Médecin non attribué'}</h3>
+                <p className="text-gray-500 mt-1">{selectedAppointment.specialite || 'Généraliste'}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowAppointmentDetails(false)
+                  setSelectedAppointment(null)
+                }}
+                className="rounded-full bg-gray-100 p-3 text-gray-600 hover:bg-gray-200 transition"
+              >
+                Fermer
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mb-6">
+              <div className="rounded-3xl bg-gray-50 p-5">
+                <p className="text-xs uppercase tracking-widest text-gray-500 font-semibold mb-2">Date</p>
+                <p className="text-lg font-bold text-gray-900">
+                  {selectedAppointment.date_rendez_vous
+                    ? new Date(selectedAppointment.date_rendez_vous).toLocaleDateString('fr-FR', {
+                        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+                      })
+                    : 'Non défini'}
+                </p>
+              </div>
+              <div className="rounded-3xl bg-gray-50 p-5">
+                <p className="text-xs uppercase tracking-widest text-gray-500 font-semibold mb-2">Heure</p>
+                <p className="text-lg font-bold text-gray-900">
+                  {selectedAppointment.heure_rendez_vous?.substring(0, 5) || 'Non défini'}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="rounded-3xl bg-gray-50 p-5">
+                <p className="text-xs uppercase tracking-widest text-gray-500 font-semibold mb-2">Statut</p>
+                <p className="text-lg font-bold text-gray-900 capitalize">{selectedAppointment.statut || 'En attente'}</p>
+              </div>
+              <div className="rounded-3xl bg-gray-50 p-5">
+                <p className="text-xs uppercase tracking-widest text-gray-500 font-semibold mb-2">Motif</p>
+                <p className="text-gray-700">{selectedAppointment.motif || 'Aucun motif renseigné'}</p>
+              </div>
+              <div className="rounded-3xl bg-gray-50 p-5">
+                <p className="text-xs uppercase tracking-widest text-gray-500 font-semibold mb-2">Lieu</p>
+                <p className="text-gray-700">Clinique CEMECO</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Forms */}
       <AppointmentForm
