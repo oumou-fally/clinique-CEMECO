@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import Layout from '../layouts/Layout'
 import { Calendar, Clock, MapPin, User, CheckCircle, XCircle, RotateCcw, Stethoscope, AlertTriangle, Phone, Mail, X } from 'lucide-react'
 
@@ -19,6 +20,9 @@ export default function GestionRendezVous() {
 
   const API_URL = 'http://localhost:3000'
 
+  const location = useLocation()
+  const navigate = useNavigate()
+
   const fetchAppointments = async () => {
     try {
       setLoading(true)
@@ -37,6 +41,20 @@ export default function GestionRendezVous() {
   useEffect(() => {
     fetchAppointments()
   }, [])
+
+  // Si on reçoit une réservation via location.state.reportApp, ouvrir directement le modal de report
+  useEffect(() => {
+    try {
+      const payload = location && location.state && location.state.reportApp
+      if (payload) {
+        openReportModal(payload)
+        // nettoyer l'état de navigation pour éviter de rouvrir le modal
+        navigate(location.pathname, { replace: true, state: {} })
+      }
+    } catch (err) {
+      console.error('Erreur lors du traitement de location.state', err)
+    }
+  }, [location])
 
   // ======================================================
   // 📊 COMPTEURS PAR STATUT

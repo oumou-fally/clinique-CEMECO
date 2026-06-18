@@ -229,7 +229,7 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm p-8 flex flex-col justify-center items-center text-center">
+                  <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm p-8 flex flex-col justify-center items-center text-center">
                   <div className="w-20 h-20 bg-blue-50 rounded-[2rem] flex items-center justify-center text-blue-600 mb-6">
                     <Heart size={40} className="animate-pulse" />
                   </div>
@@ -269,13 +269,13 @@ export default function Dashboard() {
                     <div className="space-y-2">
                       <div className="flex justify-between text-xs font-black">
                         <span>Progression</span>
-                        <span>82%</span>
+                        <span>{data?.financialGoal?.progression ? `${data.financialGoal.progression}%` : 'N/A'}</span>
                       </div>
                       <div className="h-3 bg-white/20 rounded-full overflow-hidden">
-                        <div className="h-full bg-white rounded-full w-[82%]" />
+                        <div className="h-full bg-white rounded-full" style={{ width: `${data?.financialGoal?.progression || 0}%` }} />
                       </div>
                     </div>
-                    <button className="w-full py-4 bg-white text-blue-900 font-black rounded-2xl hover:bg-blue-50 transition-all text-sm">
+                    <button onClick={() => window.location.href = '/dashboard/finance'} className="w-full py-4 bg-white text-blue-900 font-black rounded-2xl hover:bg-blue-50 transition-all text-sm">
                       Détails Finances
                     </button>
                   </div>

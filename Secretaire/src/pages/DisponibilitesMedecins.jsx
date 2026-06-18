@@ -75,6 +75,18 @@ export default function DisponibilitesMedecins() {
       if (filterStatus !== 'all') {
         filtered = filtered.filter(p => p.statut === filterStatus);
       }
+      // Remove duplicate slots (by id or by medecin/date/time)
+      const dedupeSlots = (items) => {
+        const seen = new Set();
+        return (items || []).filter(s => {
+          const key = s.id ? `id:${s.id}` : `${s.id_medecin}:${s.date_planning}:${s.heure_debut}:${s.heure_fin}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+      };
+
+      filtered = dedupeSlots(filtered);
       
       setPlanning(filtered);
     } catch (err) {
@@ -225,6 +237,16 @@ export default function DisponibilitesMedecins() {
       setImpactLoading(false);
     }
   };
+
+  const reportReservation = async (rdv) => {
+    // Ouvrir le formulaire de report dédié (GestionRendezVous) en passant la réservation
+    try {
+      navigate('/dashboard/rendez-vous', { state: { reportApp: rdv } })
+    } catch (err) {
+      console.error('Navigation vers le formulaire de report échouée', err)
+      alert('Impossible d\'ouvrir le formulaire de report')
+    }
+  }
 
   const groupPlanningByDoctor = (planningData) => {
     const grouped = planningData.reduce((acc, slot) => {
@@ -699,6 +721,13 @@ export default function DisponibilitesMedecins() {
                               Confirmer le RDV
                             </button>
                           )}
+                          <button
+                            onClick={() => reportReservation(rdv)}
+                            disabled={impactLoading}
+                            className="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold text-xs shadow-md shadow-amber-50 hover:shadow-lg transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                          >
+                            Reporter
+                          </button>
                           <button 
                             onClick={() => {
                               setIsImpactsModalOpen(false);

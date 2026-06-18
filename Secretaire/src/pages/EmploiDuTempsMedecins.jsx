@@ -105,6 +105,68 @@ export default function EmploiDuTempsMedecins() {
     }
   }
 
+  const startOfWeek = (d) => {
+    const date = new Date(d);
+    const day = (date.getDay() + 6) % 7; // Monday = 0
+    date.setDate(date.getDate() - day);
+    date.setHours(0,0,0,0);
+    return date;
+  };
+
+  const endOfWeek = (d) => {
+    const s = startOfWeek(d);
+    const e = new Date(s);
+    e.setDate(s.getDate() + 6);
+    e.setHours(23,59,59,999);
+    return e;
+  };
+
+  const dedupeSlots = (items) => {
+    const seen = new Set();
+    return items.filter(s => {
+      const key = s.id ? `id:${s.id}` : `${s.id_medecin}:${s.date_planning}:${s.heure_debut}:${s.heure_fin}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
+
+  const groupByWeek = (items) => {
+    const past = [];
+    const current = [];
+    const next = [];
+
+    const today = new Date();
+    const weekStart = startOfWeek(today);
+    const weekEnd = endOfWeek(today);
+
+    const nextWeekStart = new Date(weekStart);
+    nextWeekStart.setDate(weekStart.getDate() + 7);
+    const nextWeekEnd = new Date(nextWeekStart);
+    nextWeekEnd.setDate(nextWeekStart.getDate() + 6);
+    nextWeekEnd.setHours(23,59,59,999);
+
+    items.forEach(p => {
+      const d = new Date(p.date_planning);
+      if (d < weekStart) past.push(p);
+      else if (d >= weekStart && d <= weekEnd) current.push(p);
+      else if (d >= nextWeekStart && d <= nextWeekEnd) next.push(p);
+      else {
+        // ignore further future for this view
+      }
+    });
+
+    const sortByDate = (a,b) => new Date(a.date_planning) - new Date(b.date_planning) || a.heure_debut.localeCompare(b.heure_debut);
+
+    return {
+      past: past.sort(sortByDate),
+      current: current.sort(sortByDate),
+      next: next.sort(sortByDate)
+    };
+  };
+
+  const [selectedTab, setSelectedTab] = useState('current');
+
   return (
     <Layout>
       <div className="p-8 space-y-8 bg-gray-50 min-h-screen">
@@ -185,8 +247,9 @@ export default function EmploiDuTempsMedecins() {
             <p className="text-gray-300">Utilisez le bouton "Nouvel Horaire" pour commencer.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredPlanning.map((slot) => (
+          (() => {
+            const groups = groupByWeek(dedupeSlots(filteredPlanning));
+            const renderCard = (slot) => (
               <div 
                 key={slot.id}
                 className="bg-white p-8 rounded-[40px] shadow-sm border border-gray-100 hover:border-indigo-200 hover:shadow-xl hover:shadow-indigo-500/5 transition-all group relative overflow-hidden"
@@ -253,8 +316,46 @@ export default function EmploiDuTempsMedecins() {
                   </button>
                 </div>
               </div>
-            ))}
-          </div>
+            );
+
+            return (
+              <div>
+                {/* Tabs */}
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="bg-gray-100 rounded-full p-1 flex items-center">
+                    <button
+                      onClick={() => setSelectedTab('past')}
+                      className={`px-6 py-2 rounded-full transition ${selectedTab === 'past' ? 'bg-white shadow text-gray-800' : 'text-gray-500'}`}>
+                      Passé {groups.past.length > 0 && <span className="ml-2 text-sm text-gray-400">({groups.past.length})</span>}
+                    </button>
+
+                    <button
+                      onClick={() => setSelectedTab('current')}
+                      className={`px-6 py-2 rounded-full transition ${selectedTab === 'current' ? 'bg-white shadow text-indigo-600' : 'text-gray-500'}`}>
+                      Cette Sem. {groups.current.length > 0 && <span className="ml-2 text-sm text-gray-400">({groups.current.length})</span>}
+                    </button>
+
+                    <button
+                      onClick={() => setSelectedTab('next')}
+                      className={`px-6 py-2 rounded-full transition ${selectedTab === 'next' ? 'bg-white shadow text-gray-800' : 'text-gray-500'}`}>
+                      Suivante {groups.next.length > 0 && <span className="ml-2 text-sm text-gray-400">({groups.next.length})</span>}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Selected group */}
+                {groups[selectedTab].length === 0 ? (
+                  <div className="bg-white p-12 rounded-2xl text-center border border-gray-100">
+                    <p className="text-gray-500 font-bold">Aucun créneau dans cette section.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {groups[selectedTab].map(renderCard)}
+                  </div>
+                )}
+              </div>
+            );
+          })()
         )}
 
         {/* Modal Edition / Ajout */}

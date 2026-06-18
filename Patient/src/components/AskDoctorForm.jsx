@@ -351,8 +351,7 @@ export default function AskDoctorForm({ isOpen, onClose, onSubmit, selectedDocto
               <div>
                 <p className="text-sm font-semibold text-amber-900">Important</p>
                 <p className="text-sm text-amber-800 mt-1">
-                  Pour les urgences médicales, veuillez appeler directement le 15 (SAMU) ou vous rendre aux urgences. 
-                  Les demandes reçoivent généralement une réponse dans les 24-48 heures.
+                  En cas d'urgence médicale, veuillez contacter la secrétaire au <strong>612 80 00 08</strong> ou vous rendre directement aux urgences. Les demandes reçoivent généralement une réponse dans les 24-48 heures.
                 </p>
               </div>
             </div>

@@ -151,7 +151,6 @@ export default function GestionSysteme() {
             {[
                 { label: 'Total Patients', value: stats.patients, icon: Users, color: 'bg-blue-600' },
                 { label: 'Rendez-vous Jour', value: stats.rendezVous, icon: Calendar, color: 'bg-emerald-600' },
-                { label: 'Dossiers Médicaux', value: stats.dossiers, icon: ClipboardList, color: 'bg-amber-600' },
                 { label: 'Performance', value: '98%', icon: TrendingUp, color: 'bg-rose-600' }
             ].map((s, i) => (
                 <div key={i} className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 flex items-center justify-between group hover:shadow-xl hover:-translate-y-1 transition-all duration-300">

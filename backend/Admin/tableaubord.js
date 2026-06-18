@@ -68,6 +68,7 @@ router.get('/stats', checkRole(['super_admin', 'admin']), async (req, res) => {
             FROM factures
         `);
 
+        
         res.json({
             success: true,
             kpis,

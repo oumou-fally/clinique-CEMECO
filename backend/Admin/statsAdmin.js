@@ -24,8 +24,8 @@ router.get('/', async (req, res) => {
 
     // 5. Liste complète des rendez-vous (pour Supervision)
     const [allReservations] = await pool.execute(`
-      SELECT r.id_reservation AS id, r.date_rendez_vous, r.heure_rendez_vous as heure, 
-             p.nom as patient_nom, p.prenom as patient_prenom, 
+      SELECT r.id_reservation AS id, r.date_rendez_vous, r.heure_rendez_vous as heure, r.motif,
+             p.nom as patient_nom, p.prenom as patient_prenom,
              m.nom as medecin_nom, r.statut
       FROM reservation r
       LEFT JOIN patient p ON r.patient_id = p.id
@@ -41,6 +41,15 @@ router.get('/', async (req, res) => {
       ORDER BY p.nom ASC
     `);
 
+    // 7. Derniers dossiers médicaux (rapports)
+    const [rapports] = await pool.execute(`
+      SELECT r.id_rapport AS id, r.date_rapport, r.id_patient, r.id_consultation, r.id_ordonnance, p.nom as patient_nom, p.prenom as patient_prenom
+      FROM rapport_medical r
+      LEFT JOIN patient p ON r.id_patient = p.id
+      ORDER BY r.date_rapport DESC
+      LIMIT 50
+    `);
+
     res.json({
       success: true,
       metrics: {
@@ -51,6 +60,7 @@ router.get('/', async (req, res) => {
       },
       reservations: allReservations,
       patients: allPatients
+      ,rapports
     });
 
   } catch (error) {

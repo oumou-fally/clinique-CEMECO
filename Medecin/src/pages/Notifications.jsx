@@ -23,7 +23,7 @@ export default function Notifications() {
     if (!medecinId) return
     try {
       setLoading(true)
-      const res = await fetch(`${API_URL}/api/notifications/notifications/${medecinId}`)
+      const res = await fetch(`${API_URL}/api/notifications/medecin/${medecinId}`)
       const data = await res.json()
       if (data.success) {
         setNotifications(data.notifications || [])
@@ -39,12 +39,21 @@ export default function Notifications() {
     fetchNotifications()
   }, [medecinId])
 
+  // Poll notifications periodically so the médecin sees updates
+  useEffect(() => {
+    if (!medecinId) return
+    const iv = setInterval(() => {
+      fetchNotifications()
+    }, 20000)
+    return () => clearInterval(iv)
+  }, [medecinId])
+
   // ======================================================
   // ✅ MARQUER COMME LUE
   // ======================================================
   const markAsRead = async (id) => {
     try {
-      await fetch(`${API_URL}/api/notifications/notifications/${id}/lu`, {
+      await fetch(`${API_URL}/api/notifications/${id}/lu`, {
         method: 'PUT'
       })
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, lu: 1 } : n))

@@ -80,9 +80,12 @@ router.get('/all/global', async (req, res) => {
                 AND r.heure_rendez_vous BETWEEN ? AND ?
                 AND r.statut != 'annule'
             `, [p.id_medecin, p.date_planning, p.heure_debut, p.heure_fin]);
-            
+            // Nettoyer les commentaires temporaires venant des notifications
+            const commentaire = (p.commentaire && /^temp_from_notification_/.test(p.commentaire)) ? '' : p.commentaire;
+
             return { 
                 ...p, 
+                commentaire,
                 nb_reservations: rdvs.length,
                 reservations: rdvs
             };
@@ -134,7 +137,7 @@ router.get('/:id/impacts', async (req, res) => {
 // 📝 AJOUT / MODIFICATION
 // ======================================================
 router.post('/', async (req, res) => {
-    const { id, id_medecin, date_planning, heure_debut, heure_fin, statut, commentaire } = req.body;
+    const { id, id_medecin, date_planning, heure_debut, heure_fin, statut, commentaire, force } = req.body;
 
     if (!id_medecin || !date_planning || !heure_debut || !heure_fin) {
         return res.status(400).json({ success: false, message: 'Données manquantes' });
@@ -143,23 +146,25 @@ router.post('/', async (req, res) => {
     try {
         // await cleanupOldPlanning(); // Désactivé
 
-        // Vérification chevauchement
-        const [overlaps] = await pool.execute(`
-            SELECT id FROM planning_medecin
-            WHERE id_medecin = ?
-              AND date_planning = ?
-              AND id != ?
-              AND (
-                    (heure_debut < ? AND heure_fin > ?)
-                 OR (heure_debut >= ? AND heure_debut < ?)
-              )
-        `, [id_medecin, date_planning, id || 0, heure_fin, heure_debut, heure_debut, heure_fin]);
+        // Vérification chevauchement (possibilité d'ignorer avec `force`)
+        if (!force) {
+            const [overlaps] = await pool.execute(`
+                SELECT id FROM planning_medecin
+                WHERE id_medecin = ?
+                  AND date_planning = ?
+                  AND id != ?
+                  AND (
+                        (heure_debut < ? AND heure_fin > ?)
+                     OR (heure_debut >= ? AND heure_debut < ?)
+                  )
+            `, [id_medecin, date_planning, id || 0, heure_fin, heure_debut, heure_debut, heure_fin]);
 
-        if (overlaps.length > 0) {
-            return res.status(400).json({
-                success: false,
-                message: 'Ce créneau chevauche un autre existant'
-            });
+            if (overlaps.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Ce créneau chevauche un autre existant'
+                });
+            }
         }
 
         if (id) {
@@ -243,15 +248,39 @@ router.post('/envoyer-jour', async (req, res) => {
             if (c.commentaire) message += `  → ${c.commentaire}\n`;
         });
 
+        // Vérifier s'il existe déjà une notification de planning du jour pour ce médecin
+        const [existing] = await pool.execute(`
+            SELECT id FROM notifications
+            WHERE id_medecin = ? AND type = 'planning_jour' AND DATE(created_at) = ?
+            ORDER BY created_at DESC LIMIT 1
+        `, [id_medecin, today]);
+
+        if (existing.length > 0) {
+            // Mettre à jour la notification existante (considérée comme une mise à jour)
+            await pool.execute(`
+                UPDATE notifications SET message = ?, lu = 0, created_at = NOW()
+                WHERE id = ?
+            `, [message, existing[0].id]);
+
+            return res.json({
+                success: true,
+                message: 'Mise à jour du planning envoyée à la secrétaire avec succès !',
+                creneauxCount: creneaux.length,
+                updated: true
+            });
+        }
+
+        // Sinon insérer une nouvelle notification
         await pool.execute(`
-            INSERT INTO notifications (type, message, id_medecin, lu)
-            VALUES ('planning_jour', ?, ?, 0)
+            INSERT INTO notifications (type, message, id_medecin, lu, created_at)
+            VALUES ('planning_jour', ?, ?, 0, NOW())
         `, [message, id_medecin]);
 
         res.json({
             success: true,
             message: 'Planning du jour envoyé à la secrétaire avec succès !',
-            creneauxCount: creneaux.length
+            creneauxCount: creneaux.length,
+            updated: false
         });
 
     } catch (error) {

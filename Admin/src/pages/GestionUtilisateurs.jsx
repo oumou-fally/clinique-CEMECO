@@ -243,11 +243,12 @@ export default function GestionUtilisateurs() {
                       </div>
                     </td>
                     <td className="px-10 py-8 text-right">
-                      <button 
+                      <button
                         onClick={() => handleDelete(user.id, user.role)}
-                        className="p-4 bg-gray-50 text-gray-400 rounded-2xl hover:bg-rose-500 hover:text-white transition-all shadow-sm group-hover:shadow-rose-100"
+                        className="inline-flex items-center gap-2 px-4 py-3 bg-rose-50 text-rose-600 rounded-2xl hover:bg-rose-600 hover:text-white transition-all shadow-sm group-hover:shadow-rose-100"
                       >
                         <Trash2 className="w-5 h-5" />
+                        <span className="text-sm font-bold">Supprimer</span>
                       </button>
                     </td>
                   </tr>

@@ -1,5 +1,5 @@
 import Layout from '../layouts/Layout'
-import { Calendar, FileText, BarChart3, Eye, Search, RefreshCw, AlertCircle, X, User, Clock, Activity, MapPin, Phone, Mail } from 'lucide-react'
+import { Calendar, FileText, BarChart3, Eye, Search, RefreshCw, AlertCircle, X, User, Clock, Activity } from 'lucide-react'
 import { useState, useEffect } from 'react'
 
 export default function Supervision() {
@@ -11,7 +11,6 @@ export default function Supervision() {
   
   // États pour les modales
   const [selectedRDV, setSelectedRDV] = useState(null)
-  const [selectedPatient, setSelectedPatient] = useState(null)
 
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -40,7 +39,6 @@ export default function Supervision() {
 
   const statistiques = [
     { label: 'Total Rendez-vous', value: stats?.reservations?.length || '0', icon: Calendar, color: 'blue' },
-    { label: 'Dossiers Médicaux', value: stats?.metrics?.medicalRecords || '0', icon: FileText, color: 'green' },
     { label: 'Patients Inscrits', value: stats?.metrics?.patients || '0', icon: BarChart3, color: 'purple' },
     { label: 'Médecins Actifs', value: stats?.metrics?.medecins || '0', icon: Eye, color: 'orange' },
   ]
@@ -211,49 +209,7 @@ export default function Supervision() {
           </div>
         </div>
 
-        {/* Tableau Dossiers Patients */}
-        <div className="bg-white rounded-[3rem] shadow-2xl shadow-gray-100 overflow-hidden border border-gray-100">
-          <div className="border-b bg-gray-50/30 p-8">
-            <h2 className="text-2xl font-black text-gray-900 flex items-center gap-3">
-              <FileText className="w-8 h-8 text-emerald-600" />
-              Récapitulatif des Dossiers
-            </h2>
-          </div>
-
-          <div className="p-4 overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="text-left">
-                  <th className="px-8 py-6 font-black text-gray-400 uppercase text-[10px] tracking-widest">Nom du Patient</th>
-                  <th className="px-8 py-6 font-black text-gray-400 uppercase text-[10px] tracking-widest">Coordonnées</th>
-                  <th className="px-8 py-6 font-black text-gray-400 uppercase text-[10px] tracking-widest text-center">Volume Consultations</th>
-                  <th className="px-8 py-6 font-black text-gray-400 uppercase text-[10px] tracking-widest text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {stats?.patients?.map((dossier) => (
-                  <tr key={dossier.id} className="group hover:bg-gray-50/50 transition-all">
-                    <td className="px-8 py-6 font-black text-gray-900">{dossier.prenom} {dossier.nom}</td>
-                    <td className="px-8 py-6 text-gray-500 font-bold text-sm">{dossier.telephone || 'Non renseigné'}</td>
-                    <td className="px-8 py-6 text-center">
-                      <span className="inline-block px-5 py-2 bg-blue-600 text-white rounded-[1rem] text-xs font-black shadow-lg shadow-blue-100">
-                        {dossier.consultations}
-                      </span>
-                    </td>
-                    <td className="px-8 py-6 text-right">
-                      <button 
-                        onClick={() => setSelectedPatient(dossier)}
-                        className="p-3 text-gray-400 hover:text-emerald-600 hover:bg-white hover:shadow-lg rounded-2xl transition-all"
-                      >
-                        <Eye className="w-5 h-5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        {/* Tableau Dossiers Patients (supprimé) */}
 
         {/* MODALE DÉTAILS RENDEZ-VOUS */}
         {selectedRDV && (
@@ -304,7 +260,9 @@ export default function Supervision() {
                                 <Activity className="w-3 h-3" /> Motif de consultation
                             </p>
                             <p className="text-gray-700 font-medium leading-relaxed italic">
-                                "{selectedRDV.motif || "Aucun motif spécifié pour ce rendez-vous."}"
+                              {(selectedRDV && (selectedRDV.motif || selectedRDV.info || selectedRDV.motif_consultation))
+                                ? (selectedRDV.motif || selectedRDV.info || selectedRDV.motif_consultation)
+                                : 'Aucun motif spécifié pour ce rendez-vous.'}
                             </p>
                         </div>
                     </div>
@@ -320,76 +278,9 @@ export default function Supervision() {
             </div>
         )}
 
-        {/* MODALE DÉTAILS PATIENT */}
-        {selectedPatient && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-                <div className="bg-white rounded-[3rem] w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
-                    <div className="bg-emerald-600 p-8 text-white flex justify-between items-start">
-                        <div className="flex items-center gap-6">
-                            <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-white text-2xl font-black">
-                                {selectedPatient.nom.charAt(0)}
-                            </div>
-                            <div>
-                                <p className="text-emerald-200 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Dossier Patient</p>
-                                <h3 className="text-3xl font-black tracking-tight">{selectedPatient.prenom} {selectedPatient.nom}</h3>
-                            </div>
-                        </div>
-                        <button onClick={() => setSelectedPatient(null)} className="p-2 hover:bg-white/20 rounded-xl transition-all">
-                            <X className="w-6 h-6" />
-                        </button>
-                    </div>
-                    <div className="p-8 space-y-8">
-                        <div className="grid grid-cols-1 gap-6">
-                            <div className="flex items-center gap-4 group">
-                                <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all">
-                                    <Phone className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Contact Téléphonique</p>
-                                    <p className="text-gray-900 font-bold">{selectedPatient.telephone || 'Non renseigné'}</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-4 group">
-                                <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all">
-                                    <Mail className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Adresse Email</p>
-                                    <p className="text-gray-900 font-bold">{selectedPatient.email || 'Non renseigné'}</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-4 group">
-                                <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-all">
-                                    <MapPin className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Localisation</p>
-                                    <p className="text-gray-900 font-bold">{selectedPatient.commune || 'Conakry'}, {selectedPatient.quartier || 'Guinée'}</p>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div className="p-8 bg-emerald-50 rounded-[2.5rem] border border-emerald-100 flex items-center justify-between">
-                            <div>
-                                <p className="text-emerald-800 font-black text-lg">Activité Clinique</p>
-                                <p className="text-emerald-600 text-sm font-bold">Volume total de consultations</p>
-                            </div>
-                            <div className="text-4xl font-black text-emerald-600 bg-white w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-100">
-                                {selectedPatient.consultations}
-                            </div>
-                        </div>
-                    </div>
-                    <div className="p-8 bg-gray-50 border-t border-gray-100">
-                        <button 
-                            onClick={() => setSelectedPatient(null)}
-                            className="w-full py-4 bg-gray-900 text-white rounded-2xl font-black hover:bg-gray-800 transition-all shadow-xl active:scale-95"
-                        >
-                            Fermer le dossier
-                        </button>
-                    </div>
-                </div>
-            </div>
-        )}
+        
+
+        {/* MODALE DÉTAILS PATIENT supprimée */}
 
       </div>
     </Layout>
